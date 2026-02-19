@@ -1,10 +1,10 @@
 {
-  "templates_folder": "Templates/",
+  "templates_folder": "Templates",
   "trigger_on_file_creation": true,
   "enable_folder_templates": true,
   "folder_templates": [
     {
-      "folder": "Daily/",
+      "folder": "Daily",
       "template": "Templates/daily.md"
     }
   ]

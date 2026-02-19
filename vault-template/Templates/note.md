@@ -3,10 +3,6 @@ type: note
 tags: []
 summary: ""
 source: ""
-created: 2026-02-18
-updated: 2026-02-18
+created: <% tp.date.now("YYYY-MM-DD") %>
+updated: <% tp.date.now("YYYY-MM-DD") %>
 ---
-
-[The actual idea, explained.]
-
-Related: [[Other Note]], [[Another Note]]
