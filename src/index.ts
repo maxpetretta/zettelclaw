@@ -30,6 +30,7 @@ function usage(): string {
     "Init options:",
     "  --vault <path>      Set vault path (default: current directory)",
     "  --workspace <path>  Override OpenClaw workspace path (default: ~/.openclaw/workspace)",
+    "  --openclaw          Force OpenClaw integration and hook setup",
     "  --yes               Accept all defaults non-interactively",
     "  --root              Use root mode (notes in vault root instead of 01 Notes/)",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",

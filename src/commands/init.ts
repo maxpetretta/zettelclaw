@@ -2,7 +2,11 @@ import { intro, isCancel, select, spinner, text } from "@clack/prompts";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 
-import { appendWorkspaceIntegration, patchOpenClawConfig } from "../lib/openclaw";
+import {
+  appendWorkspaceIntegration,
+  installOpenClawHook,
+  patchOpenClawConfig,
+} from "../lib/openclaw";
 import { resolveUserPath } from "../lib/paths";
 import { downloadPlugins } from "../lib/plugins";
 import {
@@ -94,7 +98,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   const mode: NotesMode = options.root ? "root" : "notes";
   const workspacePath = resolveUserPath(options.workspacePath ?? "~/.openclaw/workspace");
   const workspaceDetected = !options.noOpenclaw && (await isDirectory(workspacePath));
+  const openclawRequested = !options.noOpenclaw && (options.openclaw || workspaceDetected);
   const shouldInitGit = options.initGit ?? true;
+  const openclawDir = resolveUserPath(join(workspacePath, ".."));
 
   const s = spinner();
   s.start("Configuring vault");
@@ -119,6 +125,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   let symlinksCreated = false;
   let workspaceUpdated = false;
   let configPatched = false;
+  let hookInstallStatus: "installed" | "skipped" | "failed" | null = null;
 
   if (workspaceDetected) {
     const symlinkResult = await createAgentSymlinks(vaultPath, workspacePath);
@@ -132,9 +139,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     });
 
     workspaceUpdated = integration.added.length > 0;
+  }
 
-    // Derive OpenClaw home from workspace path (workspace is always <openclaw_dir>/workspace)
-    const openclawDir = join(workspacePath, "..");
+  if (openclawRequested) {
+    hookInstallStatus = await installOpenClawHook(openclawDir);
     configPatched = await patchOpenClawConfig(vaultPath, openclawDir);
   }
 
@@ -177,6 +185,14 @@ export async function runInit(options: InitOptions): Promise<void> {
     console.log("✓ Workspace files updated (AGENTS.md, MEMORY.md, HEARTBEAT.md)");
   }
 
+  if (hookInstallStatus === "installed") {
+    console.log("✓ OpenClaw hook installed (zettelclaw)");
+  } else if (hookInstallStatus === "skipped") {
+    console.log("✓ OpenClaw hook already installed (zettelclaw)");
+  } else if (hookInstallStatus === "failed") {
+    console.log("⚠ Failed to install OpenClaw hook (zettelclaw)");
+  }
+
   if (gitInitialized) {
     console.log("✓ Git repository initialized");
   }
@@ -186,7 +202,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   if (configPatched) {
-    console.log("✓ OpenClaw config patched (memorySearch.extraPaths)");
+    console.log("✓ OpenClaw config patched (memorySearch.extraPaths, hooks.internal)");
+  }
+
+  if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {
     console.log("\n⚠ Restart OpenClaw gateway for the config change to take effect.");
   }
 

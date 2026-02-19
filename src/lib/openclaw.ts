@@ -1,11 +1,12 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { access, cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 
 import { getVaultFolders, type NotesMode } from "./vault";
 
 const AGENTS_MARKER = "zettelclaw-agents";
 const MEMORY_MARKER = "zettelclaw-memory";
 const HEARTBEAT_MARKER = "zettelclaw-heartbeat";
+const HOOK_SOURCE_DIR = resolve(import.meta.dir, "..", "..", "hooks", "zettelclaw");
 
 interface WorkspaceContext {
   vaultPath: string;
@@ -13,6 +14,8 @@ interface WorkspaceContext {
   includeAgent: boolean;
   symlinksEnabled: boolean;
 }
+
+type JsonRecord = Record<string, unknown>;
 
 function section(marker: string, body: string): string {
   return [
@@ -94,26 +97,101 @@ export function gatewayPatchSnippet(vaultPath: string): string {
   ].join("\n");
 }
 
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function asRecord(value: unknown): JsonRecord {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as JsonRecord;
+  }
+
+  return {};
+}
+
+function coerceHookEntry(value: unknown): JsonRecord {
+  if (typeof value === "boolean") {
+    return { enabled: value };
+  }
+
+  return asRecord(value);
+}
+
+export async function installOpenClawHook(openclawDir: string): Promise<"installed" | "skipped" | "failed"> {
+  const hookPath = join(openclawDir, "hooks", "zettelclaw");
+
+  try {
+    if (await pathExists(hookPath)) {
+      return "skipped";
+    }
+
+    if (!(await pathExists(HOOK_SOURCE_DIR))) {
+      return "failed";
+    }
+
+    await mkdir(dirname(hookPath), { recursive: true });
+    await cp(HOOK_SOURCE_DIR, hookPath, { recursive: true });
+    return "installed";
+  } catch {
+    return "failed";
+  }
+}
+
 export async function patchOpenClawConfig(vaultPath: string, openclawDir: string): Promise<boolean> {
   const configPath = join(openclawDir, "openclaw.json");
 
   try {
     const raw = await readFile(configPath, "utf8");
-    const config = JSON.parse(raw);
+    const config = asRecord(JSON.parse(raw));
+    let changed = false;
 
-    if (!config.memorySearch) {
-      config.memorySearch = {};
+    const memorySearch = asRecord(config.memorySearch);
+    config.memorySearch = memorySearch;
+
+    const extraPaths = Array.isArray(memorySearch.extraPaths) ? [...memorySearch.extraPaths] : [];
+    memorySearch.extraPaths = extraPaths;
+
+    if (!extraPaths.includes(vaultPath)) {
+      extraPaths.push(vaultPath);
+      changed = true;
     }
 
-    if (!Array.isArray(config.memorySearch.extraPaths)) {
-      config.memorySearch.extraPaths = [];
+    const hooks = asRecord(config.hooks);
+    config.hooks = hooks;
+
+    const internal = asRecord(hooks.internal);
+    hooks.internal = internal;
+
+    if (internal.enabled !== true) {
+      internal.enabled = true;
+      changed = true;
     }
 
-    if (config.memorySearch.extraPaths.includes(vaultPath)) {
+    const entries = asRecord(internal.entries);
+    internal.entries = entries;
+
+    const zettelclawEntry = coerceHookEntry(entries.zettelclaw);
+    entries.zettelclaw = zettelclawEntry;
+    if (zettelclawEntry.enabled !== true) {
+      zettelclawEntry.enabled = true;
+      changed = true;
+    }
+
+    const sessionMemoryEntry = coerceHookEntry(entries["session-memory"]);
+    entries["session-memory"] = sessionMemoryEntry;
+    if (sessionMemoryEntry.enabled !== false) {
+      sessionMemoryEntry.enabled = false;
+      changed = true;
+    }
+
+    if (!changed) {
       return false;
     }
-
-    config.memorySearch.extraPaths.push(vaultPath);
     await writeFile(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
     return true;
   } catch {

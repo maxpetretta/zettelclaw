@@ -8,6 +8,7 @@
   },
   "files": [
     "src",
+    "hooks",
     "vault",
     "README.md"
   ],
