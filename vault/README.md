@@ -15,4 +15,14 @@ If OpenClaw integration is disabled, `02 Agent/` is omitted and numbering is com
 
 Create your first note in `01 Notes/` using one of the templates. Each note type has its own frontmatter — the templates handle this for you.
 
+## Web Clipper
+
+This vault includes an Obsidian Web Clipper template at `clipper/inbox.json` that clips pages into `00 Inbox/`.
+
+To import it in the Web Clipper extension:
+1. Open extension settings.
+2. Go to `Templates`.
+3. Click `New Template`.
+4. Paste the JSON from `clipper/inbox.json`.
+
 For more, visit [zettelclaw.com](https://zettelclaw.com).

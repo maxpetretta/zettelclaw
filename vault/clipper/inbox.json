@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "Inbox Clip",
+  "behavior": "create",
+  "noteNameFormat": "{{title|safe_name}}",
+  "path": "00 Inbox",
+  "context": "{{selectorHtml:article,main,.post-content,.entry-content,#content|markdown|slice:0,8000|trim}}",
+  "properties": [
+    {"name": "type", "value": "note", "type": "text"},
+    {"name": "source", "value": "{{url}}", "type": "text"},
+    {"name": "tags", "value": "clippings", "type": "text"},
+    {"name": "created", "value": "{{date:YYYY-MM-DD}}", "type": "text"},
+    {"name": "updated", "value": "{{date:YYYY-MM-DD}}", "type": "text"}
+  ],
+  "noteContentFormat": "# {{title}}\n\n{{content}}"
+}

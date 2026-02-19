@@ -27,6 +27,16 @@ npx zettelclaw init --yes --vault ~/my-vault
 - Auto-detects OpenClaw and creates `02 Agent/` symlinks + workspace injection (or compacts numbering when disabled)
 - Sets up frontmatter-driven note types that both humans and AI agents can read/write
 
+## Web Clipper Template
+
+The project ships an Obsidian Web Clipper template at `vault/clipper/inbox.json` that captures clips into `00 Inbox/`.
+
+Import steps in the Web Clipper extension:
+1. Open extension settings.
+2. Go to `Templates`.
+3. Click `New Template`.
+4. Paste the JSON from `vault/clipper/inbox.json`.
+
 ## Links
 
 - [zettelclaw.com](https://zettelclaw.com) (coming soon)
