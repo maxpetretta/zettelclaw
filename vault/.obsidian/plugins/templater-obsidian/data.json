@@ -5,7 +5,7 @@
   "folder_templates": [
     {
       "folder": "03 Journal",
-      "template": "04 Templates/daily.md"
+      "template": "04 Templates/journal.md"
     }
   ]
 }

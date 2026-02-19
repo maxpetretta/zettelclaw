@@ -51,7 +51,7 @@ const AGENT_FILES = [
   "HEARTBEAT.md",
 ] as const;
 
-const TEMPLATE_FILES = ["daily.md", "note.md", "project.md", "research.md", "contact.md", "writing.md"];
+const TEMPLATE_FILES = ["journal.md", "note.md", "project.md", "research.md", "contact.md", "writing.md"];
 
 const FOLDERS_WITH_AGENT: VaultFolders = {
   inbox: "00 Inbox",
@@ -435,7 +435,7 @@ export async function configureApp(
   includeAgent: boolean,
 ): Promise<void> {
   const folders = getVaultFolders(includeAgent);
-  const journalTemplatePath = `${folders.templates}/daily.md`;
+  const journalTemplatePath = `${folders.templates}/journal.md`;
 
   const appPath = join(pathToVault, ".obsidian", "app.json");
   const appConfig = {
@@ -484,10 +484,9 @@ export async function configureApp(
 
       const nextRule = { ...(rule as Record<string, unknown>) };
       const ruleFolder = typeof nextRule.folder === "string" ? nextRule.folder : "";
-      const ruleTemplate = typeof nextRule.template === "string" ? nextRule.template : "";
       const isJournalRule =
-        ruleTemplate.endsWith("/daily.md") ||
-        JOURNAL_FOLDER_ALIASES.includes(ruleFolder);
+        JOURNAL_FOLDER_ALIASES.includes(ruleFolder) ||
+        (typeof nextRule.template === "string" && nextRule.template.endsWith("/journal.md"));
 
       if (isJournalRule) {
         nextRule.folder = folders.journal;

@@ -13,7 +13,7 @@ If OpenClaw integration is disabled, `02 Agent/` is omitted and numbering is com
 
 ## Getting started
 
-Create your first note in `01 Notes/` using one of the templates. Each note type has its own frontmatter — the templates handle this for you.
+Create your first note in `01 Notes/` using one of the templates. The journal template is `04 Templates/journal.md`, and each note type has its own frontmatter.
 
 ## Web Clipper
 
