@@ -1,5 +1,7 @@
 .DS_Store
-Attachments/
-Agent/
+Attachments/*
+!Attachments/.gitkeep
+Agent/*
+!Agent/.gitkeep
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json

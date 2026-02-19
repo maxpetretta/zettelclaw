@@ -1,12 +1,11 @@
-import { cancel, intro, isCancel, log, outro, select, text } from "@clack/prompts";
+import { cancel, intro, isCancel, log, outro, text } from "@clack/prompts";
 
 import { resolveUserPath } from "../lib/paths";
-import { applyVaultTemplate, detectNotesMode, isDirectory, pathExists, type NotesMode } from "../lib/vault";
+import { copyVaultTemplatesOnly, isDirectory, pathExists } from "../lib/vault";
 
 export interface UpgradeOptions {
   yes: boolean;
   vaultPath?: string;
-  mode?: NotesMode;
 }
 
 function unwrapPrompt<T>(value: T | symbol): T {
@@ -28,19 +27,6 @@ async function promptVaultPath(defaultPath: string): Promise<string> {
   );
 }
 
-async function promptMode(defaultMode: NotesMode): Promise<NotesMode> {
-  return unwrapPrompt(
-    await select({
-      message: "Detected note layout",
-      initialValue: defaultMode,
-      options: [
-        { value: "notes", label: "Notes mode" },
-        { value: "root", label: "Root mode" },
-      ],
-    }),
-  ) as NotesMode;
-}
-
 export async function runUpgrade(options: UpgradeOptions): Promise<void> {
   intro("Zettelclaw upgrade");
 
@@ -54,15 +40,9 @@ export async function runUpgrade(options: UpgradeOptions): Promise<void> {
     }
   }
 
-  const detectedMode = options.mode ?? (await detectNotesMode(vaultPath));
-  const mode = options.yes ? detectedMode : await promptMode(detectedMode);
+  const result = await copyVaultTemplatesOnly(vaultPath, false);
 
-  const result = await applyVaultTemplate(vaultPath, {
-    mode,
-    overwrite: false,
-  });
-
-  log.info(`Added ${result.added.length} file(s).`);
-  log.info(`Skipped ${result.skipped.length} existing file(s).`);
-  outro("Upgrade complete. Existing custom files were preserved.");
+  log.info(`Added ${result.added.length} template file(s).`);
+  log.info(`Skipped ${result.skipped.length} existing template file(s).`);
+  outro("Upgrade complete. Existing custom templates were preserved.");
 }

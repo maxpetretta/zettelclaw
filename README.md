@@ -2,7 +2,7 @@
 
 Zettelclaw ships two things in this repository:
 
-- `vault-template/`: a ready-to-open Obsidian vault template.
+- `vault/`: a ready-to-open Obsidian vault template.
 - `zettelclaw` CLI: Bun + TypeScript setup/upgrade tool.
 
 ## Install dependencies

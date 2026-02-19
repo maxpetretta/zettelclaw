@@ -16,12 +16,19 @@ import { join } from "node:path";
 import { appendWorkspaceIntegration, gatewayPatchSnippet } from "../lib/openclaw";
 import { resolveUserPath } from "../lib/paths";
 import {
-  applyVaultTemplate,
+  configureAgentFolder,
+  configureApp,
+  configureCommunityPlugins,
+  configureCoreSync,
+  configureMinimalTheme,
+  configureTemplatesForCommunity,
+  copyVaultSeed,
   createAgentSymlinks,
   directoryHasEntries,
   isDirectory,
   pathExists,
   type NotesMode,
+  type SyncMethod,
 } from "../lib/vault";
 
 export interface InitOptions {
@@ -56,28 +63,59 @@ async function promptVaultPath(defaultPath: string): Promise<string> {
 async function promptMode(defaultMode: NotesMode): Promise<NotesMode> {
   return unwrapPrompt(
     await select({
-      message: "Choose note layout",
+      message: "Note location",
       initialValue: defaultMode,
       options: [
         {
           value: "notes",
-          label: "Notes mode (recommended)",
-          hint: "All notes live in Notes/",
+          label: "Notes/ folder (recommended)",
+          hint: "Default",
         },
         {
           value: "root",
-          label: "Root mode",
-          hint: "Notes live in the vault root",
+          label: "Vault root (Steph Ango style)",
         },
       ],
     }),
   ) as NotesMode;
 }
 
-async function promptBoolean(message: string, defaultValue = false): Promise<boolean> {
+async function promptCommunityPlugins(defaultValue: boolean): Promise<boolean> {
   return unwrapPrompt(
     await confirm({
-      message,
+      message: "Install recommended community plugins? (Templater, Linter, Obsidian Git)",
+      initialValue: defaultValue,
+    }),
+  );
+}
+
+async function promptSyncMethod(defaultMethod: SyncMethod): Promise<SyncMethod> {
+  return unwrapPrompt(
+    await select({
+      message: "How do you want to sync your vault?",
+      initialValue: defaultMethod,
+      options: [
+        {
+          value: "git",
+          label: "Git (via Obsidian Git plugin) (recommended)",
+        },
+        {
+          value: "obsidian-sync",
+          label: "Obsidian Sync",
+        },
+        {
+          value: "none",
+          label: "None",
+        },
+      ],
+    }),
+  ) as SyncMethod;
+}
+
+async function promptAgentSymlinks(defaultValue: boolean): Promise<boolean> {
+  return unwrapPrompt(
+    await confirm({
+      message: "Create Agent/ folder with symlinks to OpenClaw workspace? (recommended)",
       initialValue: defaultValue,
     }),
   );
@@ -93,6 +131,33 @@ async function promptWorkspacePath(defaultPath: string): Promise<string> {
   );
 }
 
+async function promptMinimalTheme(defaultValue: boolean): Promise<boolean> {
+  return unwrapPrompt(
+    await confirm({
+      message: "Install Minimal theme with recommended settings?",
+      initialValue: defaultValue,
+    }),
+  );
+}
+
+async function promptGitInit(defaultValue: boolean): Promise<boolean> {
+  return unwrapPrompt(
+    await confirm({
+      message: "Initialize a git repository?",
+      initialValue: defaultValue,
+    }),
+  );
+}
+
+async function promptOpenClawIntegration(defaultValue: boolean): Promise<boolean> {
+  return unwrapPrompt(
+    await confirm({
+      message: "Append Zettelclaw instructions to OpenClaw workspace files? (recommended for OpenClaw users)",
+      initialValue: defaultValue,
+    }),
+  );
+}
+
 function normalizeMode(input: string | undefined): NotesMode | undefined {
   if (!input) {
     return undefined;
@@ -102,14 +167,18 @@ function normalizeMode(input: string | undefined): NotesMode | undefined {
 }
 
 export async function runInit(options: InitOptions): Promise<void> {
-  intro(`Zettelclaw init${options.openclaw ? " --openclaw" : ""}`);
+  intro("Zettelclaw init");
 
   const defaults = {
     vaultPath: process.cwd(),
     mode: normalizeMode(options.mode) ?? "notes",
-    workspacePath: "~/.openclaw/workspace",
-    createSymlinks: options.createSymlinks ?? false,
-    initGit: options.initGit ?? false,
+    useCommunityPlugins: true,
+    syncMethod: "git" as SyncMethod,
+    createSymlinks: options.createSymlinks ?? true,
+    workspacePath: options.workspacePath ?? "~/.openclaw/workspace",
+    minimalTheme: false,
+    initGit: options.initGit ?? true,
+    openclawIntegration: options.openclaw,
   };
 
   const rawVaultPath =
@@ -123,10 +192,13 @@ export async function runInit(options: InitOptions): Promise<void> {
 
     const hasEntries = await directoryHasEntries(vaultPath);
     if (hasEntries && !options.yes) {
-      const shouldContinue = await promptBoolean(
-        "Vault path is not empty. Continue without overwriting existing files?",
-        false,
+      const shouldContinue = unwrapPrompt(
+        await confirm({
+          message: "Vault path is not empty. Continue without overwriting existing files?",
+          initialValue: false,
+        }),
       );
+
       if (!shouldContinue) {
         cancel("Cancelled.");
         process.exit(0);
@@ -136,37 +208,78 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   const mode = options.mode ?? (options.yes ? defaults.mode : await promptMode(defaults.mode));
 
+  const useCommunityPlugins = options.yes
+    ? defaults.useCommunityPlugins
+    : await promptCommunityPlugins(defaults.useCommunityPlugins);
+
+  const syncMethod = useCommunityPlugins
+    ? options.yes
+      ? defaults.syncMethod
+      : await promptSyncMethod(defaults.syncMethod)
+    : "none";
+
   const createSymlinks =
     options.createSymlinks ??
-    (options.yes ? defaults.createSymlinks : await promptBoolean("Create Agent/ symlinks?", false));
+    (options.yes ? defaults.createSymlinks : await promptAgentSymlinks(defaults.createSymlinks));
 
-  const needsWorkspace = options.openclaw || createSymlinks;
-  const rawWorkspacePath =
-    options.workspacePath ??
-    (needsWorkspace
-      ? options.yes
-        ? defaults.workspacePath
-        : await promptWorkspacePath(defaults.workspacePath)
-      : undefined);
-  const workspacePath = rawWorkspacePath ? resolveUserPath(rawWorkspacePath) : undefined;
+  let workspacePath: string | undefined;
 
-  const initGit =
-    options.initGit ?? (options.yes ? defaults.initGit : await promptBoolean("Initialize git repo?", false));
+  if (createSymlinks) {
+    const rawWorkspacePath = options.yes
+      ? defaults.workspacePath
+      : await promptWorkspacePath(defaults.workspacePath);
+    workspacePath = resolveUserPath(rawWorkspacePath);
+  }
+
+  const minimalTheme = options.yes ? defaults.minimalTheme : await promptMinimalTheme(defaults.minimalTheme);
+
+  if (minimalTheme && !useCommunityPlugins) {
+    log.warn(
+      "Community plugins are disabled. Minimal theme will be configured, but minimal-settings and hider plugins will not be installed.",
+    );
+  }
+
+  const initGit = options.initGit ?? (options.yes ? defaults.initGit : await promptGitInit(defaults.initGit));
+
+  const openclawIntegration = options.yes
+    ? defaults.openclawIntegration
+    : await promptOpenClawIntegration(defaults.openclawIntegration);
+
+  if (openclawIntegration && !workspacePath) {
+    const rawWorkspacePath = options.yes
+      ? defaults.workspacePath
+      : await promptWorkspacePath(defaults.workspacePath);
+    workspacePath = resolveUserPath(rawWorkspacePath);
+  }
 
   const s = spinner();
-  s.start("Applying vault template");
-  const templateResult = await applyVaultTemplate(vaultPath, { mode, overwrite: false });
-  s.stop(`Vault ready at ${vaultPath}`);
+  s.start("Copying vault template and applying setup choices");
 
-  log.info(`Added ${templateResult.added.length} template file(s), skipped ${templateResult.skipped.length}.`);
+  const templateResult = await copyVaultSeed(vaultPath, { mode, overwrite: false });
+
+  await configureApp(vaultPath, mode);
+  await configureCoreSync(vaultPath, syncMethod);
+  await configureCommunityPlugins(vaultPath, {
+    enabled: useCommunityPlugins,
+    includeGit: syncMethod === "git",
+    includeMinimalThemeTools: useCommunityPlugins && minimalTheme,
+  });
+  await configureTemplatesForCommunity(vaultPath, useCommunityPlugins);
+  await configureMinimalTheme(vaultPath, minimalTheme);
 
   if (createSymlinks && workspacePath) {
     const symlinkResult = await createAgentSymlinks(vaultPath, workspacePath);
     log.info(`Agent symlinks: created ${symlinkResult.added.length}, skipped ${symlinkResult.skipped.length}.`);
+  } else {
+    await configureAgentFolder(vaultPath, false);
   }
+
+  s.stop(`Vault ready at ${vaultPath}`);
+  log.info(`Added ${templateResult.added.length} file(s), skipped ${templateResult.skipped.length}.`);
 
   if (initGit) {
     const gitDir = join(vaultPath, ".git");
+
     if (await pathExists(gitDir)) {
       log.info("Git repo already exists; skipping init.");
     } else {
@@ -183,9 +296,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     }
   }
 
-  if (options.openclaw) {
+  if (openclawIntegration) {
     if (!workspacePath) {
-      throw new Error("Workspace path is required for --openclaw.");
+      throw new Error("Workspace path is required when OpenClaw integration is enabled.");
     }
 
     const integration = await appendWorkspaceIntegration(workspacePath, {
@@ -204,5 +317,5 @@ export async function runInit(options: InitOptions): Promise<void> {
     );
   }
 
-  outro(`Done. Use \`bun run src/index.ts upgrade\` later to add any new defaults without overwriting edits.`);
+  outro("Done. Use `bun run src/index.ts upgrade` later to add new defaults without overwriting edits.");
 }

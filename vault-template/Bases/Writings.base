@@ -1,9 +1,0 @@
-{
-  "name": "Writings",
-  "description": "Writing notes including publish status.",
-  "query": {
-    "where": "type = 'writing'",
-    "sort": [{ "field": "updated", "direction": "desc" }]
-  },
-  "columns": ["file", "summary", "published", "updated"]
-}

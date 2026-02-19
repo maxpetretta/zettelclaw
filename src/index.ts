@@ -25,7 +25,10 @@ function usage(): string {
     "",
     "Commands:",
     "  zettelclaw init [--openclaw] [--yes] [--vault <path>] [--mode notes|root] [--symlinks|--no-symlinks] [--workspace <path>] [--git|--no-git]",
-    "  zettelclaw upgrade [--yes] [--vault <path>] [--mode notes|root]",
+    "  zettelclaw upgrade [--yes] [--vault <path>]",
+    "",
+    "Flags:",
+    "  --openclaw  Set the OpenClaw integration prompt default to yes",
   ].join("\n");
 }
 
@@ -167,7 +170,6 @@ async function main(): Promise<void> {
     await runUpgrade({
       yes: parsed.flags.yes,
       vaultPath: parsed.flags.vaultPath,
-      mode: parsed.flags.mode,
     });
     return;
   }
