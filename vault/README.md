@@ -1,7 +1,12 @@
-# Zettelclaw Vault Template
+# Welcome To Your Zettelclaw Vault
 
-## Quickstart
+This vault is set up for fast capture and human+agent collaboration.
 
-1. Clone this repository.
-2. Open `vault/` in Obsidian as a vault.
-3. Start capturing notes.
+- `Inbox/` for quick captures and triage
+- `Daily/` for daily notes
+- `Notes/` for your durable knowledge notes
+- `Templates/` for reusable note templates
+
+Tip: create your first note in `Notes/` and link as you go.
+
+Docs: https://zettelclaw.com

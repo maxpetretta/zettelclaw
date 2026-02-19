@@ -21,18 +21,24 @@ interface ParsedArgs {
 
 function usage(): string {
   return [
-    "zettelclaw",
+    "zettelclaw — A human+agent knowledge system built on Obsidian and OpenClaw",
     "",
-    "Commands:",
-    "  zettelclaw init [--yes] [--vault <path>] [--workspace <path>] [--root] [--minimal] [--no-git] [--no-openclaw] [--openclaw]",
-    "  zettelclaw upgrade [--yes] [--vault <path>]",
+    "Usage:",
+    "  zettelclaw init [options]     Set up a new Zettelclaw vault",
+    "  zettelclaw upgrade [options]  Add new templates to an existing vault",
     "",
-    "Flags:",
-    "  --root          Use vault root for new notes",
-    "  --minimal       Install Minimal theme and companion plugins",
-    "  --no-git        Skip git initialization",
-    "  --no-openclaw   Skip OpenClaw workspace detection/injection",
-    "  --openclaw      Backward-compatible no-op",
+    "Init options:",
+    "  --vault <path>      Set vault path (default: current directory)",
+    "  --workspace <path>  Override OpenClaw workspace path (default: ~/.openclaw/workspace)",
+    "  --yes               Accept all defaults non-interactively",
+    "  --root              Use root mode (notes in vault root instead of Notes/)",
+    "  --minimal           Install Minimal theme with Minimal Settings and Hider",
+    "  --no-git            Skip git repository initialization",
+    "  --no-openclaw       Skip OpenClaw workspace detection and injection",
+    "",
+    "Upgrade options:",
+    "  --vault <path>      Vault path (default: current directory)",
+    "  --yes               Accept all defaults",
   ].join("\n");
 }
 

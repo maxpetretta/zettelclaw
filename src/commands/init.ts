@@ -160,9 +160,11 @@ export async function runInit(options: InitOptions): Promise<void> {
     console.log("✓ Minimal theme installed");
   }
 
-  console.log("\nℹ Add this to your OpenClaw gateway config:");
-  for (const line of gatewayPatchSnippet(vaultPath).split("\n")) {
-    console.log(`  ${line}`);
+  if (!options.noOpenclaw) {
+    console.log("\nℹ Add this to your OpenClaw gateway config:");
+    for (const line of gatewayPatchSnippet(vaultPath).split("\n")) {
+      console.log(`  ${line}`);
+    }
   }
 
   console.log("\nDone! Open it in Obsidian to get started.");

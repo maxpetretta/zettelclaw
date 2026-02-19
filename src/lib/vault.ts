@@ -202,6 +202,9 @@ export async function createAgentSymlinks(
     result.added.push(`Agent/${file}`);
   }
 
+  // Once real symlinks are present, the placeholder keeper is unnecessary.
+  await removePathIfExists(join(agentDir, ".gitkeep"));
+
   return result;
 }
 

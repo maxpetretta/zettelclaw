@@ -1,31 +1,29 @@
-# zettelclaw
+# Zettelclaw 🦞
 
-Zettelclaw ships two things in this repository:
+A human+agent knowledge system built on Obsidian and OpenClaw
 
-- `vault/`: a ready-to-open Obsidian vault template.
-- `zettelclaw` CLI: Bun + TypeScript setup/upgrade tool.
+## Quick Start
 
-## Install dependencies
-
-```bash
-bun install
-```
-
-## Run the CLI locally
+Run directly without installing:
 
 ```bash
-bun run src/index.ts init
-bun run src/index.ts init --openclaw
-bun run src/index.ts upgrade
+npx zettelclaw init
+# or
+bunx zettelclaw init
 ```
 
-`init` now prompts for only:
-- vault path
-- sync method (Git, Obsidian Sync, None)
+## What It Does
 
-Everything else is defaulted or controlled by flags such as `--root`, `--minimal`, `--no-git`, and `--no-openclaw`.
+`zettelclaw init` scaffolds an Obsidian vault designed for dual human+agent authorship:
 
-## Binary metadata
+- opinionated folder structure and templates
+- Obsidian configuration for fast capture and retrieval
+- optional OpenClaw workspace linkage and instructions
 
-- Package name: `zettelclaw`
-- Binary name: `zettelclaw`
+## Website
+
+Docs and guides: https://zettelclaw.com (coming soon)
+
+## License
+
+MIT
