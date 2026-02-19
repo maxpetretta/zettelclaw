@@ -4,7 +4,6 @@ import { log } from "@clack/prompts";
 
 import { runInit } from "./commands/init";
 import { runUpgrade } from "./commands/upgrade";
-import type { NotesMode } from "./lib/vault";
 
 interface ParsedArgs {
   command?: string;
@@ -12,8 +11,9 @@ interface ParsedArgs {
     openclaw: boolean;
     yes: boolean;
     vaultPath?: string;
-    mode?: NotesMode;
-    createSymlinks?: boolean;
+    root: boolean;
+    minimal: boolean;
+    noOpenclaw: boolean;
     workspacePath?: string;
     initGit?: boolean;
   };
@@ -24,11 +24,15 @@ function usage(): string {
     "zettelclaw",
     "",
     "Commands:",
-    "  zettelclaw init [--openclaw] [--yes] [--vault <path>] [--mode notes|root] [--symlinks|--no-symlinks] [--workspace <path>] [--git|--no-git]",
+    "  zettelclaw init [--yes] [--vault <path>] [--workspace <path>] [--root] [--minimal] [--no-git] [--no-openclaw] [--openclaw]",
     "  zettelclaw upgrade [--yes] [--vault <path>]",
     "",
     "Flags:",
-    "  --openclaw  Set the OpenClaw integration prompt default to yes",
+    "  --root          Use vault root for new notes",
+    "  --minimal       Install Minimal theme and companion plugins",
+    "  --no-git        Skip git initialization",
+    "  --no-openclaw   Skip OpenClaw workspace detection/injection",
+    "  --openclaw      Backward-compatible no-op",
   ].join("\n");
 }
 
@@ -36,14 +40,6 @@ function takeValue(args: string[], index: number, key: string): string {
   const value = args[index + 1];
   if (!value || value.startsWith("--")) {
     throw new Error(`Missing value for ${key}`);
-  }
-
-  return value;
-}
-
-function parseMode(value: string): NotesMode {
-  if (value !== "notes" && value !== "root") {
-    throw new Error(`Invalid mode: ${value}. Expected notes or root.`);
   }
 
   return value;
@@ -57,6 +53,10 @@ function parseArgs(argv: string[]): ParsedArgs {
     flags: {
       openclaw: false,
       yes: false,
+      root: false,
+      minimal: false,
+      noOpenclaw: false,
+      initGit: true,
     },
   };
 
@@ -86,13 +86,13 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
 
-    if (arg === "--symlinks") {
-      parsed.flags.createSymlinks = true;
+    if (arg === "--root") {
+      parsed.flags.root = true;
       continue;
     }
 
-    if (arg === "--no-symlinks") {
-      parsed.flags.createSymlinks = false;
+    if (arg === "--minimal") {
+      parsed.flags.minimal = true;
       continue;
     }
 
@@ -103,6 +103,11 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     if (arg === "--no-git") {
       parsed.flags.initGit = false;
+      continue;
+    }
+
+    if (arg === "--no-openclaw") {
+      parsed.flags.noOpenclaw = true;
       continue;
     }
 
@@ -128,17 +133,6 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
 
-    if (arg.startsWith("--mode=")) {
-      parsed.flags.mode = parseMode(arg.slice("--mode=".length));
-      continue;
-    }
-
-    if (arg === "--mode") {
-      parsed.flags.mode = parseMode(takeValue(rest, index, "--mode"));
-      index += 1;
-      continue;
-    }
-
     throw new Error(`Unknown argument: ${arg}`);
   }
 
@@ -158,8 +152,9 @@ async function main(): Promise<void> {
       openclaw: parsed.flags.openclaw,
       yes: parsed.flags.yes,
       vaultPath: parsed.flags.vaultPath,
-      mode: parsed.flags.mode,
-      createSymlinks: parsed.flags.createSymlinks,
+      root: parsed.flags.root,
+      minimal: parsed.flags.minimal,
+      noOpenclaw: parsed.flags.noOpenclaw,
       workspacePath: parsed.flags.workspacePath,
       initGit: parsed.flags.initGit,
     });
