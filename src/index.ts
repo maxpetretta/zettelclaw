@@ -31,7 +31,7 @@ function usage(): string {
     "  --vault <path>      Set vault path (default: current directory)",
     "  --workspace <path>  Override OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --yes               Accept all defaults non-interactively",
-    "  --root              Use root mode (notes in vault root instead of Notes/)",
+    "  --root              Use root mode (notes in vault root instead of 01 Notes/)",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",
     "  --no-git            Skip git repository initialization",
     "  --no-openclaw       Skip OpenClaw workspace detection and injection",

@@ -3,6 +3,7 @@ import {
   copyFile,
   lstat,
   mkdir,
+  rename,
   readdir,
   readFile,
   readlink,
@@ -23,10 +24,20 @@ export interface CopyResult {
 export interface CopyVaultOptions {
   mode: NotesMode;
   overwrite: boolean;
+  includeAgent: boolean;
 }
 
 interface CorePlugins {
   [pluginId: string]: boolean;
+}
+
+export interface VaultFolders {
+  inbox: string;
+  notes: string;
+  journal: string;
+  agent: string;
+  templates: string;
+  attachments: string;
 }
 
 const TEMPLATE_ROOT = resolve(import.meta.dir, "..", "..", "vault");
@@ -41,6 +52,52 @@ const AGENT_FILES = [
 ] as const;
 
 const TEMPLATE_FILES = ["daily.md", "note.md", "project.md", "research.md", "contact.md", "writing.md"];
+
+const FOLDERS_WITH_AGENT: VaultFolders = {
+  inbox: "00 Inbox",
+  notes: "01 Notes",
+  journal: "03 Journal",
+  agent: "02 Agent",
+  templates: "04 Templates",
+  attachments: "05 Attachments",
+};
+
+const FOLDERS_WITHOUT_AGENT: VaultFolders = {
+  inbox: "00 Inbox",
+  notes: "01 Notes",
+  journal: "02 Journal",
+  agent: "02 Agent",
+  templates: "03 Templates",
+  attachments: "04 Attachments",
+};
+
+const LEGACY_FOLDERS: VaultFolders = {
+  inbox: "Inbox",
+  notes: "Notes",
+  journal: "Daily",
+  agent: "Agent",
+  templates: "Templates",
+  attachments: "Attachments",
+};
+
+const TEMPLATE_PATH_PREFIX = /^(?:\d{2} )?Templates\//;
+const JOURNAL_FOLDER_ALIASES: readonly string[] = [
+  FOLDERS_WITH_AGENT.journal,
+  FOLDERS_WITHOUT_AGENT.journal,
+  "02 Daily",
+  "03 Daily",
+  "Daily",
+  "Journal",
+] as const;
+const AGENT_FOLDER_ALIASES: readonly string[] = [
+  FOLDERS_WITH_AGENT.agent,
+  "03 Agent",
+  LEGACY_FOLDERS.agent,
+] as const;
+
+export function getVaultFolders(includeAgent: boolean): VaultFolders {
+  return includeAgent ? FOLDERS_WITH_AGENT : FOLDERS_WITHOUT_AGENT;
+}
 
 export async function pathExists(path: string): Promise<boolean> {
   try {
@@ -85,12 +142,102 @@ async function walkFiles(baseDir: string, relativeDir = ""): Promise<string[]> {
   return files;
 }
 
-function shouldSkipForMode(relativePath: string, mode: NotesMode): boolean {
-  if (mode !== "root") {
-    return false;
+function pathIsInsideFolder(relativePath: string, folder: string): boolean {
+  return relativePath === folder || relativePath.startsWith(`${folder}/`);
+}
+
+function remapSeedPath(relativePath: string, options: CopyVaultOptions): string | null {
+  let mapped = relativePath;
+
+  if (options.mode === "root" && pathIsInsideFolder(mapped, FOLDERS_WITH_AGENT.notes)) {
+    return null;
   }
 
-  return relativePath === "Notes/.gitkeep" || relativePath.startsWith("Notes/");
+  if (!options.includeAgent) {
+    if (pathIsInsideFolder(mapped, FOLDERS_WITH_AGENT.agent)) {
+      return null;
+    }
+
+    if (mapped.startsWith(`${FOLDERS_WITH_AGENT.journal}/`)) {
+      mapped = mapped.replace(
+        `${FOLDERS_WITH_AGENT.journal}/`,
+        `${FOLDERS_WITHOUT_AGENT.journal}/`,
+      );
+    }
+
+    if (mapped.startsWith(`${FOLDERS_WITH_AGENT.templates}/`)) {
+      mapped = mapped.replace(
+        `${FOLDERS_WITH_AGENT.templates}/`,
+        `${FOLDERS_WITHOUT_AGENT.templates}/`,
+      );
+    }
+
+    if (mapped.startsWith(`${FOLDERS_WITH_AGENT.attachments}/`)) {
+      mapped = mapped.replace(
+        `${FOLDERS_WITH_AGENT.attachments}/`,
+        `${FOLDERS_WITHOUT_AGENT.attachments}/`,
+      );
+    }
+  }
+
+  return mapped;
+}
+
+async function detectTemplatesFolderName(vaultPath: string): Promise<string> {
+  for (const folder of [
+    FOLDERS_WITH_AGENT.templates,
+    FOLDERS_WITHOUT_AGENT.templates,
+    LEGACY_FOLDERS.templates,
+  ]) {
+    if (await pathExists(join(vaultPath, folder))) {
+      return folder;
+    }
+  }
+
+  return FOLDERS_WITH_AGENT.templates;
+}
+
+async function moveFolderIfPossible(
+  vaultPath: string,
+  sourceFolder: string,
+  destinationFolder: string,
+): Promise<void> {
+  const sourcePath = join(vaultPath, sourceFolder);
+  const destinationPath = join(vaultPath, destinationFolder);
+
+  if (!(await pathExists(sourcePath))) {
+    return;
+  }
+
+  if (await pathExists(destinationPath)) {
+    return;
+  }
+
+  await rename(sourcePath, destinationPath);
+}
+
+async function moveFirstAliasToCanonical(
+  vaultPath: string,
+  canonicalFolder: string,
+  aliasFolders: readonly string[],
+): Promise<void> {
+  const canonicalPath = join(vaultPath, canonicalFolder);
+
+  if (await pathExists(canonicalPath)) {
+    return;
+  }
+
+  for (const alias of aliasFolders) {
+    if (alias === canonicalFolder) {
+      continue;
+    }
+
+    const aliasPath = join(vaultPath, alias);
+    if (await pathExists(aliasPath)) {
+      await rename(aliasPath, canonicalPath);
+      return;
+    }
+  }
 }
 
 export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions): Promise<CopyResult> {
@@ -103,24 +250,26 @@ export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions
   };
 
   for (const relativePath of files) {
-    if (shouldSkipForMode(relativePath, options.mode)) {
+    const mappedRelativePath = remapSeedPath(relativePath, options);
+
+    if (!mappedRelativePath) {
       continue;
     }
 
     const source = join(TEMPLATE_ROOT, relativePath);
-    const destination = join(vaultPath, relativePath);
+    const destination = join(vaultPath, mappedRelativePath);
 
     await mkdir(dirname(destination), { recursive: true });
 
     const exists = await pathExists(destination);
 
     if (exists && !options.overwrite) {
-      result.skipped.push(relativePath);
+      result.skipped.push(mappedRelativePath);
       continue;
     }
 
     await copyFile(source, destination);
-    result.added.push(relativePath);
+    result.added.push(mappedRelativePath);
   }
 
   return result;
@@ -129,34 +278,40 @@ export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions
 export async function copyVaultTemplatesOnly(vaultPath: string, overwrite: boolean): Promise<CopyResult> {
   await mkdir(vaultPath, { recursive: true });
 
-  const templateFiles = await walkFiles(join(TEMPLATE_ROOT, "Templates"));
+  const sourceTemplatesFolder = FOLDERS_WITH_AGENT.templates;
+  const destinationTemplatesFolder = await detectTemplatesFolderName(vaultPath);
+  const templateFiles = await walkFiles(join(TEMPLATE_ROOT, sourceTemplatesFolder));
   const result: CopyResult = {
     added: [],
     skipped: [],
   };
 
   for (const relativePath of templateFiles) {
-    const source = join(TEMPLATE_ROOT, "Templates", relativePath);
-    const destination = join(vaultPath, "Templates", relativePath);
+    const source = join(TEMPLATE_ROOT, sourceTemplatesFolder, relativePath);
+    const destination = join(vaultPath, destinationTemplatesFolder, relativePath);
 
     await mkdir(dirname(destination), { recursive: true });
 
     const exists = await pathExists(destination);
 
     if (exists && !overwrite) {
-      result.skipped.push(join("Templates", relativePath));
+      result.skipped.push(join(destinationTemplatesFolder, relativePath));
       continue;
     }
 
     await copyFile(source, destination);
-    result.added.push(join("Templates", relativePath));
+    result.added.push(join(destinationTemplatesFolder, relativePath));
   }
 
   return result;
 }
 
 export async function detectNotesMode(vaultPath: string): Promise<NotesMode> {
-  if (await pathExists(join(vaultPath, "Notes"))) {
+  if (await pathExists(join(vaultPath, FOLDERS_WITH_AGENT.notes))) {
+    return "notes";
+  }
+
+  if (await pathExists(join(vaultPath, LEGACY_FOLDERS.notes))) {
     return "notes";
   }
 
@@ -171,7 +326,8 @@ export async function createAgentSymlinks(
   vaultPath: string,
   workspacePath: string,
 ): Promise<CopyResult> {
-  const agentDir = join(vaultPath, "Agent");
+  const agentFolder = FOLDERS_WITH_AGENT.agent;
+  const agentDir = join(vaultPath, agentFolder);
   await mkdir(agentDir, { recursive: true });
 
   const result: CopyResult = {
@@ -189,17 +345,17 @@ export async function createAgentSymlinks(
       if (stats.isSymbolicLink()) {
         const existingTarget = await readlink(linkPath);
         if (existingTarget === targetPath) {
-          result.skipped.push(`Agent/${file}`);
+          result.skipped.push(`${agentFolder}/${file}`);
           continue;
         }
       }
 
-      result.skipped.push(`Agent/${file}`);
+      result.skipped.push(`${agentFolder}/${file}`);
       continue;
     }
 
     await symlink(targetPath, linkPath);
-    result.added.push(`Agent/${file}`);
+    result.added.push(`${agentFolder}/${file}`);
   }
 
   // Once real symlinks are present, the placeholder keeper is unnecessary.
@@ -209,9 +365,29 @@ export async function createAgentSymlinks(
 }
 
 export async function configureAgentFolder(vaultPath: string, enabled: boolean): Promise<void> {
-  if (!enabled) {
-    await removePathIfExists(join(vaultPath, "Agent"));
+  await moveFolderIfPossible(vaultPath, LEGACY_FOLDERS.inbox, FOLDERS_WITH_AGENT.inbox);
+  await moveFolderIfPossible(vaultPath, LEGACY_FOLDERS.notes, FOLDERS_WITH_AGENT.notes);
+
+  if (enabled) {
+    await moveFirstAliasToCanonical(vaultPath, FOLDERS_WITH_AGENT.journal, JOURNAL_FOLDER_ALIASES);
+    await moveFirstAliasToCanonical(vaultPath, FOLDERS_WITH_AGENT.agent, AGENT_FOLDER_ALIASES);
+    await moveFolderIfPossible(vaultPath, LEGACY_FOLDERS.templates, FOLDERS_WITH_AGENT.templates);
+    await moveFolderIfPossible(vaultPath, FOLDERS_WITHOUT_AGENT.templates, FOLDERS_WITH_AGENT.templates);
+    await moveFolderIfPossible(vaultPath, LEGACY_FOLDERS.attachments, FOLDERS_WITH_AGENT.attachments);
+    await moveFolderIfPossible(vaultPath, FOLDERS_WITHOUT_AGENT.attachments, FOLDERS_WITH_AGENT.attachments);
+    await mkdir(join(vaultPath, FOLDERS_WITH_AGENT.agent), { recursive: true });
+    return;
   }
+
+  for (const agentFolder of AGENT_FOLDER_ALIASES) {
+    await removePathIfExists(join(vaultPath, agentFolder));
+  }
+
+  await moveFirstAliasToCanonical(vaultPath, FOLDERS_WITHOUT_AGENT.journal, JOURNAL_FOLDER_ALIASES);
+  await moveFolderIfPossible(vaultPath, LEGACY_FOLDERS.templates, FOLDERS_WITHOUT_AGENT.templates);
+  await moveFolderIfPossible(vaultPath, FOLDERS_WITH_AGENT.templates, FOLDERS_WITHOUT_AGENT.templates);
+  await moveFolderIfPossible(vaultPath, LEGACY_FOLDERS.attachments, FOLDERS_WITHOUT_AGENT.attachments);
+  await moveFolderIfPossible(vaultPath, FOLDERS_WITH_AGENT.attachments, FOLDERS_WITHOUT_AGENT.attachments);
 }
 
 async function readJsonFile<T>(path: string): Promise<T> {
@@ -219,20 +395,127 @@ async function readJsonFile<T>(path: string): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
+async function readJsonFileOrDefault<T>(path: string, fallback: T): Promise<T> {
+  try {
+    return await readJsonFile<T>(path);
+  } catch {
+    return fallback;
+  }
+}
+
 async function writeJsonFile(path: string, value: unknown): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-export async function configureApp(pathToVault: string, mode: NotesMode): Promise<void> {
+function rewriteTemplatePaths(value: unknown, templatesFolder: string): unknown {
+  if (typeof value === "string") {
+    return value.replace(TEMPLATE_PATH_PREFIX, `${templatesFolder}/`);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => rewriteTemplatePaths(entry, templatesFolder));
+  }
+
+  if (value && typeof value === "object") {
+    const next: Record<string, unknown> = {};
+    for (const [key, nested] of Object.entries(value)) {
+      next[key] = rewriteTemplatePaths(nested, templatesFolder);
+    }
+
+    return next;
+  }
+
+  return value;
+}
+
+export async function configureApp(
+  pathToVault: string,
+  mode: NotesMode,
+  includeAgent: boolean,
+): Promise<void> {
+  const folders = getVaultFolders(includeAgent);
+  const journalTemplatePath = `${folders.templates}/daily.md`;
+
   const appPath = join(pathToVault, ".obsidian", "app.json");
   const appConfig = {
-    attachmentFolderPath: "Attachments",
+    attachmentFolderPath: folders.attachments,
     newFileLocation: "folder",
-    newFileFolderPath: mode === "notes" ? "Notes" : "",
+    newFileFolderPath: mode === "notes" ? folders.notes : "",
   };
 
   await writeJsonFile(appPath, appConfig);
+
+  const dailyNotesPath = join(pathToVault, ".obsidian", "daily-notes.json");
+  const dailyNotesConfig = await readJsonFileOrDefault<Record<string, unknown>>(dailyNotesPath, {});
+  dailyNotesConfig.folder = folders.journal;
+  dailyNotesConfig.template = journalTemplatePath;
+
+  if (typeof dailyNotesConfig.format !== "string") {
+    dailyNotesConfig.format = "YYYY-MM-DD";
+  }
+
+  await writeJsonFile(dailyNotesPath, dailyNotesConfig);
+
+  const templatesPath = join(pathToVault, ".obsidian", "templates.json");
+  const templatesConfig = await readJsonFileOrDefault<Record<string, unknown>>(templatesPath, {});
+  templatesConfig.folder = folders.templates;
+  await writeJsonFile(templatesPath, templatesConfig);
+
+  const templaterPath = join(pathToVault, ".obsidian", "plugins", "templater-obsidian", "data.json");
+
+  if (await pathExists(templaterPath)) {
+    const templaterConfig = await readJsonFileOrDefault<Record<string, unknown>>(templaterPath, {});
+    templaterConfig.templates_folder = folders.templates;
+    templaterConfig.trigger_on_file_creation = true;
+    templaterConfig.enable_folder_templates = true;
+
+    const rawRules = Array.isArray(templaterConfig.folder_templates)
+      ? templaterConfig.folder_templates
+      : [];
+    const normalizedRules: unknown[] = [];
+    let journalRuleSet = false;
+
+    for (const rule of rawRules) {
+      if (!rule || typeof rule !== "object") {
+        normalizedRules.push(rule);
+        continue;
+      }
+
+      const nextRule = { ...(rule as Record<string, unknown>) };
+      const ruleFolder = typeof nextRule.folder === "string" ? nextRule.folder : "";
+      const ruleTemplate = typeof nextRule.template === "string" ? nextRule.template : "";
+      const isJournalRule =
+        ruleTemplate.endsWith("/daily.md") ||
+        JOURNAL_FOLDER_ALIASES.includes(ruleFolder);
+
+      if (isJournalRule) {
+        nextRule.folder = folders.journal;
+        nextRule.template = journalTemplatePath;
+        journalRuleSet = true;
+      }
+
+      normalizedRules.push(nextRule);
+    }
+
+    if (!journalRuleSet) {
+      normalizedRules.push({
+        folder: folders.journal,
+        template: journalTemplatePath,
+      });
+    }
+
+    templaterConfig.folder_templates = normalizedRules;
+    await writeJsonFile(templaterPath, templaterConfig);
+  }
+
+  const workspacePath = join(pathToVault, ".obsidian", "workspace.json");
+
+  if (await pathExists(workspacePath)) {
+    const workspace = await readJsonFileOrDefault<unknown>(workspacePath, {});
+    const nextWorkspace = rewriteTemplatePaths(workspace, folders.templates);
+    await writeJsonFile(workspacePath, nextWorkspace);
+  }
 }
 
 export async function configureCoreSync(pathToVault: string, method: SyncMethod): Promise<void> {
@@ -331,8 +614,10 @@ export async function configureTemplatesForCommunity(pathToVault: string, enable
     return;
   }
 
+  const templatesFolder = await detectTemplatesFolderName(pathToVault);
+
   for (const templateFile of TEMPLATE_FILES) {
-    const templatePath = join(pathToVault, "Templates", templateFile);
+    const templatePath = join(pathToVault, templatesFolder, templateFile);
     const existing = await readFile(templatePath, "utf8");
     const next = stripTemplaterSyntax(existing);
     await writeFile(templatePath, next, "utf8");

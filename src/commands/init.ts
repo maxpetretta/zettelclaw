@@ -14,6 +14,7 @@ import {
   configureTemplatesForCommunity,
   copyVaultSeed,
   createAgentSymlinks,
+  getVaultFolders,
   isDirectory,
   pathExists,
   type NotesMode,
@@ -98,8 +99,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   const s = spinner();
   s.start("Configuring vault");
 
-  await copyVaultSeed(vaultPath, { mode, overwrite: false });
-  await configureApp(vaultPath, mode);
+  await configureAgentFolder(vaultPath, workspaceDetected);
+  await copyVaultSeed(vaultPath, { mode, overwrite: false, includeAgent: workspaceDetected });
   await configureCoreSync(vaultPath, syncMethod);
   await configureCommunityPlugins(vaultPath, {
     enabled: true,
@@ -126,6 +127,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     const integration = await appendWorkspaceIntegration(workspacePath, {
       vaultPath,
       notesMode: mode,
+      includeAgent: true,
       symlinksEnabled: symlinkResult.added.length > 0 || symlinkResult.skipped.length > 0,
     });
 
@@ -134,9 +136,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     // Derive OpenClaw home from workspace path (workspace is always <openclaw_dir>/workspace)
     const openclawDir = join(workspacePath, "..");
     configPatched = await patchOpenClawConfig(vaultPath, openclawDir);
-  } else {
-    await configureAgentFolder(vaultPath, false);
   }
+
+  await configureApp(vaultPath, mode, workspaceDetected);
 
   let gitInitialized = false;
 
@@ -168,7 +170,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   if (symlinksCreated) {
-    console.log("✓ Agent/ symlinks created (OpenClaw workspace detected)");
+    console.log(`✓ ${getVaultFolders(true).agent}/ symlinks created (OpenClaw workspace detected)`);
   }
 
   if (workspaceUpdated) {

@@ -22,9 +22,9 @@ npx zettelclaw init --yes --vault ~/my-vault
 
 ## What It Does
 
-- Creates a ready-to-use Obsidian vault with 6 note templates (daily, note, project, research, contact, writing)
+- Creates a ready-to-use Obsidian vault with 6 note templates (journal via `daily.md`, note, project, research, contact, writing)
 - Configures community plugins (Templater, Linter, Obsidian Git)
-- Auto-detects OpenClaw and creates Agent/ symlinks + workspace injection
+- Auto-detects OpenClaw and creates `02 Agent/` symlinks + workspace injection (or compacts numbering when disabled)
 - Sets up frontmatter-driven note types that both humans and AI agents can read/write
 
 ## Links

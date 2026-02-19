@@ -1,7 +1,16 @@
 import { cancel, intro, isCancel, log, outro, text } from "@clack/prompts";
+import { join } from "node:path";
 
 import { resolveUserPath } from "../lib/paths";
-import { copyVaultTemplatesOnly, isDirectory, pathExists } from "../lib/vault";
+import {
+  configureAgentFolder,
+  configureApp,
+  copyVaultTemplatesOnly,
+  detectNotesMode,
+  getVaultFolders,
+  isDirectory,
+  pathExists,
+} from "../lib/vault";
 
 export interface UpgradeOptions {
   yes: boolean;
@@ -27,6 +36,19 @@ async function promptVaultPath(defaultPath: string): Promise<string> {
   );
 }
 
+async function detectAgentFolder(vaultPath: string): Promise<boolean> {
+  const expectedAgentFolder = getVaultFolders(true).agent;
+  const candidateFolders = [expectedAgentFolder, "03 Agent", "Agent"];
+
+  for (const folder of candidateFolders) {
+    if (await pathExists(join(vaultPath, folder))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function runUpgrade(options: UpgradeOptions): Promise<void> {
   intro("Zettelclaw upgrade");
 
@@ -39,6 +61,11 @@ export async function runUpgrade(options: UpgradeOptions): Promise<void> {
       throw new Error(`Vault path is not a directory: ${vaultPath}`);
     }
   }
+
+  const includeAgent = await detectAgentFolder(vaultPath);
+  await configureAgentFolder(vaultPath, includeAgent);
+  const notesMode = await detectNotesMode(vaultPath);
+  await configureApp(vaultPath, notesMode, includeAgent);
 
   const result = await copyVaultTemplatesOnly(vaultPath, false);
 

@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import type { NotesMode } from "./vault";
+import { getVaultFolders, type NotesMode } from "./vault";
 
 const AGENTS_MARKER = "zettelclaw-agents";
 const MEMORY_MARKER = "zettelclaw-memory";
@@ -10,6 +10,7 @@ const HEARTBEAT_MARKER = "zettelclaw-heartbeat";
 interface WorkspaceContext {
   vaultPath: string;
   notesMode: NotesMode;
+  includeAgent: boolean;
   symlinksEnabled: boolean;
 }
 
@@ -42,19 +43,20 @@ async function appendSectionIfMissing(path: string, marker: string, body: string
 }
 
 function agentsContent(context: WorkspaceContext): string {
-  const notesLocation = context.notesMode === "notes" ? "`Notes/`" : "the vault root";
+  const folders = getVaultFolders(context.includeAgent);
+  const notesLocation = context.notesMode === "notes" ? `\`${folders.notes}/\`` : "the vault root";
 
   return `
 ## Zettelclaw Vault Conventions
 
 - Vault path: \`${context.vaultPath}\`
 - Note location: ${notesLocation}
-- Required frontmatter \`type\` values: \`note\`, \`daily\`, \`project\`, \`research\`, \`contact\`, \`writing\`
+- Required frontmatter \`type\` values: \`note\`, \`journal\`, \`project\`, \`research\`, \`contact\`, \`writing\`
 - Only \`project\` and \`research\` may use \`status\`.
 - Always use title-case filenames, \`YYYY-MM-DD\` dates, and pluralized tags.
 - Link aggressively with \`[[wikilinks]]\` and keep source provenance in \`source\` when possible.
-- Do not create nested folders under \`Notes/\` (or the root note area in root mode).
-- Triage \`Inbox/\` during heartbeat cycles and extract durable notes from workspace dailies.
+- Do not create nested folders under ${notesLocation} (or the root note area in root mode).
+- Triage \`${folders.inbox}/\` during heartbeat cycles and extract durable notes from workspace journals.
 `;
 }
 
@@ -65,19 +67,21 @@ function memoryContent(context: WorkspaceContext): string {
 - Vault path: \`${context.vaultPath}\`
 - Notes mode: \`${context.notesMode}\`
 - Agent symlinks enabled: \`${context.symlinksEnabled ? "yes" : "no"}\`
-- Vault note types: \`note\`, \`daily\`, \`project\`, \`research\`, \`contact\`, \`writing\`
+- Vault note types: \`note\`, \`journal\`, \`project\`, \`research\`, \`contact\`, \`writing\`
 `;
 }
 
 function heartbeatContent(): string {
+  const folders = getVaultFolders(true);
+
   return `
 ## Zettelclaw Extraction Tasks
 
-- Review recent workspace dailies in \`memory/YYYY-MM-DD.md\` for extractable ideas.
+- Review recent workspace journals in \`memory/YYYY-MM-DD.md\` for extractable ideas.
 - Convert durable insights into vault notes with complete frontmatter.
 - Link new notes to relevant existing notes.
 - Update project notes with progress logs and decisions.
-- Triage \`Inbox/\` captures into proper notes or archive them.
+- Triage \`${folders.inbox}/\` captures into proper notes or archive them.
 - Surface notes that need missing links, sources, or summaries.
 `;
 }
