@@ -353,26 +353,7 @@ export async function configureMinimalTheme(pathToVault: string, enabled: boolea
     cssTheme: "Minimal",
   });
 
+  // Theme files (manifest.json + theme.css) are downloaded by plugins.ts
+  // Just ensure the directory exists
   await mkdir(themePath, { recursive: true });
-  await writeJsonFile(join(themePath, "manifest.json"), {
-    name: "Minimal",
-    version: "7.7.2",
-    minAppVersion: "1.0.0",
-    author: "kepano",
-    authorUrl: "https://github.com/kepano",
-  });
-
-  await writeFile(
-    join(themePath, "theme.css"),
-    [
-      "/* Placeholder so Obsidian can resolve the Minimal theme folder during setup. */",
-      "body {",
-      "  --h1-weight: 600;",
-      "  --h2-weight: 600;",
-      "  --h3-weight: 600;",
-      "}",
-      "",
-    ].join("\n"),
-    "utf8",
-  );
 }

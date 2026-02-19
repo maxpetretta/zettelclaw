@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { appendWorkspaceIntegration, gatewayPatchSnippet } from "../lib/openclaw";
 import { resolveUserPath } from "../lib/paths";
+import { downloadPlugins } from "../lib/plugins";
 import {
   configureAgentFolder,
   configureApp,
@@ -108,6 +109,12 @@ export async function runInit(options: InitOptions): Promise<void> {
   await configureTemplatesForCommunity(vaultPath, true);
   await configureMinimalTheme(vaultPath, options.minimal);
 
+  s.message("Downloading plugins");
+  const pluginResult = await downloadPlugins(vaultPath, {
+    includeGit: syncMethod === "git",
+    includeMinimal: options.minimal,
+  });
+
   let symlinksCreated = false;
   let workspaceUpdated = false;
 
@@ -146,6 +153,14 @@ export async function runInit(options: InitOptions): Promise<void> {
   console.log(`✓ Vault created at ${vaultPath}`);
   console.log("✓ Templates written (6 templates)");
   console.log(`✓ Obsidian configured (${configuredPluginsSummary(syncMethod)})`);
+
+  if (pluginResult.downloaded.length > 0) {
+    console.log(`✓ Plugins downloaded (${pluginResult.downloaded.join(", ")})`);
+  }
+
+  if (pluginResult.failed.length > 0) {
+    console.log(`⚠ Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`);
+  }
 
   if (symlinksCreated) {
     console.log("✓ Agent/ symlinks created (OpenClaw workspace detected)");
