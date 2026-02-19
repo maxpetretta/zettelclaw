@@ -29,13 +29,13 @@ npx zettelclaw init --yes --vault ~/my-vault
 
 ## Web Clipper Template
 
-The project ships an Obsidian Web Clipper template at `vault/clipper/inbox.json` that captures clips into `00 Inbox/`.
+The project ships an Obsidian Web Clipper template at `vault/04 Templates/clipper-inbox.json` that captures clips into `00 Inbox/`.
 
 Import steps in the Web Clipper extension:
 1. Open extension settings.
 2. Go to `Templates`.
 3. Click `New Template`.
-4. Paste the JSON from `vault/clipper/inbox.json`.
+4. Paste the JSON from `vault/04 Templates/clipper-inbox.json`.
 
 ## Links
 

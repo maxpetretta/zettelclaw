@@ -17,12 +17,12 @@ Create your first note in `01 Notes/` using one of the templates. The journal te
 
 ## Web Clipper
 
-This vault includes an Obsidian Web Clipper template at `clipper/inbox.json` that clips pages into `00 Inbox/`.
+This vault includes an Obsidian Web Clipper template at `04 Templates/clipper-inbox.json` that clips pages into `00 Inbox/`.
 
 To import it in the Web Clipper extension:
 1. Open extension settings.
 2. Go to `Templates`.
 3. Click `New Template`.
-4. Paste the JSON from `clipper/inbox.json`.
+4. Paste the JSON from `04 Templates/clipper-inbox.json`.
 
 For more, visit [zettelclaw.com](https://zettelclaw.com).
