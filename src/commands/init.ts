@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { appendWorkspaceIntegration, gatewayPatchSnippet } from "../lib/openclaw";
 import { resolveUserPath } from "../lib/paths";
 import {
+  configureAgentFolder,
   configureApp,
   configureCommunityPlugins,
   configureCoreSync,
@@ -121,6 +122,8 @@ export async function runInit(options: InitOptions): Promise<void> {
     });
 
     workspaceUpdated = integration.added.length > 0;
+  } else {
+    await configureAgentFolder(vaultPath, false);
   }
 
   let gitInitialized = false;

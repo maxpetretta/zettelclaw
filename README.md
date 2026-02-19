@@ -1,10 +1,10 @@
 # Zettelclaw 🦞
 
-A human+agent knowledge system built on Obsidian and OpenClaw
+A human+agent knowledge system built on Obsidian and OpenClaw.
+
+Zettelclaw sets up an Obsidian vault designed for dual human+agent authorship — atomic notes, rich linking, frontmatter as API, and automated extraction from conversations to durable knowledge.
 
 ## Quick Start
-
-Run directly without installing:
 
 ```bash
 npx zettelclaw init
@@ -12,17 +12,25 @@ npx zettelclaw init
 bunx zettelclaw init
 ```
 
+The wizard asks for a vault path and sync method, then auto-configures everything: templates, plugins, and OpenClaw integration (if detected).
+
+For a fully non-interactive setup:
+
+```bash
+npx zettelclaw init --yes --vault ~/my-vault
+```
+
 ## What It Does
 
-`zettelclaw init` scaffolds an Obsidian vault designed for dual human+agent authorship:
+- Creates a ready-to-use Obsidian vault with 6 note templates (daily, note, project, research, contact, writing)
+- Configures community plugins (Templater, Linter, Obsidian Git)
+- Auto-detects OpenClaw and creates Agent/ symlinks + workspace injection
+- Sets up frontmatter-driven note types that both humans and AI agents can read/write
 
-- opinionated folder structure and templates
-- Obsidian configuration for fast capture and retrieval
-- optional OpenClaw workspace linkage and instructions
+## Links
 
-## Website
-
-Docs and guides: https://zettelclaw.com (coming soon)
+- [zettelclaw.com](https://zettelclaw.com) (coming soon)
+- [GitHub](https://github.com/maxpetretta/zettelclaw)
 
 ## License
 

@@ -1,12 +1,14 @@
-# Welcome To Your Zettelclaw Vault
+# Welcome to your Zettelclaw vault
 
-This vault is set up for fast capture and human+agent collaboration.
+This is your knowledge base. Here's how it's organized:
 
-- `Inbox/` for quick captures and triage
-- `Daily/` for daily notes
-- `Notes/` for your durable knowledge notes
-- `Templates/` for reusable note templates
+- **Inbox/** — drop quick captures here, triage them later
+- **Daily/** — daily notes (one per day, auto-created via template)
+- **Notes/** — everything else: ideas, projects, research, contacts, writing
+- **Templates/** — note templates (used automatically when creating new notes)
 
-Tip: create your first note in `Notes/` and link as you go.
+## Getting started
 
-Docs: https://zettelclaw.com
+Create your first note in `Notes/` using one of the templates. Each note type has its own frontmatter — the templates handle this for you.
+
+For more, visit [zettelclaw.com](https://zettelclaw.com).

@@ -274,15 +274,25 @@ async function writeMinimalPluginConfigs(pathToVault: string): Promise<void> {
   const hiderPath = join(pathToVault, ".obsidian", "plugins", "obsidian-hider", "data.json");
 
   await writeJsonFile(minimalSettingsPath, {
-    colorScheme: "system",
-    tabStyle: "auto",
-    compactMode: false,
+    lightStyle: "minimal-light",
+    darkStyle: "minimal-dark",
+    colorfulHeadings: true,
+    colorfulFrame: false,
+    trimFileName: true,
+    focusMode: false,
+    underlineInternal: true,
+    underlineExternal: true,
+    fullWidthMedia: true,
   });
 
   await writeJsonFile(hiderPath, {
-    hideRibbon: false,
+    hideVaultName: false,
+    hideScrollbar: false,
+    hideTitleBar: false,
     hideStatusBar: false,
-    hideTabBar: false,
+    hideTabHeader: false,
+    hideSearchSuggestions: false,
+    hidePropertiesReading: true,
   });
 }
 
@@ -345,12 +355,11 @@ export async function configureMinimalTheme(pathToVault: string, enabled: boolea
 
   await mkdir(themePath, { recursive: true });
   await writeJsonFile(join(themePath, "manifest.json"), {
-    id: "Minimal",
     name: "Minimal",
-    version: "0.0.0",
-    minAppVersion: "0.16.0",
-    author: "zettelclaw",
-    authorUrl: "https://github.com/maxpetretta/zettelclaw",
+    version: "7.7.2",
+    minAppVersion: "1.0.0",
+    author: "kepano",
+    authorUrl: "https://github.com/kepano",
   });
 
   await writeFile(
