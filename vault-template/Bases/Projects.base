@@ -1,0 +1,10 @@
+{
+  "name": "Projects",
+  "description": "All project notes grouped by status.",
+  "query": {
+    "where": "type = 'project'",
+    "groupBy": ["status"],
+    "sort": [{ "field": "updated", "direction": "desc" }]
+  },
+  "columns": ["file", "status", "summary", "updated"]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "zettelclaw",
+  "version": "0.1.0",
+  "description": "CLI and vault template for the Zettelclaw human+agent knowledge system",
+  "type": "module",
+  "bin": {
+    "zettelclaw": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "vault-template",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "init": "bun run src/index.ts init",
+    "upgrade": "bun run src/index.ts upgrade",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}

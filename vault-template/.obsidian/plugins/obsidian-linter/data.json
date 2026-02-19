@@ -1,0 +1,10 @@
+{
+  "yaml-timestamp": {
+    "enabled": true,
+    "date-created": true,
+    "date-created-key": "created",
+    "date-modified": true,
+    "date-modified-key": "updated",
+    "format": "YYYY-MM-DD"
+  }
+}

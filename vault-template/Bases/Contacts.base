@@ -1,0 +1,9 @@
+{
+  "name": "Contacts",
+  "description": "All contact notes.",
+  "query": {
+    "where": "type = 'contact'",
+    "sort": [{ "field": "updated", "direction": "desc" }]
+  },
+  "columns": ["file", "summary", "updated"]
+}
