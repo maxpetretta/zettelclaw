@@ -3,30 +3,45 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
-const SYSTEM_PROMPT = `You are a knowledge extraction agent. Given a conversation transcript, extract atomic ideas worth preserving as permanent notes.
+const SYSTEM_PROMPT = `You are a knowledge extraction agent. Given a conversation transcript, produce a structured journal entry and optionally extract atomic notes.
 
-Rules:
-- Each note captures ONE idea (atomic). The title IS the idea.
-- Title format: Title Case, opinionated/descriptive (e.g., "React Virtual DOM Trades Memory For Speed")
-- Skip mundane chatter, greetings, troubleshooting steps that aren't reusable insights
-- Skip anything that's just "we did X" without a reusable takeaway
-- If nothing is worth extracting, return an empty array
-- Include wikilinks to related concepts using [[Double Brackets]]
-- Add relevant tags (always pluralized: "projects" not "project")
+Your output has two parts:
 
-Respond with JSON only — an array of objects:
-[
-  {
-    "title": "Note Title In Title Case",
-    "type": "note",
-    "tags": ["tag1", "tag2"],
-    "summary": "One-line summary of the idea",
-    "body": "The full note content with [[wikilinks]] to related concepts.\\n\\nCan be multiple paragraphs.",
-    "source": "conversation"
-  }
-]
+## 1. Journal Entry (ALWAYS required)
+Summarize the session into these sections. Omit a section if nothing fits it. Use bullet points. Use [[wikilinks]] for concepts/projects/people.
+- **Done**: What was accomplished
+- **Decisions**: Key decisions made and their reasoning
+- **Open**: Unresolved questions, blockers, next steps
+- **Notes**: Observations, ideas, things to remember
 
-If nothing worth extracting, respond with: []`;
+## 2. Atomic Notes (ONLY when warranted)
+Extract standalone notes ONLY for genuinely reusable concepts or insights — things that would be valuable outside the context of this conversation. Most sessions produce zero atomic notes. This is expected.
+
+Rules for atomic notes:
+- Each captures ONE idea. The title IS the idea in Title Case.
+- Skip anything that's just "we did X" — that belongs in the journal
+- Skip troubleshooting steps, routine work, and project-specific progress
+- Only extract if the insight is reusable and stands alone
+- Include [[wikilinks]] to related concepts
+- Tags are always pluralized ("projects" not "project")
+
+Respond with JSON only:
+{
+  "done": ["- bullet point with [[wikilinks]]"],
+  "decisions": ["- bullet point"],
+  "open": ["- bullet point"],
+  "journalNotes": ["- bullet point"],
+  "notes": [
+    {
+      "title": "Note Title In Title Case",
+      "type": "note",
+      "tags": ["tag1", "tag2"],
+      "summary": "One-line summary",
+      "body": "Full note content with [[wikilinks]].\\n\\nCan be multiple paragraphs.",
+      "source": "conversation"
+    }
+  ]
+}`;
 
 export interface ExtractedNote {
   title: string;
@@ -35,6 +50,14 @@ export interface ExtractedNote {
   summary: string;
   body: string;
   source: string;
+}
+
+export interface SessionSummary {
+  done: string[];
+  decisions: string[];
+  open: string[];
+  journalNotes: string[];
+  notes: ExtractedNote[];
 }
 
 interface ExtractOptions {
@@ -120,10 +143,15 @@ function parseNoteArray(value: unknown): ExtractedNote[] {
   return notes;
 }
 
-function parseExtractionOutput(rawOutput: string): ExtractedNote[] | null {
+function parseStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string" && v.trim().length > 0).map((v) => v.trim());
+}
+
+function parseSummaryOutput(rawOutput: string): SessionSummary | null {
   const trimmed = rawOutput.trim();
   if (!trimmed) {
-    return [];
+    return null;
   }
 
   const withoutFence = trimmed
@@ -133,22 +161,48 @@ function parseExtractionOutput(rawOutput: string): ExtractedNote[] | null {
     .trim();
 
   const parseCandidates = [withoutFence];
-  const arrayStart = withoutFence.indexOf("[");
-  const arrayEnd = withoutFence.lastIndexOf("]");
-  if (arrayStart >= 0 && arrayEnd > arrayStart) {
-    parseCandidates.push(withoutFence.slice(arrayStart, arrayEnd + 1));
+  const objStart = withoutFence.indexOf("{");
+  const objEnd = withoutFence.lastIndexOf("}");
+  if (objStart >= 0 && objEnd > objStart) {
+    parseCandidates.push(withoutFence.slice(objStart, objEnd + 1));
   }
 
   for (const candidate of parseCandidates) {
     try {
       const parsed = JSON.parse(candidate);
-      return parseNoteArray(parsed);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const record = parsed as Record<string, unknown>;
+        return {
+          done: parseStringArray(record.done),
+          decisions: parseStringArray(record.decisions),
+          open: parseStringArray(record.open),
+          journalNotes: parseStringArray(record.journalNotes),
+          notes: parseNoteArray(record.notes),
+        };
+      }
+      // Legacy format: bare array of notes
+      if (Array.isArray(parsed)) {
+        return {
+          done: [],
+          decisions: [],
+          open: [],
+          journalNotes: [],
+          notes: parseNoteArray(parsed),
+        };
+      }
     } catch {
       // Keep trying candidate representations.
     }
   }
 
   return null;
+}
+
+// Keep old name for compatibility with CLI/gateway callers
+function parseExtractionOutput(rawOutput: string): ExtractedNote[] | null {
+  const summary = parseSummaryOutput(rawOutput);
+  if (!summary) return null;
+  return summary.notes;
 }
 
 function readModelFromConfig(cfg: unknown): string | null {
@@ -194,29 +248,10 @@ function parseCliOutput(stdout: string): string {
   return trimmed;
 }
 
+// Kept for backward compatibility with extractNotesFromConversation
 function runOpenClawCliTask(conversation: string, model: string | null): ExtractedNote[] | null {
-  const args = ["llm-task", "--system", SYSTEM_PROMPT, "--json"];
-  if (model) {
-    args.push("--model", model);
-  }
-
-  const result = spawnSync("openclaw", args, {
-    input: conversation,
-    encoding: "utf8",
-    timeout: 45_000,
-  });
-
-  if (result.error || result.status !== 0) {
-    return null;
-  }
-
-  const parsedText = parseCliOutput(result.stdout ?? "");
-  if (!parsedText.trim()) {
-    return null;
-  }
-
-  const parsed = parseExtractionOutput(parsedText);
-  return parsed;
+  const result = runOpenClawCliSummary(conversation, model);
+  return result ? result.notes : null;
 }
 
 async function readGatewayPort(cfg: unknown): Promise<number> {
@@ -251,20 +286,54 @@ async function readGatewayPort(cfg: unknown): Promise<number> {
   return 3456;
 }
 
+// Kept for backward compatibility
 async function runGatewayCompletion(
   conversation: string,
   cfg: unknown,
   model: string | null,
 ): Promise<ExtractedNote[] | null> {
+  const result = await runGatewayCompletionSummary(conversation, cfg, model);
+  return result ? result.notes : null;
+}
+
+const EMPTY_SUMMARY: SessionSummary = { done: [], decisions: [], open: [], journalNotes: [], notes: [] };
+
+function runOpenClawCliSummary(conversation: string, model: string | null): SessionSummary | null {
+  const args = ["llm-task", "--system", SYSTEM_PROMPT, "--json"];
+  if (model) {
+    args.push("--model", model);
+  }
+
+  const result = spawnSync("openclaw", args, {
+    input: conversation,
+    encoding: "utf8",
+    timeout: 45_000,
+  });
+
+  if (result.error || result.status !== 0) {
+    return null;
+  }
+
+  const parsedText = parseCliOutput(result.stdout ?? "");
+  if (!parsedText.trim()) {
+    return null;
+  }
+
+  return parseSummaryOutput(parsedText);
+}
+
+async function runGatewayCompletionSummary(
+  conversation: string,
+  cfg: unknown,
+  model: string | null,
+): Promise<SessionSummary | null> {
   const port = await readGatewayPort(cfg);
   const completionModel = model ?? "gpt-4o-mini";
 
   try {
     const response = await fetch(`http://localhost:${port}/v1/chat/completions`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: completionModel,
         temperature: 0.2,
@@ -275,46 +344,49 @@ async function runGatewayCompletion(
       }),
     });
 
-    if (!response.ok) {
-      return null;
-    }
+    if (!response.ok) return null;
 
     const payload = asRecord(await response.json());
     const choices = Array.isArray(payload.choices) ? payload.choices : [];
     const firstChoice = choices[0];
-    if (!firstChoice || typeof firstChoice !== "object") {
-      return null;
-    }
+    if (!firstChoice || typeof firstChoice !== "object") return null;
 
     const message = asRecord((firstChoice as Record<string, unknown>).message);
     const content = contentToString(message.content);
-    if (!content) {
-      return null;
-    }
+    if (!content) return null;
 
-    return parseExtractionOutput(content);
+    return parseSummaryOutput(content);
   } catch {
     return null;
   }
 }
 
-export async function extractNotesFromConversation(
+export async function extractSessionSummary(
   conversation: string,
   options: ExtractOptions,
-): Promise<ExtractedNote[]> {
+): Promise<SessionSummary> {
   const log = options.logger ?? (() => {});
   const configuredModel = options.model?.trim() || readModelFromConfig(options.cfg);
 
-  const cliResult = runOpenClawCliTask(conversation, configuredModel);
+  const cliResult = runOpenClawCliSummary(conversation, configuredModel);
   if (cliResult !== null) {
     return cliResult;
   }
 
-  const gatewayResult = await runGatewayCompletion(conversation, options.cfg, configuredModel);
+  const gatewayResult = await runGatewayCompletionSummary(conversation, options.cfg, configuredModel);
   if (gatewayResult !== null) {
     return gatewayResult;
   }
 
-  log("Failed to extract notes via openclaw CLI and gateway API fallback.");
-  return [];
+  log("Failed to extract session summary via openclaw CLI and gateway API fallback.");
+  return EMPTY_SUMMARY;
+}
+
+/** @deprecated Use extractSessionSummary instead */
+export async function extractNotesFromConversation(
+  conversation: string,
+  options: ExtractOptions,
+): Promise<ExtractedNote[]> {
+  const result = await extractSessionSummary(conversation, options);
+  return result.notes;
 }

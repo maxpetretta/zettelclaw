@@ -1,7 +1,7 @@
 import { access, appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { extractNotesFromConversation, type ExtractedNote } from "./lib/extract";
+import { extractSessionSummary, type ExtractedNote, type SessionSummary } from "./lib/extract";
 import { readRecentSessionMessages } from "./lib/session";
 import { resolveVaultPath } from "./lib/vault-path";
 
@@ -173,16 +173,23 @@ async function writeExtractedNotes(
   return writtenTitles;
 }
 
-async function appendJournalLog(vaultPath: string, timestamp: Date, titles: string[]): Promise<void> {
+function renderBullets(items: string[]): string {
+  if (items.length === 0) return "";
+  return items.map((item) => item.startsWith("- ") ? item : `- ${item}`).join("\n");
+}
+
+async function writeJournalEntry(vaultPath: string, timestamp: Date, summary: SessionSummary): Promise<void> {
   const journalDir = await resolveJournalDirectory(vaultPath);
   const dateStamp = formatDate(timestamp);
-  const timeStamp = formatTime(timestamp);
   const journalPath = join(journalDir, `${dateStamp}.md`);
 
   await mkdir(journalDir, { recursive: true });
 
-  if (!(await pathExists(journalPath))) {
-    const journalFrontmatter = [
+  const isNew = !(await pathExists(journalPath));
+
+  if (isNew) {
+    // Create journal using the template format
+    const sections: string[] = [
       "---",
       "type: journal",
       "tags: [journals]",
@@ -190,35 +197,75 @@ async function appendJournalLog(vaultPath: string, timestamp: Date, titles: stri
       `updated: ${dateStamp}`,
       "---",
       "",
-      "## Notes",
-      "",
-    ].join("\n");
+    ];
 
-    await writeFile(journalPath, `${journalFrontmatter}\n`, "utf8");
-  }
-
-  let prefix = "\n";
-  try {
-    const existing = await readFile(journalPath, "utf8");
-    if (existing.endsWith("\n\n")) {
-      prefix = "";
-    } else if (existing.endsWith("\n")) {
-      prefix = "\n";
+    if (summary.done.length > 0) {
+      sections.push("## Done", "", renderBullets(summary.done), "");
     } else {
-      prefix = "\n\n";
+      sections.push("## Done", "", "");
     }
-  } catch {
-    prefix = "\n";
+
+    if (summary.decisions.length > 0) {
+      sections.push("## Decisions", "", renderBullets(summary.decisions), "");
+    } else {
+      sections.push("## Decisions", "", "");
+    }
+
+    if (summary.open.length > 0) {
+      sections.push("## Open", "", renderBullets(summary.open), "");
+    } else {
+      sections.push("## Open", "", "");
+    }
+
+    if (summary.journalNotes.length > 0 || summary.notes.length > 0) {
+      const noteItems = [...summary.journalNotes];
+      if (summary.notes.length > 0) {
+        const links = summary.notes.map((n) => `[[${n.title}]]`).join(", ");
+        noteItems.push(`Extracted notes: ${links}`);
+      }
+      sections.push("## Notes", "", renderBullets(noteItems), "");
+    } else {
+      sections.push("## Notes", "", "");
+    }
+
+    await writeFile(journalPath, sections.join("\n"), "utf8");
+  } else {
+    // Append to existing journal — add bullets under the right sections
+    const existing = await readFile(journalPath, "utf8");
+    let updated = existing;
+
+    // Update the `updated` frontmatter field
+    updated = updated.replace(/^(updated:\s*).+$/m, `$1${dateStamp}`);
+
+    // Helper: append bullets before the next ## heading or EOF
+    function appendToSection(content: string, heading: string, bullets: string[]): string {
+      if (bullets.length === 0) return content;
+      const rendered = renderBullets(bullets);
+      const headingPattern = new RegExp(`(## ${heading}[\\s\\S]*?)(\n## |$)`);
+      const match = content.match(headingPattern);
+      if (match) {
+        const sectionEnd = match.index! + match[1].length;
+        const before = content.slice(0, sectionEnd).trimEnd();
+        const after = content.slice(sectionEnd);
+        return `${before}\n${rendered}\n${after}`;
+      }
+      // Section doesn't exist — append it
+      return `${content.trimEnd()}\n\n## ${heading}\n\n${rendered}\n`;
+    }
+
+    updated = appendToSection(updated, "Done", summary.done);
+    updated = appendToSection(updated, "Decisions", summary.decisions);
+    updated = appendToSection(updated, "Open", summary.open);
+
+    const noteItems = [...summary.journalNotes];
+    if (summary.notes.length > 0) {
+      const links = summary.notes.map((n) => `[[${n.title}]]`).join(", ");
+      noteItems.push(`Extracted notes: ${links}`);
+    }
+    updated = appendToSection(updated, "Notes", noteItems);
+
+    await writeFile(journalPath, updated, "utf8");
   }
-
-  const links = titles.map((title) => `[[${title}]]`).join(", ");
-  const section = [
-    `## Session Reset (${timeStamp})`,
-    `Extracted ${titles.length} notes: ${links}`,
-    "",
-  ].join("\n");
-
-  await appendFile(journalPath, `${prefix}${section}`, "utf8");
 }
 
 function buildConversationTranscript(
@@ -264,28 +311,31 @@ export const handler: HookHandler = async (event) => {
     }
 
     const transcript = buildConversationTranscript(turns);
-    const extracted = await extractNotesFromConversation(transcript, {
+    const eventDate = toDate(event.timestamp);
+    const dateStamp = formatDate(eventDate);
+
+    // Journal entry is ALWAYS written — it's the primary output of the hook.
+    // Atomic notes are only created when a genuinely reusable concept was discussed.
+    const result = await extractSessionSummary(transcript, {
       cfg,
       model: typeof hookConfig.model === "string" ? hookConfig.model : undefined,
       logger: logWarning,
     });
 
-    if (extracted.length === 0) {
-      event.messages.push("🦞 No extractable insights from this session");
-      return;
+    // Write/update journal entry (always)
+    await writeJournalEntry(vaultPath, eventDate, result);
+
+    // Write atomic notes only if any were extracted
+    let writtenTitles: string[] = [];
+    if (result.notes.length > 0) {
+      writtenTitles = await writeExtractedNotes(notesDirectory, result.notes, dateStamp);
     }
 
-    const eventDate = toDate(event.timestamp);
-    const dateStamp = formatDate(eventDate);
-    const writtenTitles = await writeExtractedNotes(notesDirectory, extracted, dateStamp);
-
-    if (writtenTitles.length === 0) {
-      event.messages.push("🦞 No extractable insights from this session");
-      return;
+    if (writtenTitles.length > 0) {
+      event.messages.push(`🦞 Journal updated, extracted ${writtenTitles.length} notes: ${writtenTitles.join(", ")}`);
+    } else {
+      event.messages.push("🦞 Journal updated");
     }
-
-    await appendJournalLog(vaultPath, eventDate, writtenTitles);
-    event.messages.push(`🦞 Extracted ${writtenTitles.length} notes to vault: ${writtenTitles.join(", ")}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logWarning(`Unexpected error: ${message}`);
