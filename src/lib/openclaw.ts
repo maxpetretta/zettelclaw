@@ -86,8 +86,35 @@ export function gatewayPatchSnippet(vaultPath: string): string {
   return [
     "memorySearch:",
     "  extraPaths:",
-    `    - \"${vaultPath}\"`,
+    `    - "${vaultPath}"`,
   ].join("\n");
+}
+
+export async function patchOpenClawConfig(vaultPath: string, openclawDir: string): Promise<boolean> {
+  const configPath = join(openclawDir, "openclaw.json");
+
+  try {
+    const raw = await readFile(configPath, "utf8");
+    const config = JSON.parse(raw);
+
+    if (!config.memorySearch) {
+      config.memorySearch = {};
+    }
+
+    if (!Array.isArray(config.memorySearch.extraPaths)) {
+      config.memorySearch.extraPaths = [];
+    }
+
+    if (config.memorySearch.extraPaths.includes(vaultPath)) {
+      return false;
+    }
+
+    config.memorySearch.extraPaths.push(vaultPath);
+    await writeFile(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function appendWorkspaceIntegration(

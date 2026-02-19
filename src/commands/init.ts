@@ -2,7 +2,7 @@ import { intro, isCancel, select, spinner, text } from "@clack/prompts";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 
-import { appendWorkspaceIntegration, gatewayPatchSnippet } from "../lib/openclaw";
+import { appendWorkspaceIntegration, patchOpenClawConfig } from "../lib/openclaw";
 import { resolveUserPath } from "../lib/paths";
 import { downloadPlugins } from "../lib/plugins";
 import {
@@ -117,6 +117,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   let symlinksCreated = false;
   let workspaceUpdated = false;
+  let configPatched = false;
 
   if (workspaceDetected) {
     const symlinkResult = await createAgentSymlinks(vaultPath, workspacePath);
@@ -129,6 +130,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     });
 
     workspaceUpdated = integration.added.length > 0;
+
+    // Derive OpenClaw home from workspace path (workspace is always <openclaw_dir>/workspace)
+    const openclawDir = join(workspacePath, "..");
+    configPatched = await patchOpenClawConfig(vaultPath, openclawDir);
   } else {
     await configureAgentFolder(vaultPath, false);
   }
@@ -178,11 +183,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     console.log("✓ Minimal theme installed");
   }
 
-  if (!options.noOpenclaw) {
-    console.log("\nℹ Add this to your OpenClaw gateway config:");
-    for (const line of gatewayPatchSnippet(vaultPath).split("\n")) {
-      console.log(`  ${line}`);
-    }
+  if (configPatched) {
+    console.log("✓ OpenClaw config patched (memorySearch.extraPaths)");
+    console.log("\n⚠ Restart OpenClaw gateway for the config change to take effect.");
   }
 
   console.log("\nDone! Open it in Obsidian to get started.");
