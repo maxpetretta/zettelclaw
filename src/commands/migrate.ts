@@ -10,6 +10,7 @@ type JsonRecord = Record<string, unknown>
 
 export interface MigrateOptions {
   yes: boolean
+  dryRun: boolean
   vaultPath?: string | undefined
   workspacePath?: string | undefined
   model?: string | undefined
@@ -319,7 +320,7 @@ async function fireMigrateEvent(values: Record<string, string>): Promise<boolean
       "--announce",
       "--delete-after-run",
       "--timeout-seconds",
-      "600",
+      "1800",
     ],
     {
       encoding: "utf8",
@@ -372,6 +373,11 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   s.stop("Model list loaded")
 
   const modelChoice = await chooseModel(models, options)
+  if (options.dryRun) {
+    log.success("Dry run complete — migration would start here.")
+    return
+  }
+
   const sent = await fireMigrateEvent({
     vaultPath,
     workspacePath,

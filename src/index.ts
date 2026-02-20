@@ -14,6 +14,7 @@ interface ParsedArgs {
     minimal: boolean
     workspacePath?: string | undefined
     model?: string | undefined
+    dryRun: boolean
   }
 }
 
@@ -36,6 +37,7 @@ function usage(): string {
     "  --vault <path>      Vault path (auto-detected if not provided)",
     "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --model <name>      Model alias/key for migration sub-agents",
+    "  --dry-run           Run prompts but don't start migration",
     "  --yes               Accept defaults non-interactively",
   ].join("\n")
 }
@@ -58,6 +60,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       openclaw: false,
       yes: false,
       minimal: false,
+      dryRun: false,
     },
   }
 
@@ -135,6 +138,11 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue
     }
 
+    if (arg === "--dry-run") {
+      parsed.flags.dryRun = true
+      continue
+    }
+
     throw new Error(`Unknown argument: ${arg}`)
   }
 
@@ -163,6 +171,7 @@ async function main(): Promise<void> {
   if (parsed.command === "migrate") {
     await runMigrate({
       yes: parsed.flags.yes,
+      dryRun: parsed.flags.dryRun,
       vaultPath: parsed.flags.vaultPath,
       workspacePath: parsed.flags.workspacePath,
       model: parsed.flags.model,
