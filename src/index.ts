@@ -13,7 +13,6 @@ interface ParsedArgs {
     vaultPath?: string | undefined
     minimal: boolean
     workspacePath?: string | undefined
-    initGit?: boolean | undefined
   }
 }
 
@@ -31,7 +30,6 @@ function usage(): string {
     "  --openclaw          Force OpenClaw integration and hook setup",
     "  --yes               Accept all defaults non-interactively",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",
-    "  --no-git            Skip git repository initialization",
     "",
     "Upgrade options:",
     "  --vault <path>      Vault path (default: current directory)",
@@ -57,7 +55,6 @@ function parseArgs(argv: string[]): ParsedArgs {
       openclaw: false,
       yes: false,
       minimal: false,
-      initGit: true,
     },
   }
 
@@ -94,16 +91,6 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     if (arg === "--minimal") {
       parsed.flags.minimal = true
-      continue
-    }
-
-    if (arg === "--git") {
-      parsed.flags.initGit = true
-      continue
-    }
-
-    if (arg === "--no-git") {
-      parsed.flags.initGit = false
       continue
     }
 
@@ -155,7 +142,6 @@ async function main(): Promise<void> {
       vaultPath: parsed.flags.vaultPath,
       minimal: parsed.flags.minimal,
       workspacePath: parsed.flags.workspacePath,
-      initGit: parsed.flags.initGit,
     })
     return
   }

@@ -26,7 +26,6 @@ export interface InitOptions {
   vaultPath?: string | undefined
   minimal: boolean
   workspacePath?: string | undefined
-  initGit?: boolean | undefined
 }
 
 function unwrapPrompt<T>(value: T | symbol): T {
@@ -86,7 +85,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const openclawRequested = options.openclaw || workspaceDetected
   const includeAgentFolder = openclawRequested
   const shouldCreateSymlinks = openclawRequested && (options.openclaw || workspaceDetected)
-  const shouldInitGit = options.initGit ?? true
+  const shouldInitGit = syncMethod === "git"
   const openclawDir = resolveUserPath(join(workspacePath, ".."))
 
   const s = spinner()
