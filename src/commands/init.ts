@@ -21,7 +21,6 @@ import {
 } from "../lib/vault"
 
 export interface InitOptions {
-  openclaw: boolean
   yes: boolean
   vaultPath?: string | undefined
   minimal: boolean
@@ -82,9 +81,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   const mode: NotesMode = "notes"
   const workspacePath = resolveUserPath(options.workspacePath ?? "~/.openclaw/workspace")
   const workspaceDetected = await isDirectory(workspacePath)
-  const openclawRequested = options.openclaw || workspaceDetected
+  const openclawRequested = workspaceDetected
   const includeAgentFolder = openclawRequested
-  const shouldCreateSymlinks = openclawRequested && (options.openclaw || workspaceDetected)
+  const shouldCreateSymlinks = openclawRequested
   const shouldInitGit = syncMethod === "git"
   const openclawDir = resolveUserPath(join(workspacePath, ".."))
 

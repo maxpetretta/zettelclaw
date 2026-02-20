@@ -8,13 +8,11 @@ import { runMigrate } from "./commands/migrate"
 interface ParsedArgs {
   command?: string | undefined
   flags: {
-    openclaw: boolean
     yes: boolean
     vaultPath?: string | undefined
     minimal: boolean
     workspacePath?: string | undefined
     model?: string | undefined
-    dryRun: boolean
   }
 }
 
@@ -29,7 +27,6 @@ function usage(): string {
     "Init options:",
     "  --vault <path>      Set vault path (default: current directory)",
     "  --workspace <path>  Override OpenClaw workspace path (default: ~/.openclaw/workspace)",
-    "  --openclaw          Force OpenClaw integration and hook setup",
     "  --yes               Accept all defaults non-interactively",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",
     "",
@@ -37,7 +34,6 @@ function usage(): string {
     "  --vault <path>      Vault path (auto-detected if not provided)",
     "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --model <name>      Model alias/key for migration sub-agents",
-    "  --dry-run           Run prompts but don't start migration",
     "  --yes               Accept defaults non-interactively",
   ].join("\n")
 }
@@ -57,10 +53,8 @@ function parseArgs(argv: string[]): ParsedArgs {
   const parsed: ParsedArgs = {
     command,
     flags: {
-      openclaw: false,
       yes: false,
       minimal: false,
-      dryRun: false,
     },
   }
 
@@ -80,28 +74,13 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue
     }
 
-    if (arg === "--openclaw") {
-      parsed.flags.openclaw = true
-      continue
-    }
-
     if (arg === "--yes") {
       parsed.flags.yes = true
       continue
     }
 
-    if (arg === "--root") {
-      // deprecated, ignored
-      continue
-    }
-
     if (arg === "--minimal") {
       parsed.flags.minimal = true
-      continue
-    }
-
-    if (arg === "--no-openclaw") {
-      // deprecated, ignored
       continue
     }
 
@@ -111,7 +90,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
 
     if (arg === "--vault") {
-      parsed.flags.vaultPath = takeValue(rest, index, "--vault")
+      parsed.flags.model = takeValue(rest, index, "--vault")
       index += 1
       continue
     }
@@ -138,11 +117,6 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue
     }
 
-    if (arg === "--dry-run") {
-      parsed.flags.dryRun = true
-      continue
-    }
-
     throw new Error(`Unknown argument: ${arg}`)
   }
 
@@ -159,7 +133,6 @@ async function main(): Promise<void> {
 
   if (parsed.command === "init") {
     await runInit({
-      openclaw: parsed.flags.openclaw,
       yes: parsed.flags.yes,
       vaultPath: parsed.flags.vaultPath,
       minimal: parsed.flags.minimal,
@@ -171,7 +144,6 @@ async function main(): Promise<void> {
   if (parsed.command === "migrate") {
     await runMigrate({
       yes: parsed.flags.yes,
-      dryRun: parsed.flags.dryRun,
       vaultPath: parsed.flags.vaultPath,
       workspacePath: parsed.flags.workspacePath,
       model: parsed.flags.model,

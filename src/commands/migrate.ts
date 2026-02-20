@@ -10,7 +10,6 @@ type JsonRecord = Record<string, unknown>
 
 export interface MigrateOptions {
   yes: boolean
-  dryRun: boolean
   vaultPath?: string | undefined
   workspacePath?: string | undefined
   model?: string | undefined
@@ -373,11 +372,6 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   s.stop("Model list loaded")
 
   const modelChoice = await chooseModel(models, options)
-  if (options.dryRun) {
-    log.success(`Migration ready — ${summary.files.length} files would be processed.`)
-    log.message(`Watch progress with:\n  openclaw tui --session ${MIGRATE_SESSION}`)
-    return
-  }
 
   const sent = await fireMigrateEvent({
     vaultPath,
