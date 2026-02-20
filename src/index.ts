@@ -25,7 +25,7 @@ function usage(): string {
     "  zettelclaw migrate [options]  Migrate OpenClaw workspace memory into the vault",
     "",
     "Init options:",
-    "  --vault <path>      Set vault path (default: current directory)",
+    "  --vault <path>      Set vault path (default: ./zettelclaw)",
     "  --workspace <path>  Override OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --yes               Accept all defaults non-interactively",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",
@@ -47,6 +47,29 @@ function takeValue(args: string[], index: number, key: string): string {
   return value
 }
 
+function parseInlineValue(arg: string, prefix: string, key: string): string {
+  const value = arg.slice(prefix.length)
+  if (value.length === 0) {
+    throw new Error(`Missing value for ${key}`)
+  }
+
+  return value
+}
+
+function validateArgs(parsed: ParsedArgs): void {
+  if (parsed.command !== "init" && parsed.command !== "migrate") {
+    return
+  }
+
+  if (parsed.command === "init" && parsed.flags.model) {
+    throw new Error("--model is only supported with `zettelclaw migrate`")
+  }
+
+  if (parsed.command === "migrate" && parsed.flags.minimal) {
+    throw new Error("--minimal is only supported with `zettelclaw init`")
+  }
+}
+
 function parseArgs(argv: string[]): ParsedArgs {
   const [, , command, ...rest] = argv
 
@@ -58,7 +81,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     },
   }
 
-  if (command === "--help" || command === "-h") {
+  if (command === "--help" || command === "-h" || command === "help") {
     parsed.command = "help"
     return parsed
   }
@@ -71,7 +94,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     if (arg === "--help" || arg === "-h") {
       parsed.command = "help"
-      continue
+      return parsed
     }
 
     if (arg === "--yes") {
@@ -85,18 +108,18 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
 
     if (arg.startsWith("--vault=")) {
-      parsed.flags.vaultPath = arg.slice("--vault=".length)
+      parsed.flags.vaultPath = parseInlineValue(arg, "--vault=", "--vault")
       continue
     }
 
     if (arg === "--vault") {
-      parsed.flags.model = takeValue(rest, index, "--vault")
+      parsed.flags.vaultPath = takeValue(rest, index, "--vault")
       index += 1
       continue
     }
 
     if (arg.startsWith("--workspace=")) {
-      parsed.flags.workspacePath = arg.slice("--workspace=".length)
+      parsed.flags.workspacePath = parseInlineValue(arg, "--workspace=", "--workspace")
       continue
     }
 
@@ -107,7 +130,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
 
     if (arg.startsWith("--model=")) {
-      parsed.flags.model = arg.slice("--model=".length)
+      parsed.flags.model = parseInlineValue(arg, "--model=", "--model")
       continue
     }
 
@@ -120,6 +143,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     throw new Error(`Unknown argument: ${arg}`)
   }
 
+  validateArgs(parsed)
   return parsed
 }
 

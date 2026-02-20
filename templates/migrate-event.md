@@ -19,14 +19,14 @@ For each batch, spawn sub-agents (one per file) using model `{{model}}`.
 
 Maintain an accumulated **wikilink index** — a list of all note titles that exist in the vault. Start by listing existing notes:
 ```bash
-ls "{{vaultPath}}/01 Notes/"
+ls "{{vaultPath}}/{{notesFolder}}/"
 ```
 
 **For daily files** (YYYY-MM-DD.md pattern), instruct each sub-agent:
 - Read the memory file at `{{workspacePath}}/memory/<filename>`
-- Create a journal entry at `{{vaultPath}}/03 Journal/<filename>` with proper frontmatter (type: journal, tags: [journals], created/updated dates)
-- The journal should have sections: Done, Decisions, Open, Notes — summarize the raw content into these sections concisely
-- Extract any atomic, reusable ideas into separate notes in `{{vaultPath}}/01 Notes/` with proper frontmatter
+- Create a journal entry at `{{vaultPath}}/{{journalFolder}}/<filename>` with proper frontmatter (type: journal, tags: [journals], created/updated dates)
+- The journal should have sections: Done, Decisions, Open, Notes and summarize the raw content into these sections concisely
+- Extract any atomic, reusable ideas into separate notes in `{{vaultPath}}/{{notesFolder}}/` with proper frontmatter
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
 - Report back: a list of all note titles created (for the wikilink index)
 - When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
@@ -34,7 +34,7 @@ ls "{{vaultPath}}/01 Notes/"
 **For non-daily files**, instruct each sub-agent:
 - Read the memory file at `{{workspacePath}}/memory/<filename>`
 - Determine the appropriate note type (note, project, research) based on content
-- Create a properly typed note in `{{vaultPath}}/01 Notes/` with correct frontmatter and a good Title Case filename
+- Create a properly typed note in `{{vaultPath}}/{{notesFolder}}/` with correct frontmatter and a good Title Case filename
 - If the file contains multiple distinct topics, split into multiple atomic notes
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
 - Report back: a list of all note titles created
@@ -47,7 +47,7 @@ After spawning a batch of up to 5 sub-agents, wait for all to complete before st
 ### Step 3: Final pass
 
 After all files are processed:
-1. List all notes in `{{vaultPath}}/01 Notes/` to get the complete wikilink index
+1. List all notes in `{{vaultPath}}/{{notesFolder}}/` to get the complete wikilink index
 2. Scan all notes and journals for unresolved `[[wikilinks]]` that could link to existing notes
 3. Read `{{workspacePath}}/MEMORY.md`
 4. Rewrite MEMORY.md to reference vault notes with `[[wikilinks]]` where relevant

@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process"
-import { join } from "node:path"
-import { confirm, intro, isCancel, log, select, spinner, text } from "@clack/prompts"
-
+import { dirname, join } from "node:path"
+import { confirm, intro, log, select, spinner, text } from "@clack/prompts"
+import { DEFAULT_OPENCLAW_WORKSPACE_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import { firePostInitEvent, installOpenClawHook, patchOpenClawConfig } from "../lib/openclaw"
 import { resolveUserPath } from "../lib/paths"
 import { downloadPlugins } from "../lib/plugins"
@@ -11,7 +11,6 @@ import {
   configureCommunityPlugins,
   configureCoreSync,
   configureMinimalTheme,
-  configureTemplatesForCommunity,
   copyVaultSeed,
   createAgentSymlinks,
   isDirectory,
@@ -27,17 +26,26 @@ export interface InitOptions {
   workspacePath?: string | undefined
 }
 
-function unwrapPrompt<T>(value: T | symbol): T {
-  if (isCancel(value)) {
-    process.exit(0)
+function initGitRepository(vaultPath: string): string | null {
+  const result = spawnSync("git", ["init"], {
+    cwd: vaultPath,
+    encoding: "utf8",
+  })
+
+  if (result.error) {
+    return result.error.message
   }
 
-  return value as T
-}
+  if (result.status !== 0) {
+    const stderr = result.stderr.trim()
+    if (stderr.length > 0) {
+      return stderr
+    }
 
-function toTildePath(p: string): string {
-  const home = process.env.HOME ?? ""
-  return home && p.startsWith(home) ? `~${p.slice(home.length)}` : p
+    return `git init exited with code ${result.status}`
+  }
+
+  return null
 }
 
 async function promptVaultPath(defaultPath: string): Promise<string> {
@@ -79,13 +87,13 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   const syncMethod = options.yes ? "git" : await promptSyncMethod("git")
   const mode: NotesMode = "notes"
-  const workspacePath = resolveUserPath(options.workspacePath ?? "~/.openclaw/workspace")
+  const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
   const workspaceDetected = await isDirectory(workspacePath)
   const openclawRequested = workspaceDetected
   const includeAgentFolder = openclawRequested
   const shouldCreateSymlinks = openclawRequested
   const shouldInitGit = syncMethod === "git"
-  const openclawDir = resolveUserPath(join(workspacePath, ".."))
+  const openclawDir = dirname(workspacePath)
 
   const s = spinner()
   s.start("Configuring vault")
@@ -98,7 +106,6 @@ export async function runInit(options: InitOptions): Promise<void> {
     includeGit: syncMethod === "git",
     includeMinimalThemeTools: options.minimal,
   })
-  await configureTemplatesForCommunity(vaultPath, true)
   await configureMinimalTheme(vaultPath, options.minimal)
 
   s.message("Downloading plugins")
@@ -121,14 +128,13 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   await configureApp(vaultPath, mode, includeAgentFolder)
 
+  let gitInitError: string | null = null
+
   if (shouldInitGit) {
     const gitDir = join(vaultPath, ".git")
 
     if (!(await pathExists(gitDir))) {
-      spawnSync("git", ["init"], {
-        cwd: vaultPath,
-        encoding: "utf8",
-      })
+      gitInitError = initGitRepository(vaultPath)
     }
   }
 
@@ -136,9 +142,8 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   const summaryLines = [`Vault path:  ${toTildePath(vaultPath)}`]
 
-  const plugins = [...pluginResult.downloaded, ...pluginResult.failed]
-  if (plugins.length > 0) {
-    summaryLines.push(`Plugins:     ${plugins.join(", ")}`)
+  if (pluginResult.downloaded.length > 0) {
+    summaryLines.push(`Plugins:     ${pluginResult.downloaded.join(", ")}`)
   }
 
   summaryLines.push("Skill:       /zettelclaw")
@@ -151,6 +156,10 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (pluginResult.failed.length > 0) {
     log.warn(`Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
+  }
+
+  if (gitInitError) {
+    log.warn(`Could not initialize Git repository: ${gitInitError}`)
   }
 
   if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {

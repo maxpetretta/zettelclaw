@@ -1,12 +1,15 @@
 import { spawnSync } from "node:child_process"
 import { cp, readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
-import { intro, isCancel, log, select, spinner, text } from "@clack/prompts"
+import { intro, log, select, spinner, text } from "@clack/prompts"
 
+import { DEFAULT_OPENCLAW_WORKSPACE_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import { resolveUserPath } from "../lib/paths"
 import { isDirectory, pathExists } from "../lib/vault"
 
 type JsonRecord = Record<string, unknown>
+const NOTES_FOLDER_CANDIDATES = ["01 Notes", "Notes"] as const
+const JOURNAL_FOLDER_CANDIDATES = ["03 Journal", "02 Journal", "Daily", "Journal"] as const
 
 export interface MigrateOptions {
   yes: boolean
@@ -29,17 +32,9 @@ interface MemorySummary {
   dateRange: string
 }
 
-function unwrapPrompt<T>(value: T | symbol): T {
-  if (isCancel(value)) {
-    process.exit(0)
-  }
-
-  return value as T
-}
-
-function toTildePath(p: string): string {
-  const home = process.env.HOME ?? ""
-  return home && p.startsWith(home) ? `~${p.slice(home.length)}` : p
+interface VaultLayout {
+  notesFolder: string
+  journalFolder: string
 }
 
 function asRecord(value: unknown): JsonRecord {
@@ -146,8 +141,7 @@ async function detectVaultFromOpenClawConfig(): Promise<string | undefined> {
       }
 
       const resolvedCandidate = resolveUserPath(candidate)
-      const journalPath = join(resolvedCandidate, "03 Journal")
-      if (await isDirectory(journalPath)) {
+      if (await looksLikeZettelclawVault(resolvedCandidate)) {
         return resolvedCandidate
       }
     }
@@ -185,6 +179,37 @@ async function detectVaultPath(options: MigrateOptions): Promise<string | undefi
   }
 
   return resolveUserPath(await promptVaultPath())
+}
+
+async function detectExistingFolder(vaultPath: string, candidates: readonly string[]): Promise<string | undefined> {
+  for (const folder of candidates) {
+    if (await isDirectory(join(vaultPath, folder))) {
+      return folder
+    }
+  }
+
+  return undefined
+}
+
+async function looksLikeZettelclawVault(vaultPath: string): Promise<boolean> {
+  if (!(await isDirectory(vaultPath))) {
+    return false
+  }
+
+  const notesFolder = await detectExistingFolder(vaultPath, NOTES_FOLDER_CANDIDATES)
+  const journalFolder = await detectExistingFolder(vaultPath, JOURNAL_FOLDER_CANDIDATES)
+  return typeof notesFolder === "string" && typeof journalFolder === "string"
+}
+
+async function detectVaultLayout(vaultPath: string): Promise<VaultLayout> {
+  const notesFolder = await detectExistingFolder(vaultPath, NOTES_FOLDER_CANDIDATES)
+  const journalFolder = await detectExistingFolder(vaultPath, JOURNAL_FOLDER_CANDIDATES)
+
+  if (!(notesFolder && journalFolder)) {
+    throw new Error(`Could not detect notes/journal folders in ${toTildePath(vaultPath)}. Is this a Zettelclaw vault?`)
+  }
+
+  return { notesFolder, journalFolder }
 }
 
 async function readMemorySummary(memoryPath: string): Promise<MemorySummary> {
@@ -241,10 +266,7 @@ function readModelsFromOpenClaw(): ModelInfo[] {
   return models
 }
 
-async function chooseModel(
-  models: ModelInfo[],
-  options: MigrateOptions,
-): Promise<{ selected: ModelInfo; eventModel: string }> {
+async function chooseModel(models: ModelInfo[], options: MigrateOptions): Promise<ModelInfo> {
   if (models.length === 0) {
     throw new Error("OpenClaw returned no models")
   }
@@ -254,12 +276,11 @@ async function chooseModel(
     if (!selected) {
       throw new Error(`Model not found: ${options.model}`)
     }
-    return { selected, eventModel: options.model }
+    return selected
   }
 
   if (options.yes) {
-    const selected = selectYesModel(models)
-    return { selected, eventModel: selected.key }
+    return selectYesModel(models)
   }
 
   const defaultModel = models.find((model) => model.isDefault) ?? models[0]
@@ -271,7 +292,7 @@ async function chooseModel(
       message: "Which model should sub-agents use for migration?",
       initialValue: defaultModel.key,
       options: models.map((model) => {
-        const baseLabel = model.alias ? `${model.name} (${model.alias})` : model.key
+        const baseLabel = model.alias ? `${model.name} (${model.alias})` : `${model.name} (${model.key})`
         return {
           value: model.key,
           label: model.key === defaultModel.key ? `${baseLabel} — default` : baseLabel,
@@ -285,7 +306,7 @@ async function chooseModel(
     throw new Error("Could not resolve selected model")
   }
 
-  return { selected, eventModel: selected.key }
+  return selected
 }
 
 const MIGRATE_SESSION = "zettelclaw-migrate"
@@ -339,7 +360,8 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
     return
   }
 
-  const workspacePath = resolveUserPath(options.workspacePath ?? "~/.openclaw/workspace")
+  const layout = await detectVaultLayout(vaultPath)
+  const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
   const memoryPath = join(workspacePath, "memory")
 
   if (!(await isDirectory(memoryPath))) {
@@ -363,20 +385,29 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   )
 
   const backup = await chooseBackupPath(workspacePath)
-  await cp(backup.source, backup.backup, { recursive: true })
+  try {
+    await cp(backup.source, backup.backup, { recursive: true })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`Could not back up memory directory: ${message}`)
+  }
   log.success(`Backed up memory/ → ${backup.label}/`)
 
   const s = spinner()
   s.start("Loading available models")
-  const models = await readModelsFromOpenClaw()
+  const models = readModelsFromOpenClaw()
   s.stop("Model list loaded")
 
-  const modelChoice = await chooseModel(models, options)
+  const selectedModel = await chooseModel(models, options)
+  const modelLabel = selectedModel.alias ? `${selectedModel.name} (${selectedModel.alias})` : selectedModel.name
+  log.message(`Using model: ${modelLabel}`)
 
   const sent = await fireMigrateEvent({
     vaultPath,
     workspacePath,
-    model: modelChoice.eventModel,
+    model: selectedModel.key,
+    notesFolder: layout.notesFolder,
+    journalFolder: layout.journalFolder,
     fileCount: String(summary.files.length),
     dailyFiles: JSON.stringify(summary.dailyFiles),
     otherFiles: JSON.stringify(summary.otherFiles),
