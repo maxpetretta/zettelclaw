@@ -25,9 +25,7 @@ export interface InitOptions {
   openclaw: boolean
   yes: boolean
   vaultPath?: string | undefined
-  root: boolean
   minimal: boolean
-  noOpenclaw: boolean
   workspacePath?: string | undefined
   initGit?: boolean | undefined
 }
@@ -90,10 +88,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   const syncMethod = options.yes ? "git" : await promptSyncMethod("git")
-  const mode: NotesMode = options.root ? "root" : "notes"
+  const mode: NotesMode = "notes"
   const workspacePath = resolveUserPath(options.workspacePath ?? "~/.openclaw/workspace")
   const workspaceDetected = await isDirectory(workspacePath)
-  const openclawRequested = options.openclaw || (!options.noOpenclaw && workspaceDetected)
+  const openclawRequested = options.openclaw || workspaceDetected
   const includeAgentFolder = openclawRequested
   const shouldCreateSymlinks = openclawRequested && (options.openclaw || workspaceDetected)
   const shouldInitGit = options.initGit ?? true

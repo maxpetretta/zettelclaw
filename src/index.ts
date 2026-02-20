@@ -11,9 +11,7 @@ interface ParsedArgs {
     openclaw: boolean
     yes: boolean
     vaultPath?: string | undefined
-    root: boolean
     minimal: boolean
-    noOpenclaw: boolean
     workspacePath?: string | undefined
     initGit?: boolean | undefined
   }
@@ -32,10 +30,8 @@ function usage(): string {
     "  --workspace <path>  Override OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --openclaw          Force OpenClaw integration and hook setup",
     "  --yes               Accept all defaults non-interactively",
-    "  --root              Use root mode (notes in vault root instead of 01 Notes/)",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",
     "  --no-git            Skip git repository initialization",
-    "  --no-openclaw       Skip OpenClaw workspace detection and injection",
     "",
     "Upgrade options:",
     "  --vault <path>      Vault path (default: current directory)",
@@ -60,9 +56,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     flags: {
       openclaw: false,
       yes: false,
-      root: false,
       minimal: false,
-      noOpenclaw: false,
       initGit: true,
     },
   }
@@ -94,7 +88,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
 
     if (arg === "--root") {
-      parsed.flags.root = true
+      // deprecated, ignored
       continue
     }
 
@@ -114,7 +108,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
 
     if (arg === "--no-openclaw") {
-      parsed.flags.noOpenclaw = true
+      // deprecated, ignored
       continue
     }
 
@@ -159,9 +153,7 @@ async function main(): Promise<void> {
       openclaw: parsed.flags.openclaw,
       yes: parsed.flags.yes,
       vaultPath: parsed.flags.vaultPath,
-      root: parsed.flags.root,
       minimal: parsed.flags.minimal,
-      noOpenclaw: parsed.flags.noOpenclaw,
       workspacePath: parsed.flags.workspacePath,
       initGit: parsed.flags.initGit,
     })
