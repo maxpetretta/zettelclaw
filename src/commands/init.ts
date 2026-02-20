@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { join } from "node:path"
-import { intro, isCancel, select, spinner, text } from "@clack/prompts"
+import { confirm, intro, isCancel, select, spinner, text } from "@clack/prompts"
 
 import { firePostInitEvent, installOpenClawHook, patchOpenClawConfig } from "../lib/openclaw"
 import { resolveUserPath } from "../lib/paths"
@@ -126,7 +126,6 @@ export async function runInit(options: InitOptions): Promise<void> {
   let symlinksSkipped = false
   let configPatched = false
   let hookInstallStatus: "installed" | "skipped" | "failed" | null = null
-  let postInitEventFired = false
 
   if (shouldCreateSymlinks) {
     const symlinkResult = await createAgentSymlinks(vaultPath, workspacePath)
@@ -154,13 +153,6 @@ export async function runInit(options: InitOptions): Promise<void> {
 
       gitInitialized = result.status === 0
     }
-  }
-
-  // Fire post-init system event to tell the agent to update AGENTS.md and HEARTBEAT.md
-  if (openclawRequested) {
-    s.message("Notifying agent to update workspace files")
-    const projectPath = join(import.meta.dirname, "../..")
-    postInitEventFired = await firePostInitEvent(vaultPath, projectPath)
   }
 
   s.stop("Setup complete")
@@ -203,15 +195,34 @@ export async function runInit(options: InitOptions): Promise<void> {
     console.log("✓ OpenClaw config patched (memorySearch.extraPaths, hooks.internal)")
   }
 
-  if (postInitEventFired) {
-    console.log("✓ Agent notified — it will update AGENTS.md and HEARTBEAT.md")
-  } else if (openclawRequested) {
-    console.log("⚠ Could not notify agent — manually update AGENTS.md and HEARTBEAT.md")
-    console.log("  Template files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md")
-  }
-
   if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {
     console.log("\n⚠ Restart OpenClaw gateway for hook and config changes to take effect.")
+  }
+
+  // Prompt to notify the agent to update workspace files
+  if (openclawRequested) {
+    const shouldNotify = options.yes
+      ? true
+      : unwrapPrompt(
+          await confirm({
+            message: "Notify your OpenClaw agent to update AGENTS.md and HEARTBEAT.md?",
+            initialValue: true,
+          }),
+        )
+
+    if (shouldNotify) {
+      const projectPath = join(import.meta.dirname, "../..")
+      const sent = await firePostInitEvent(vaultPath, projectPath)
+      if (sent) {
+        console.log("✓ Agent notified — it will update AGENTS.md and HEARTBEAT.md")
+      } else {
+        console.log("⚠ Could not reach the agent. Is the OpenClaw gateway running?")
+        console.log("  You can manually update using the templates in: templates/")
+      }
+    } else {
+      console.log("  Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.")
+      console.log("  Template files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md")
+    }
   }
 
   console.log("\nDone! Open it in Obsidian to get started.")

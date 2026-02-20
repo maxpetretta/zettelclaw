@@ -141,8 +141,12 @@ export async function patchOpenClawConfig(vaultPath: string, openclawDir: string
     const config = asRecord(JSON.parse(raw))
     let changed = false
 
-    const memorySearch = asRecord(config.memorySearch)
-    config.memorySearch = memorySearch
+    const agents = asRecord(config.agents)
+    config.agents = agents
+    const defaults = asRecord(agents.defaults)
+    agents.defaults = defaults
+    const memorySearch = asRecord(defaults.memorySearch)
+    defaults.memorySearch = memorySearch
 
     const extraPaths = Array.isArray(memorySearch.extraPaths) ? [...memorySearch.extraPaths] : []
     memorySearch.extraPaths = extraPaths
