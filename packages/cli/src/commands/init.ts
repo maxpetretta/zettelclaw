@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process"
-import { dirname, join } from "node:path"
+import { cp } from "node:fs/promises"
+import { basename, dirname, join } from "node:path"
 import { confirm, intro, log, select, spinner, text } from "@clack/prompts"
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import { firePostInitEvent, installOpenClawHook, patchOpenClawConfig } from "../lib/openclaw"
@@ -46,6 +47,50 @@ function initGitRepository(vaultPath: string): string | null {
   }
 
   return null
+}
+
+async function chooseFileBackupPath(sourcePath: string): Promise<{ backupPath: string; label: string }> {
+  const sourceName = basename(sourcePath)
+  const sourceDirectory = dirname(sourcePath)
+  const maxAttempts = 10_000
+
+  for (let index = 0; index < maxAttempts; index += 1) {
+    const label = index === 0 ? `${sourceName}.bak` : `${sourceName}.bak.${index}`
+    const backupPath = join(sourceDirectory, label)
+
+    if (!(await pathExists(backupPath))) {
+      return { backupPath, label }
+    }
+  }
+
+  throw new Error(
+    `Could not find an available backup path for ${sourceName} under ${toTildePath(sourceDirectory)} after ${maxAttempts} attempts`,
+  )
+}
+
+async function backupWorkspaceRewriteFiles(workspacePath: string): Promise<string[]> {
+  const filesToBackup = ["AGENTS.md", "HEARTBEAT.md"] as const
+  const backupLogs: string[] = []
+
+  for (const fileName of filesToBackup) {
+    const sourcePath = join(workspacePath, fileName)
+    if (!(await pathExists(sourcePath))) {
+      continue
+    }
+
+    const { backupPath, label } = await chooseFileBackupPath(sourcePath)
+
+    try {
+      await cp(sourcePath, backupPath)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Could not back up ${fileName}: ${message}`)
+    }
+
+    backupLogs.push(`Backed up ${fileName} → ${label}`)
+  }
+
+  return backupLogs
 }
 
 async function promptVaultPath(defaultPath: string): Promise<string> {
@@ -211,6 +256,11 @@ export async function runInit(options: InitOptions): Promise<void> {
         )
 
     if (shouldNotify) {
+      const backupLogs = await backupWorkspaceRewriteFiles(workspacePath)
+      for (const backupLog of backupLogs) {
+        log.success(backupLog)
+      }
+
       const eventResult = await firePostInitEvent(vaultPath)
       if (eventResult.sent) {
         log.success("Agent notified — it will update AGENTS.md and HEARTBEAT.md")
