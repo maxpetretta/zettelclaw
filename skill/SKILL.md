@@ -26,44 +26,18 @@ Zettelclaw is your knowledge system — an Obsidian vault where you and your hum
 └── README.md
 ```
 
-**Find your vault path** in MEMORY.md under "Zettelclaw Vault" or by checking `memorySearch.extraPaths` in the OpenClaw config.
+**Find your vault path** in MEMORY.md under "Zettelclaw" or by checking `memorySearch.extraPaths` in the OpenClaw config.
 
-## Authoring: Obsidian CLI vs File Tools
+## How to Read and Write
 
-**Use Obsidian CLI** (`obsidian` command) when Obsidian is running — it resolves templates, updates the index, and handles properties natively.
-
-**Fall back to file tools** (Read/Write/Edit) when Obsidian is not running or the CLI is unavailable.
-
-To check if CLI is available:
-```bash
-obsidian version 2>/dev/null && echo "CLI available" || echo "CLI unavailable, use file tools"
-```
+Use **file tools** (Read/Write/Edit) for all vault operations. Use `memory_search` for semantic recall. Use Obsidian CLI only for graph queries (see Vault Maintenance).
 
 ## Searching the Vault
 
-### Primary: memory_search
-Use `memory_search` first — it indexes both the workspace and vault semantically.
+### Semantic recall
+Use `memory_search` first — it indexes both the workspace and vault.
 
-### Obsidian CLI (structured, index-powered)
-```bash
-# Full-text search with match context
-obsidian search query="search term" format=json matches
-
-# Scoped to a folder
-obsidian search query="hook architecture" path="01 Notes" format=json matches limit=10
-
-# Find files by tag
-obsidian tag name="projects"
-obsidian tags all counts sort=count        # vault-wide tag overview
-
-# Graph queries
-obsidian backlinks path="01 Notes/SafeShell.md"     # what links TO this note
-obsidian links path="01 Notes/SafeShell.md"         # what this note links TO
-obsidian unresolved                                   # broken/unresolved links
-obsidian orphans                                      # notes with no incoming links
-```
-
-### Fallback: grep/find (no Obsidian needed)
+### Structured queries
 ```bash
 # Find by type
 grep -rl 'type: project' "<vault>/01 Notes/"
@@ -71,131 +45,111 @@ grep -rl 'type: project' "<vault>/01 Notes/"
 # Active projects
 grep -rl 'status: active' "<vault>/01 Notes/" | xargs grep -l 'type: project'
 
+# Notes tagged "ai"
+grep -rl 'tags:.*ai' "<vault>/01 Notes/"
+
+# Full-text search
+grep -rl "search term" "<vault>/01 Notes/"
+
 # Recent notes
 find "<vault>/01 Notes/" -name "*.md" -mtime -7 | sort
 ```
 
 ## Creating Notes
 
-### With Obsidian CLI (preferred)
+All notes live in `01 Notes/` — flat, no subfolders. Write files directly with proper frontmatter.
 
-Use `create` with `template=` and ALWAYS add `silent` to prevent Obsidian UI from opening:
-
-```bash
-# Create a note from template
-obsidian create name="Protocols Outlast Platforms" template=note silent
-
-# Create a project
-obsidian create name="SafeShell" template=project silent
-
-# Create a research note
-obsidian create name="Hook Architecture Patterns" template=research silent
-
-# Create a contact
-obsidian create name="Max Petretta" template=contact silent
-
-# Create a writing
-obsidian create name="Why Agents Need Knowledge Systems" template=writing silent
-```
-
-Then fill in the content and set properties:
-
-```bash
-# Set properties
-obsidian property:set name=summary value="Open protocols survive longer than platforms" path="01 Notes/Protocols Outlast Platforms.md"
-obsidian property:set name=tags value="technology,principles" path="01 Notes/Protocols Outlast Platforms.md"
-obsidian property:set name=source value="[[2026-02-19]]" path="01 Notes/Protocols Outlast Platforms.md"
-
-# Add body content
-obsidian append path="01 Notes/Protocols Outlast Platforms.md" content="The web runs on HTTP, email on SMTP. The protocols were designed in the 80s-90s; the platforms built on them came and went.\n\nSee also [[Open Source]] and [[Network Effects]]."
-```
-
-**Gotchas:**
-- `create` without `silent` opens Obsidian UI — ALWAYS add `silent`
-- `create` with `template=` may place the file in the template's configured folder, not where you expect. Verify with `obsidian search` after creation.
-- `create` doesn't auto-create directories — use `mkdir -p` first if needed
-- `create` without `overwrite` is safe (won't replace existing files)
-- Exit code 0 doesn't guarantee success — check output for "Error:" strings
-
-### With File Tools (fallback)
-
-When Obsidian CLI is unavailable, write files directly:
-
-```bash
-cat > "<vault>/01 Notes/Protocols Outlast Platforms.md" << 'EOF'
----
-type: note
-tags: [technology, principles]
-summary: "Open protocols survive longer than the platforms built on them"
-source: "[[2026-02-19]]"
-created: 2026-02-19
-updated: 2026-02-19
----
-
-The web runs on HTTP, email on SMTP, messaging increasingly on ActivityPub.
-The protocols were designed in the 80s-90s; the platforms built on them
-(MySpace, Google Reader, countless others) came and went.
-
-[[Open Source]] tends to align with this — protocols are inherently open,
-platforms are inherently owned. See also [[Decentralization]] and the
-tension with [[Network Effects]].
-EOF
-```
-
-### Frontmatter Rules (for file tool fallback)
+### Frontmatter Rules
 - Every note MUST have YAML frontmatter with at least `type`, `created`, `updated`
 - Tags are ALWAYS pluralized (`projects` not `project`)
 - Dates are ALWAYS `YYYY-MM-DD`
 - Filenames are Title Case (`React Virtual DOM Trades Memory For Speed.md`)
-
-## Note Types
+- One idea per note (atomic) — the title captures the idea
 
 ### note — Atomic ideas and knowledge
 ```yaml
+---
 type: note
 tags: []
-summary: "One-line description"
+summary: "One-line description of this idea"
 source: ""
+created: 2026-02-19
+updated: 2026-02-19
+---
+
+[The idea, explained. Link profusely with [[wikilinks]].]
 ```
-The body is the explanation. No prescribed sections. Link profusely.
 
 ### project — Tracked work with a lifecycle
 ```yaml
+---
 type: project
-status: active        # active / paused / archived
+status: active
 tags: []
 aliases: []
 summary: "What this project is"
+created: 2026-02-19
+updated: 2026-02-19
+---
+
+## Goal
+
+## Log
 ```
-Sections: `## Goal`, `## Log`. Append dated entries to Log.
+Status values: `active` / `paused` / `archived`. Append dated entries to `## Log`.
 
 ### research — Questions being investigated
 ```yaml
+---
 type: research
-status: active        # active / archived
+status: active
 tags: []
 summary: "What we're investigating"
 source: ""
+created: 2026-02-19
+updated: 2026-02-19
+---
+
+## Question
+
+## Findings
+
+## Conclusion
+
+## Sources
 ```
-Sections: `## Question`, `## Findings`, `## Conclusion`, `## Sources`
+Status values: `active` / `archived`.
 
 ### contact — People
 ```yaml
+---
 type: contact
-tags: [contacts]      # always include "contacts"
+tags: [contacts]
 aliases: []
 summary: "Who this person is"
+created: 2026-02-19
+updated: 2026-02-19
+---
+
+## Context
+
+## Notes
 ```
-Sections: `## Context`, `## Notes`
+Always include `contacts` in tags. Use `aliases` for nicknames.
 
 ### writing — Blog posts, essays, published work
 ```yaml
+---
 type: writing
 tags: []
 summary: "What this piece is about"
 source: ""
-published: ""         # URL once posted, empty = draft
+published: ""
+created: 2026-02-19
+updated: 2026-02-19
+---
 ```
+`published` holds the URL once posted. Empty = draft.
 
 ### Which type to use?
 - Standalone reusable idea → `note`
@@ -210,50 +164,48 @@ ONLY `project` and `research` have `status`. Never add status to notes, journals
 
 ## Updating Existing Notes
 
-### With Obsidian CLI
-```bash
-# Append to a file
-obsidian append path="01 Notes/SafeShell.md" content="\n### 2026-02-19\n- Decided on hook-based architecture\n- See [[OpenClaw Plugin Hooks]]"
-
-# Update a property
-obsidian property:set name=status value=paused path="01 Notes/SafeShell.md"
-obsidian property:set name=updated value=2026-02-19 path="01 Notes/SafeShell.md"
-
-# Read a file
-obsidian read path="01 Notes/SafeShell.md"
-
-# Read a specific property
-obsidian property:read name=status path="01 Notes/SafeShell.md"
-```
-
-### With File Tools
 - Update the `updated` field to today's date
 - Append, don't overwrite — add to the relevant section
 - Add new `[[wikilinks]]` for any concepts mentioned
+
+Example — appending to a project log:
+```markdown
+### 2026-02-19
+- Decided on hook-based architecture using OpenClaw's lifecycle events
+- Registered npm package `safeshell`
+- See [[OpenClaw Plugin Hooks]] for API details
+```
 
 ## Journal Entries
 
 Journals live in `03 Journal/` as `YYYY-MM-DD.md`:
 
 ```yaml
+---
 type: journal
 tags: [journals]
+created: 2026-02-19
+updated: 2026-02-19
+---
+
+## Done
+- What was accomplished
+
+## Decisions
+- Key decisions and reasoning
+
+## Open
+- Unresolved questions, next steps
+
+## Notes
+- Observations, ideas, things to remember
 ```
-Sections: `## Done`, `## Decisions`, `## Open`, `## Notes`
 
-Journals are automatically written by the Zettelclaw hook on session reset. You can also append during a session:
-
-```bash
-# With CLI
-obsidian append path="03 Journal/2026-02-19.md" content="\n- Discovered Obsidian 1.12 CLI supports template creation"
-
-# Or use daily note commands if Journal is configured as the daily notes folder
-obsidian daily:append content="- Discovered Obsidian 1.12 CLI supports template creation"
-```
+Journals are automatically written by the Zettelclaw hook on session reset. You can also append during a session if something noteworthy happens. Omit empty sections.
 
 ## Linking
 
-Link aggressively. Always `[[wikilink]]` the first mention of any concept, person, project, or idea — even if the target note doesn't exist yet.
+Link aggressively. Always `[[wikilink]]` the first mention of any concept, person, project, or idea — even if the target note doesn't exist yet. Unresolved links are breadcrumbs for future connections.
 
 ```markdown
 Discussed [[SafeShell]] architecture with [[Max Petretta]]. The approach mirrors
@@ -269,41 +221,33 @@ Discussed [[SafeShell]] architecture with [[Max Petretta]]. The approach mirrors
 1. Read each inbox item
 2. Decide: extract into a proper note in `01 Notes/`, or discard
 3. If extracting: create a properly typed note, link to relevant existing notes
-4. Delete or archive the inbox item after processing
-
-```bash
-# List inbox items
-obsidian files folder="00 Inbox" ext=md
-
-# Read an inbox item
-obsidian read path="00 Inbox/Captured Article.md"
-
-# After processing, delete the inbox item (moves to trash)
-obsidian delete path="00 Inbox/Captured Article.md"
-```
+4. Delete the inbox item after processing
 
 ## Vault Maintenance
 
-Useful commands for periodic maintenance:
+For periodic maintenance, use Obsidian CLI graph queries (requires Obsidian to be running):
 
 ```bash
-# Find unresolved links (notes referenced but not yet created)
+# Find unresolved links (referenced but not yet created)
 obsidian unresolved
 
 # Find orphan notes (no incoming links)
 obsidian orphans
 
-# Find deadend notes (no outgoing links)
-obsidian deadends
+# Find what links to a specific note
+obsidian backlinks path="01 Notes/SafeShell.md"
 
-# Tag overview
-obsidian tags all counts sort=count
+# Index-powered search with match context
+obsidian search query="hook architecture" format=json matches
+```
 
-# List all vault files
-obsidian files ext=md
-
-# Check vault health
-obsidian vault
+If Obsidian CLI is unavailable, use grep:
+```bash
+# Find potential unresolved links (crude but works)
+grep -roh '\[\[[^]]*\]\]' "<vault>/01 Notes/" | sort -u | while read link; do
+  name=$(echo "$link" | sed 's/\[\[//;s/\]\]//')
+  [ ! -f "<vault>/01 Notes/${name}.md" ] && echo "Unresolved: $link"
+done
 ```
 
 ## What NOT To Do
@@ -314,8 +258,6 @@ obsidian vault
 - Do NOT create notes without frontmatter
 - Do NOT edit files in `04 Templates/` (those are Templater source templates)
 - Do NOT modify `02 Agent/` files directly — they're symlinks to the workspace
-- Do NOT use `obsidian create` without `silent` — it opens the UI
-- Do NOT trust exit codes from the Obsidian CLI — check output for "Error:" strings
 
 ## Explaining Zettelclaw to Users
 
@@ -329,4 +271,3 @@ Key concepts:
 - **Dual authorship** — both human and agent maintain the vault
 - **Journal + extraction** — conversations get summarized into journals, reusable ideas become standalone notes
 - **Links over hierarchy** — flat structure, relationships via `[[wikilinks]]`
-- **Two authoring paths** — humans use Obsidian + Templater, agents use Obsidian CLI or file tools. Same templates, same vault.
