@@ -14,7 +14,6 @@ import {
   configureTemplatesForCommunity,
   copyVaultSeed,
   createAgentSymlinks,
-  getVaultFolders,
   isDirectory,
   type NotesMode,
   pathExists,
@@ -67,18 +66,6 @@ async function promptSyncMethod(defaultMethod: SyncMethod): Promise<SyncMethod> 
   ) as SyncMethod
 }
 
-function configuredPluginsSummary(syncMethod: SyncMethod): string {
-  if (syncMethod === "git") {
-    return "Templater, Linter, Obsidian Git"
-  }
-
-  if (syncMethod === "obsidian-sync") {
-    return "Templater, Linter, Obsidian Sync"
-  }
-
-  return "Templater, Linter"
-}
-
 export async function runInit(options: InitOptions): Promise<void> {
   intro("Zettelclaw init")
 
@@ -122,15 +109,11 @@ export async function runInit(options: InitOptions): Promise<void> {
     includeMinimal: options.minimal,
   })
 
-  let symlinksCreated = false
-  let symlinksSkipped = false
   let configPatched = false
   let hookInstallStatus: "installed" | "skipped" | "failed" | null = null
 
   if (shouldCreateSymlinks) {
-    const symlinkResult = await createAgentSymlinks(vaultPath, workspacePath)
-    symlinksCreated = symlinkResult.added.length > 0
-    symlinksSkipped = symlinkResult.skipped.length > 0
+    await createAgentSymlinks(vaultPath, workspacePath)
   }
 
   if (openclawRequested) {
@@ -140,64 +123,48 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   await configureApp(vaultPath, mode, includeAgentFolder)
 
-  let gitInitialized = false
-
   if (shouldInitGit) {
     const gitDir = join(vaultPath, ".git")
 
     if (!(await pathExists(gitDir))) {
-      const result = spawnSync("git", ["init"], {
+      spawnSync("git", ["init"], {
         cwd: vaultPath,
         encoding: "utf8",
       })
-
-      gitInitialized = result.status === 0
     }
   }
 
   s.stop("Setup complete")
 
-  console.log(`✓ Vault created at ${vaultPath}`)
-  console.log("✓ Templates written (6 templates)")
-  console.log(`✓ Obsidian configured (${configuredPluginsSummary(syncMethod)})`)
+  console.log("")
+  console.log(`│  Vault path:  ${toTildePath(vaultPath)}`)
 
-  if (pluginResult.downloaded.length > 0) {
-    console.log(`✓ Plugins downloaded (${pluginResult.downloaded.join(", ")})`)
+  const plugins = [...pluginResult.downloaded, ...pluginResult.failed]
+  if (plugins.length > 0) {
+    console.log(`│  Plugins:     ${plugins.join(", ")}`)
+  }
+
+  console.log("│  Skill:       zettelclaw")
+
+  const hooks: string[] = []
+  if (hookInstallStatus === "installed" || hookInstallStatus === "skipped") {
+    hooks.push("zettelclaw")
+  }
+  if (hooks.length > 0) {
+    console.log(`│  Hooks:       ${hooks.join(", ")}`)
   }
 
   if (pluginResult.failed.length > 0) {
-    console.log(`⚠ Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
-  }
-
-  if (symlinksCreated) {
-    console.log(`✓ ${getVaultFolders(true).agent}/ symlinks created`)
-  } else if (symlinksSkipped) {
-    console.log(`✓ ${getVaultFolders(true).agent}/ symlinks already present`)
-  }
-
-  if (hookInstallStatus === "installed") {
-    console.log("✓ OpenClaw hook installed (zettelclaw)")
-  } else if (hookInstallStatus === "skipped") {
-    console.log("✓ OpenClaw hook already installed (zettelclaw)")
-  } else if (hookInstallStatus === "failed") {
-    console.log("⚠ Failed to install OpenClaw hook (zettelclaw)")
-  }
-
-  if (gitInitialized) {
-    console.log("✓ Git repository initialized")
-  }
-
-  if (options.minimal) {
-    console.log("✓ Minimal theme installed")
-  }
-
-  if (configPatched) {
-    console.log("✓ OpenClaw config patched (memorySearch.extraPaths, hooks.internal)")
+    console.log(`│`)
+    console.log(`│  ⚠ Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
   }
 
   if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {
-    console.log("\n⚠ Restart OpenClaw gateway for hook and config changes to take effect.")
+    console.log("│")
+    console.log("│  ⚠ Restart OpenClaw gateway for hook and config changes to take effect.")
   }
+
+  console.log("")
 
   // Prompt to notify the agent to update workspace files
   if (openclawRequested) {
@@ -214,14 +181,14 @@ export async function runInit(options: InitOptions): Promise<void> {
       const projectPath = join(import.meta.dirname, "../..")
       const sent = await firePostInitEvent(vaultPath, projectPath)
       if (sent) {
-        console.log("✓ Agent notified — it will update AGENTS.md and HEARTBEAT.md")
+        console.log("│  ✓ Agent notified — it will update AGENTS.md and HEARTBEAT.md")
       } else {
-        console.log("⚠ Could not reach the agent. Is the OpenClaw gateway running?")
-        console.log("  You can manually update using the templates in: templates/")
+        console.log("│  ⚠ Could not reach the agent. Is the OpenClaw gateway running?")
+        console.log("│    You can manually update using the templates in: templates/")
       }
     } else {
-      console.log("  Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.")
-      console.log("  Template files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md")
+      console.log("│  Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.")
+      console.log("│    Template files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md")
     }
   }
 
