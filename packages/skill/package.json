@@ -1,26 +1,26 @@
 {
-  "name": "zettelclaw",
+  "name": "@zettelclaw/skill",
   "version": "0.1.0",
-  "description": "CLI and vault template for the Zettelclaw human+agent knowledge system",
+  "description": "Zettelclaw skill package for OpenClaw and ClawHub",
+  "private": false,
   "type": "module",
-  "bin": {
-    "zettelclaw": "./src/index.ts"
-  },
   "files": [
-    "src",
-    "vault"
+    "SKILL.md",
+    "hooks",
+    "templates"
   ],
+  "clawhub": {
+    "skill": {
+      "entry": "SKILL.md",
+      "hooksDir": "hooks",
+      "templatesDir": "templates"
+    }
+  },
   "scripts": {
-    "start": "bun run src/index.ts",
-    "init": "bun run src/index.ts init",
-    "migrate": "bun run src/index.ts migrate",
     "lint": "biome check . && tsgo --noEmit",
     "lint:biome": "biome check .",
     "lint:typecheck": "tsgo --noEmit",
     "fix": "biome check --write ."
-  },
-  "dependencies": {
-    "@clack/prompts": "1.0.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.3",

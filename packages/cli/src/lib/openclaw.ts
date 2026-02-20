@@ -6,7 +6,9 @@ import { asRecord, type JsonRecord } from "./json"
 import { substituteTemplate } from "./template"
 import { pathExists } from "./vault"
 
-const HOOK_SOURCE_DIR = resolve(import.meta.dirname, "..", "..", "hooks", "zettelclaw")
+const SKILL_PACKAGE_DIR = resolve(import.meta.dirname, "..", "..", "..", "skill")
+const HOOK_SOURCE_DIR = join(SKILL_PACKAGE_DIR, "hooks", "zettelclaw")
+const TEMPLATE_SOURCE_DIR = join(SKILL_PACKAGE_DIR, "templates")
 
 function coerceHookEntry(value: unknown): JsonRecord {
   if (typeof value === "boolean") {
@@ -120,9 +122,9 @@ export interface EventFireResult {
   message?: string
 }
 
-export async function firePostInitEvent(vaultPath: string, projectPath: string): Promise<EventFireResult> {
+export async function firePostInitEvent(vaultPath: string): Promise<EventFireResult> {
   // Read the post-init event template
-  const templatePath = join(projectPath, "templates", "post-init-event.md")
+  const templatePath = join(TEMPLATE_SOURCE_DIR, "post-init-event.md")
   let template: string
   try {
     template = await readFile(templatePath, "utf8")
@@ -134,7 +136,7 @@ export async function firePostInitEvent(vaultPath: string, projectPath: string):
   // Substitute variables
   const eventText = substituteTemplate(template, {
     VAULT_PATH: vaultPath,
-    PROJECT_PATH: projectPath,
+    SKILL_PACKAGE_PATH: SKILL_PACKAGE_DIR,
   })
 
   // Fire the system event via OpenClaw CLI

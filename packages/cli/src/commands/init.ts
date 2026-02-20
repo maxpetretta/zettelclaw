@@ -211,17 +211,16 @@ export async function runInit(options: InitOptions): Promise<void> {
         )
 
     if (shouldNotify) {
-      const projectPath = join(import.meta.dirname, "../..")
-      const eventResult = await firePostInitEvent(vaultPath, projectPath)
+      const eventResult = await firePostInitEvent(vaultPath)
       if (eventResult.sent) {
         log.success("Agent notified — it will update AGENTS.md and HEARTBEAT.md")
       } else {
         const reason = eventResult.message ?? "Could not reach the agent. Is the OpenClaw gateway running?"
-        log.warn(`${reason}\nYou can manually update using the templates in: templates/`)
+        log.warn(`${reason}\nYou can manually update using the templates in: packages/skill/templates/`)
       }
     } else {
       log.message(
-        "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.\nTemplate files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md",
+        "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.\nTemplate files are in: packages/skill/templates/agents-memory.md, agents-heartbeat.md, heartbeat.md",
       )
     }
   }

@@ -11,6 +11,7 @@ import { substituteTemplate } from "../lib/template"
 import { isDirectory, pathExists } from "../lib/vault"
 
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
+const SKILL_TEMPLATE_DIR = join(import.meta.dirname, "..", "..", "..", "skill", "templates")
 
 export interface MigrateOptions {
   yes: boolean
@@ -324,8 +325,7 @@ interface MigrateEventResult {
 }
 
 async function fireMigrateEvent(values: Record<string, string>): Promise<MigrateEventResult> {
-  const projectPath = join(import.meta.dirname, "../..")
-  const templatePath = join(projectPath, "templates", "migrate-event.md")
+  const templatePath = join(SKILL_TEMPLATE_DIR, "migrate-event.md")
 
   let template = ""
   try {

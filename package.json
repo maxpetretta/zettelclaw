@@ -1,9 +1,9 @@
 {
   "name": "zettelclaw-workspace",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/cli", "packages/skill", "packages/website"],
   "scripts": {
-    "lint": "bun run --cwd packages/cli lint && bun run --cwd packages/website lint",
-    "fix": "bun run --cwd packages/cli fix && bun run --cwd packages/website fix"
+    "lint": "bun run --cwd packages/cli lint && bun run --cwd packages/skill lint && bun run --cwd packages/website lint",
+    "fix": "bun run --cwd packages/cli fix && bun run --cwd packages/skill fix && bun run --cwd packages/website fix"
   }
 }
