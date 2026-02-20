@@ -77,7 +77,7 @@ function configuredPluginsSummary(syncMethod: SyncMethod): string {
 export async function runInit(options: InitOptions): Promise<void> {
   intro("Zettelclaw init")
 
-  const defaultVaultPath = process.cwd()
+  const defaultVaultPath = join(process.cwd(), "zettelclaw")
   const rawVaultPath = options.vaultPath ?? (options.yes ? defaultVaultPath : await promptVaultPath(defaultVaultPath))
   const vaultPath = resolveUserPath(rawVaultPath)
 
