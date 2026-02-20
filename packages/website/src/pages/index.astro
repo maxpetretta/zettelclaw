@@ -3,24 +3,27 @@ import Layout from "@/layouts/Layout.astro"
 
 const steps = [
   {
+    num: "01",
     icon: "🛠️",
     title: "Init",
-    num: "001",
-    description: "Run one command and Zettelclaw sets up a vault structure designed for human + agent collaboration.",
+    description:
+      "Run one command and Zettelclaw sets up a vault structure designed for human + agent collaboration.",
     wikilink: "[[init]]",
   },
   {
+    num: "02",
     icon: "💬",
     title: "Converse",
-    num: "002",
-    description: "Use OpenClaw with your Obsidian vault as shared context so ideas stay connected to durable notes.",
+    description:
+      "Use OpenClaw with your Obsidian vault as shared context so ideas stay connected to durable notes.",
     wikilink: "[[conversation]]",
   },
   {
+    num: "03",
     icon: "🧠",
     title: "Extract",
-    num: "003",
-    description: "Turn conversations into atomic notes, links, and journal insights that compound over time.",
+    description:
+      "Turn conversations into atomic notes, links, and journal insights that compound over time.",
     wikilink: "[[atomic-note]]",
   },
 ]
@@ -28,308 +31,157 @@ const steps = [
 const features = [
   {
     title: "Atomic notes",
-    num: "1a1",
     description:
       "Capture one idea per note so knowledge remains reusable, composable, and easy for agents to reason over.",
     wikilink: "[[atomic-notes]]",
   },
   {
     title: "Journal extraction",
-    num: "1a2",
-    description: "Promote raw daily reflections into lasting notes without losing provenance.",
+    description:
+      "Promote raw daily reflections into lasting notes without losing provenance.",
     wikilink: "[[journal-extraction]]",
   },
   {
     title: "Vault search",
-    num: "2b1",
-    description: "Find and surface linked context quickly across your entire graph of notes.",
+    description:
+      "Find and surface linked context quickly across your entire graph of notes.",
     wikilink: "[[vault-search]]",
   },
   {
     title: "OpenClaw integration",
-    num: "2b2",
-    description: "Built to work directly with OpenClaw workflows and agent-native collaboration.",
+    description:
+      "Built to work directly with OpenClaw workflows and agent-native collaboration.",
     wikilink: "[[openclaw-integration]]",
   },
   {
     title: "Obsidian-native",
-    num: "3c1",
-    description: "No lock-in: plain markdown files in your Obsidian vault with your existing plugin ecosystem.",
+    description:
+      "No lock-in: plain markdown files in your Obsidian vault with your existing plugin ecosystem.",
     wikilink: "[[obsidian-native]]",
   },
   {
     title: "Open source",
-    num: "3c2",
-    description: "Inspect, extend, and adapt the system to your own workflows and team knowledge conventions.",
+    description:
+      "Inspect, extend, and adapt the system to your own workflows and team knowledge conventions.",
     wikilink: "[[open-source]]",
   },
-]
-
-/* Graph node positions - hand-placed for organic feel */
-const nodes = [
-  { cx: 85, cy: 78, r: 5, d: 0, color: "coral" },
-  { cx: 210, cy: 145, r: 7, d: 0.8, color: "violet" },
-  { cx: 350, cy: 85, r: 6, d: 1.5, color: "coral" },
-  { cx: 480, cy: 190, r: 8, d: 0.3, color: "violet" },
-  { cx: 620, cy: 105, r: 5.5, d: 2.1, color: "coral" },
-  { cx: 750, cy: 210, r: 7, d: 1.1, color: "violet" },
-  { cx: 890, cy: 130, r: 6, d: 0.6, color: "coral" },
-  { cx: 1020, cy: 200, r: 5, d: 1.8, color: "violet" },
-  { cx: 1130, cy: 95, r: 6.5, d: 2.4, color: "coral" },
-  { cx: 150, cy: 290, r: 6, d: 1.3, color: "violet" },
-  { cx: 310, cy: 340, r: 5, d: 0.5, color: "coral" },
-  { cx: 500, cy: 380, r: 7.5, d: 1.9, color: "violet" },
-  { cx: 680, cy: 350, r: 6, d: 0.2, color: "coral" },
-  { cx: 830, cy: 400, r: 5.5, d: 2.6, color: "violet" },
-  { cx: 970, cy: 340, r: 7, d: 1.4, color: "coral" },
-  { cx: 1100, cy: 380, r: 5, d: 0.9, color: "violet" },
-  { cx: 260, cy: 470, r: 6, d: 2.0, color: "coral" },
-  { cx: 440, cy: 520, r: 5, d: 0.7, color: "violet" },
-  { cx: 640, cy: 490, r: 7, d: 1.6, color: "coral" },
-  { cx: 820, cy: 540, r: 6, d: 2.3, color: "violet" },
-  { cx: 1000, cy: 480, r: 5.5, d: 1.0, color: "coral" },
-  { cx: 60, cy: 450, r: 4, d: 1.7, color: "violet" },
-  { cx: 1150, cy: 520, r: 4.5, d: 0.4, color: "coral" },
-]
-
-/* Edges connecting nodes by index */
-const edges = [
-  [0, 1], [1, 2], [1, 3], [2, 4], [3, 5], [4, 5], [4, 6],
-  [5, 7], [6, 8], [7, 8], [0, 9], [1, 9], [9, 10], [3, 10],
-  [3, 11], [10, 11], [11, 12], [5, 12], [12, 13], [7, 14],
-  [13, 14], [14, 15], [8, 15], [9, 16], [10, 16], [16, 17],
-  [11, 17], [17, 18], [12, 18], [18, 19], [13, 19], [19, 20],
-  [14, 20], [15, 20], [21, 9], [21, 16], [20, 22], [15, 22],
 ]
 ---
 
 <Layout>
-  <div class="zc">
-
-    <!-- ═══════ HEADER ═══════ -->
-    <header class="zc-header">
-      <div class="zc-container header-inner">
-        <a href="#top" class="brand">
-          <span class="brand-lobster" aria-hidden="true">🦞</span>
-          <span class="brand-text">Zettelclaw</span>
+  <div class="pg">
+    <header class="hd">
+      <div class="wrap hd-row">
+        <a href="#top" class="logo">
+          <span aria-hidden="true">🦞</span>
+          <span>Zettelclaw</span>
         </a>
-
-        <nav class="nav" aria-label="Primary">
-          <a href="#what">What is it</a>
+        <nav class="hd-nav" aria-label="Primary">
+          <a href="#what">About</a>
           <a href="#how">How it works</a>
           <a href="#features">Features</a>
           <a href="#quickstart">Quick start</a>
         </nav>
-
-        <a href="https://github.com/maxpetretta/zettelclaw" class="nav-cta">GitHub</a>
+        <a href="https://github.com/maxpetretta/zettelclaw" class="hd-cta">
+          GitHub <span aria-hidden="true">&rarr;</span>
+        </a>
       </div>
     </header>
 
-    <!-- ═══════ MAIN ═══════ -->
-    <main id="top" class="zc-main">
-
-      <!-- ─── HERO ─── -->
-      <section class="hero">
-        <!-- Animated graph background -->
-        <div class="hero-graph" aria-hidden="true">
-          <svg viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid slice" role="presentation" focusable="false">
-            <defs>
-              <radialGradient id="glow-coral" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#FF6B35" stop-opacity="0.9" />
-                <stop offset="100%" stop-color="#FF6B35" stop-opacity="0" />
-              </radialGradient>
-              <radialGradient id="glow-violet" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.9" />
-                <stop offset="100%" stop-color="#7C3AED" stop-opacity="0" />
-              </radialGradient>
-              <filter id="edge-blur">
-                <feGaussianBlur stdDeviation="0.8" />
-              </filter>
-            </defs>
-
-            <!-- Edges -->
-            <g class="graph-edges">
-              {edges.map(([a, b], i) => (
-                <line
-                  x1={nodes[a].cx} y1={nodes[a].cy}
-                  x2={nodes[b].cx} y2={nodes[b].cy}
-                  style={`--edge-d: ${(i * 0.4) % 3}s`}
-                />
-              ))}
-            </g>
-
-            <!-- Node halos -->
-            <g class="graph-halos">
-              {nodes.map((n) => (
-                <circle
-                  cx={n.cx} cy={n.cy} r={n.r * 4}
-                  fill={n.color === "coral" ? "url(#glow-coral)" : "url(#glow-violet)"}
-                  style={`--d: ${n.d}s`}
-                  class="halo"
-                />
-              ))}
-            </g>
-
-            <!-- Nodes -->
-            <g class="graph-nodes">
-              {nodes.map((n) => (
-                <circle
-                  cx={n.cx} cy={n.cy} r={n.r}
-                  class={`node node-${n.color}`}
-                  style={`--d: ${n.d}s`}
-                />
-              ))}
-            </g>
-          </svg>
-        </div>
-
-        <!-- Scan-line overlay -->
-        <div class="hero-scanlines" aria-hidden="true"></div>
-
-        <!-- Content -->
-        <div class="hero-content reveal">
-          <p class="hero-kicker">
-            <span aria-hidden="true">🦞</span>
-            Agent-native PKM for Obsidian + OpenClaw
+    <main id="top">
+      <section class="hero reveal">
+        <div class="wrap">
+          <p class="kicker">Agent-native PKM for Obsidian + OpenClaw</p>
+          <h1>Your AI agent&apos;s<br /><em>second brain</em></h1>
+          <p class="lead">
+            Zettelclaw turns your Obsidian vault into a shared knowledge system
+            between you and your AI agent.
           </p>
-
-          <h1 class="hero-h1">
-            Your AI agent&apos;s<br />
-            <span class="hero-accent">second brain</span>
-          </h1>
-
-          <p class="hero-lead">
-            Zettelclaw turns your Obsidian vault into a shared knowledge system between you and your AI agent.
-          </p>
-
           <div class="hero-actions">
-            <a href="https://github.com/maxpetretta/zettelclaw" class="btn btn-primary">View on GitHub</a>
-            <a href="#quickstart" class="btn btn-ghost">See quick start</a>
+            <a
+              href="https://github.com/maxpetretta/zettelclaw"
+              class="btn-solid">View on GitHub</a
+            >
+            <a href="#quickstart" class="btn-outline">Quick start</a>
           </div>
         </div>
-
-        <!-- Margin annotation -->
-        <aside class="hero-marginalia" aria-hidden="true">
-          <span class="marginalia-ref">cf. Luhmann, 1992</span>
-          <span class="marginalia-note">"One cannot think without writing"</span>
-        </aside>
       </section>
 
-      <!-- ─── WHAT ─── -->
-      <section id="what" class="section reveal">
-        <div class="section-head">
-          <span class="section-ref" aria-hidden="true">§1</span>
-          <p class="section-wikilink">[[overview]]</p>
+      <section id="what" class="sect reveal">
+        <div class="wrap">
           <h2>What is Zettelclaw?</h2>
-        </div>
-        <p class="section-body">
-          Zettelclaw is an agent-native personal knowledge management system built on Obsidian and OpenClaw. It applies
-          Zettelkasten principles: atomic notes, emergent structure, and links over folders. Instead of treating AI as a
-          detached chat history, it gives your agent access to the same living vault you rely on. The result is shared
-          context that compounds into long-term knowledge.
-        </p>
-        <div class="section-annotation" aria-hidden="true">
-          <span class="annotation-line"></span>
-          <span class="annotation-text">see also: [[zettelkasten-method]]</span>
+          <p class="prose">
+            Zettelclaw is an agent-native personal knowledge management system
+            built on Obsidian and OpenClaw. It applies Zettelkasten principles:
+            atomic notes, emergent structure, and links over folders. Instead of
+            treating AI as a detached chat history, it gives your agent access to
+            the same living vault you rely on. The result is shared context that
+            compounds into long-term knowledge.
+          </p>
         </div>
       </section>
 
-      <!-- ─── HOW IT WORKS ─── -->
-      <section id="how" class="section">
-        <div class="section-head reveal">
-          <span class="section-ref" aria-hidden="true">§2</span>
-          <p class="section-wikilink">[[workflow]]</p>
-          <h2>How it works</h2>
-        </div>
-
-        <div class="flow-pipeline reveal">
-          <span class="flow-node">conversation</span>
-          <span class="flow-connector">
-            <span class="flow-line-seg"></span>
-            <span class="flow-arrow">→</span>
-          </span>
-          <code class="flow-cmd">/new</code>
-          <span class="flow-connector">
-            <span class="flow-line-seg"></span>
-            <span class="flow-arrow">→</span>
-          </span>
-          <span class="flow-node">atomic notes in vault</span>
-        </div>
-
-        <div class="card-grid steps-grid">
-          {steps.map((step, i) => (
-            <article class={`card card-step card-rot-${i}`}>
-              <div class="card-tab" aria-hidden="true"></div>
-              <div class="card-inner">
-                <div class="card-head">
-                  <span class="card-ref">{step.num}</span>
-                  <span class="card-wikilink">{step.wikilink}</span>
-                </div>
-                <p class="card-icon" aria-hidden="true">{step.icon}</p>
-                <h3>{step.title}</h3>
-                <p class="card-desc">{step.description}</p>
-              </div>
-              <div class="card-rule" aria-hidden="true"></div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <!-- ─── FEATURES ─── -->
-      <section id="features" class="section">
-        <div class="section-head reveal">
-          <span class="section-ref" aria-hidden="true">§3</span>
-          <p class="section-wikilink">[[index]]</p>
-          <h2>Features</h2>
-        </div>
-
-        <div class="card-grid features-grid">
-          {features.map((f, i) => (
-            <article class={`card card-feature card-rot-${i % 3}`}>
-              <div class="card-tab" aria-hidden="true"></div>
-              <div class="card-inner">
-                <div class="card-head">
-                  <span class="card-ref">{f.num}</span>
-                  <span class="card-wikilink">{f.wikilink}</span>
-                </div>
-                <h3>{f.title}</h3>
-                <p class="card-desc">{f.description}</p>
-              </div>
-              <div class="card-rule" aria-hidden="true"></div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <!-- ─── QUICKSTART ─── -->
-      <section id="quickstart" class="section reveal">
-        <div class="section-head">
-          <span class="section-ref" aria-hidden="true">§4</span>
-          <p class="section-wikilink">[[quickstart]]</p>
-          <h2>Quick start</h2>
-        </div>
-
-        <div class="terminal" role="group" aria-label="Terminal command">
-          <div class="terminal-bar">
-            <span class="dot dot-red"></span>
-            <span class="dot dot-yellow"></span>
-            <span class="dot dot-green"></span>
-            <p class="terminal-title">Terminal</p>
+      <section id="how" class="sect">
+        <div class="wrap">
+          <h2 class="reveal">How it works</h2>
+          <div class="flow reveal">
+            <span>conversation</span>
+            <span class="flow-sep">&rarr;</span>
+            <code class="flow-cmd">/new</code>
+            <span class="flow-sep">&rarr;</span>
+            <span>atomic notes in vault</span>
           </div>
-          <div class="terminal-body">
-            <p class="terminal-label">Run this command</p>
-            <pre><code><span class="prompt">$</span> npx zettelclaw init</code></pre>
-            <div class="terminal-cursor" aria-hidden="true"></div>
+          <div class="steps">
+            {steps.map((s) => (
+              <article class="step reveal">
+                <span class="step-num">{s.num}</span>
+                <span class="step-icon" aria-hidden="true">{s.icon}</span>
+                <h3>{s.title}</h3>
+                <p>{s.description}</p>
+                <span class="wiki">{s.wikilink}</span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="sect">
+        <div class="wrap">
+          <h2 class="reveal">Features</h2>
+          <div class="feat-grid">
+            {features.map((f) => (
+              <article class="feat reveal">
+                <span class="wiki">{f.wikilink}</span>
+                <h3>{f.title}</h3>
+                <p>{f.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="quickstart" class="sect reveal">
+        <div class="wrap">
+          <h2>Quick start</h2>
+          <div class="term" role="group" aria-label="Terminal command">
+            <div class="term-chrome">
+              <span class="dot dot-r"></span>
+              <span class="dot dot-y"></span>
+              <span class="dot dot-g"></span>
+              <span class="term-title">Terminal</span>
+            </div>
+            <div class="term-body">
+              <pre><code><span class="prompt">$</span> npx zettelclaw init</code></pre>
+            </div>
           </div>
         </div>
       </section>
     </main>
 
-    <!-- ═══════ FOOTER ═══════ -->
-    <footer class="zc-footer">
-      <div class="zc-container footer-inner">
+    <footer class="ft">
+      <div class="wrap ft-row">
         <p>Built with 🦞 by the OpenClaw community</p>
-        <div class="footer-links">
+        <div class="ft-links">
           <a href="https://github.com/maxpetretta/zettelclaw">GitHub</a>
           <a href="https://www.npmjs.com/package/zettelclaw">npm</a>
         </div>
@@ -338,905 +190,483 @@ const edges = [
   </div>
 </Layout>
 
+<style is:global>
+  @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
+</style>
+
 <style>
-  /* ╔══════════════════════════════════════════╗
-     ║  ZETTELCLAW — Knowledge Graph Homepage  ║
-     ╚══════════════════════════════════════════╝ */
+  :global(body) {
+    background: #faf9f6 !important;
+  }
 
-  /* ── Design tokens ── */
-  .zc {
-    --base: #0D0D0D;
-    --coral: #FF6B35;
-    --coral-dim: rgba(255, 107, 53, 0.15);
-    --violet: #7C3AED;
-    --violet-dim: rgba(124, 58, 237, 0.15);
-    --paper: #F5E6C8;
-    --paper-bg: linear-gradient(
-      168deg,
-      #F5E6C8 0%,
-      #EDD9B5 40%,
-      #E8D0A4 100%
-    );
-    --paper-dark: #d4c4a0;
-    --ink: #1a1612;
-    --ink-muted: #3d352a;
-    --text: #EEF1FF;
-    --text-dim: #9BA3BC;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  :global(::selection) {
+    background: rgba(124, 58, 237, 0.14) !important;
+    color: inherit !important;
+  }
 
-    background:
-      radial-gradient(ellipse 120% 80% at 10% -10%, rgba(124, 58, 237, 0.12) 0%, transparent 50%),
-      radial-gradient(ellipse 100% 70% at 90% 10%, rgba(255, 107, 53, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse 80% 60% at 50% 100%, rgba(124, 58, 237, 0.06) 0%, transparent 50%),
-      var(--base);
-    color: var(--text);
+  .pg {
+    --paper: #faf9f6;
+    --ink: #1c1917;
+    --stone-600: #57534e;
+    --stone-500: #78716c;
+    --stone-400: #a8a29e;
+    --stone-300: #d6d3d1;
+    --stone-200: #e7e5e4;
+    --stone-100: #f5f5f4;
+    --brand: #ea580c;
+    --accent: #7c3aed;
+    --white: #ffffff;
+    --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+      "Liberation Mono", monospace;
+
+    background: var(--paper);
+    color: var(--ink);
     min-height: 100vh;
   }
 
-  :global(html) {
-    scroll-behavior: smooth;
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
   }
 
-  /* ── Layout ── */
-  .zc-container {
+  .wrap {
+    max-width: 920px;
     margin: 0 auto;
-    width: min(1120px, calc(100% - 2rem));
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 
-  .zc-main {
-    margin: 0 auto;
-    width: min(1120px, calc(100% - 2rem));
-    padding-top: clamp(1.5rem, 4vw, 4rem);
-    padding-bottom: 6rem;
-  }
+  /* ─── Header ─── */
 
-  /* ── Header ── */
-  .zc-header {
+  .hd {
     position: sticky;
     top: 0;
     z-index: 50;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(12px) saturate(1.4);
-    background: linear-gradient(180deg, rgba(13, 13, 13, 0.92) 0%, rgba(13, 13, 13, 0.6) 100%);
+    background: rgba(250, 249, 246, 0.9);
+    backdrop-filter: blur(16px) saturate(1.5);
+    border-bottom: 1px solid var(--stone-200);
   }
 
-  .header-inner {
+  .hd-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    height: 68px;
+    height: 56px;
   }
 
-  .brand {
+  .logo {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    text-decoration: none;
-    color: var(--text);
-  }
-
-  .brand-lobster {
-    font-size: 1.2rem;
-  }
-
-  .brand-text {
+    gap: 0.4rem;
+    font-size: 0.88rem;
     font-weight: 700;
-    font-size: 0.95rem;
-    letter-spacing: 0.03em;
+    color: var(--ink);
+    text-decoration: none;
+    letter-spacing: 0.02em;
   }
 
-  .nav {
+  .hd-nav {
     display: none;
     align-items: center;
-    gap: 1.5rem;
-    font-size: 0.88rem;
+    gap: 2rem;
+    font-size: 0.84rem;
   }
 
-  .nav a {
-    color: var(--text-dim);
+  .hd-nav a {
+    color: var(--stone-400);
     text-decoration: none;
     transition: color 150ms ease;
-    position: relative;
   }
 
-  .nav a::after {
-    content: "";
-    position: absolute;
-    bottom: -4px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: var(--coral);
-    transition: width 200ms ease;
+  .hd-nav a:hover {
+    color: var(--ink);
   }
 
-  .nav a:hover {
-    color: var(--text);
-  }
-
-  .nav a:hover::after {
-    width: 100%;
-  }
-
-  .nav-cta {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 107, 53, 0.5);
-    background: rgba(255, 107, 53, 0.1);
-    padding: 0.4rem 0.85rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #FFD4C2;
-    text-decoration: none;
-    transition: background 180ms ease, transform 180ms ease;
-  }
-
-  .nav-cta:hover {
-    background: rgba(255, 107, 53, 0.2);
-    transform: translateY(-1px);
-  }
-
-  /* ═══════════════════════
-     HERO
-     ═══════════════════════ */
-  .hero {
-    position: relative;
-    overflow: hidden;
-    border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    min-height: clamp(500px, 72vh, 640px);
-    background:
-      radial-gradient(ellipse 60% 50% at 70% 30%, rgba(124, 58, 237, 0.14) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 60% at 20% 70%, rgba(255, 107, 53, 0.08) 0%, transparent 70%),
-      linear-gradient(160deg, rgba(20, 18, 30, 0.9) 0%, rgba(13, 13, 13, 0.95) 100%);
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-      0 40px 80px -20px rgba(0, 0, 0, 0.6),
-      0 0 120px -40px rgba(124, 58, 237, 0.15);
-  }
-
-  /* Graph */
-  .hero-graph {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-  }
-
-  .hero-graph svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  .graph-edges line {
-    stroke: rgba(124, 58, 237, 0.25);
-    stroke-width: 1;
-    stroke-linecap: round;
-    stroke-dasharray: 6 10;
-    animation: edge-travel 6s linear infinite;
-    animation-delay: var(--edge-d);
-    filter: url(#edge-blur);
-  }
-
-  .graph-edges line:nth-child(odd) {
-    stroke: rgba(255, 107, 53, 0.2);
-    animation-duration: 8s;
-    stroke-dasharray: 4 12;
-  }
-
-  .graph-edges line:nth-child(3n) {
-    stroke: rgba(255, 255, 255, 0.08);
-    animation-duration: 10s;
-  }
-
-  .halo {
-    opacity: 0.3;
-    animation: halo-breathe 5s ease-in-out infinite;
-    animation-delay: var(--d);
-  }
-
-  .node {
-    animation: node-pulse 4s ease-in-out infinite;
-    animation-delay: var(--d);
-  }
-
-  .node-coral {
-    fill: var(--coral);
-  }
-
-  .node-violet {
-    fill: var(--violet);
-  }
-
-  /* Scan-lines for CRT / Obsidian feel */
-  .hero-scanlines {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background:
-      repeating-linear-gradient(
-        0deg,
-        transparent 0px,
-        transparent 2px,
-        rgba(0, 0, 0, 0.03) 2px,
-        rgba(0, 0, 0, 0.03) 4px
-      );
-    pointer-events: none;
-  }
-
-  /* Hero content */
-  .hero-content {
-    position: relative;
-    z-index: 2;
-    max-width: 660px;
-    padding: clamp(1.5rem, 3vw, 2.5rem);
-    margin-top: clamp(10rem, 22vw, 16rem);
-  }
-
-  .hero-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 107, 53, 0.45);
-    background: rgba(255, 107, 53, 0.12);
-    padding: 0.4rem 0.85rem;
-    font-size: 0.7rem;
+  .hd-cta {
+    font-size: 0.84rem;
     font-weight: 600;
-    letter-spacing: 0.14em;
+    color: var(--stone-500);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  .hd-cta:hover {
+    color: var(--brand);
+  }
+
+  /* ─── Hero ─── */
+
+  .hero {
+    padding: clamp(5rem, 14vw, 10rem) 0 clamp(4rem, 9vw, 7rem);
+    background: linear-gradient(
+      180deg,
+      rgba(234, 88, 12, 0.025) 0%,
+      transparent 50%
+    );
+  }
+
+  .kicker {
+    font-size: 0.76rem;
+    font-weight: 650;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: #FFD4C2;
-    margin: 0;
-    backdrop-filter: blur(4px);
+    color: var(--brand);
   }
 
-  .hero-h1 {
-    margin: 1rem 0 0;
+  .hero h1 {
+    margin-top: 1.25rem;
     font-family: var(--serif);
-    font-size: clamp(2.2rem, 6vw, 4.5rem);
-    font-weight: 700;
-    line-height: 1.05;
-    letter-spacing: -0.035em;
-    text-wrap: balance;
+    font-size: clamp(2.75rem, 8vw, 5.2rem);
+    font-weight: 400;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    color: var(--ink);
   }
 
-  .hero-accent {
-    background: linear-gradient(135deg, var(--coral) 20%, #FF9F6B 50%, var(--violet) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  .hero h1 em {
+    font-style: italic;
   }
 
-  .hero-lead {
-    margin: 1.1rem 0 0;
-    max-width: 52ch;
-    font-size: clamp(1rem, 1.6vw, 1.2rem);
-    line-height: 1.75;
-    color: #C8CDDF;
-    text-wrap: pretty;
+  .lead {
+    margin-top: 1.5rem;
+    font-size: clamp(1.02rem, 1.6vw, 1.15rem);
+    line-height: 1.72;
+    color: var(--stone-500);
+    max-width: 44ch;
   }
 
   .hero-actions {
-    margin-top: 1.8rem;
+    margin-top: 2rem;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.65rem;
   }
 
-  /* Buttons */
-  .btn {
+  /* ─── Buttons ─── */
+
+  .btn-solid,
+  .btn-outline {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    padding: 0.65rem 1.35rem;
+    font-size: 0.88rem;
+    font-weight: 600;
     text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 700;
-    padding: 0.72rem 1.15rem;
-    border-radius: 12px;
-    transition: transform 180ms ease, box-shadow 180ms ease;
+    border-radius: 8px;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      background 160ms ease;
   }
 
-  .btn:hover {
-    transform: translateY(-2px);
+  .btn-solid {
+    background: var(--ink);
+    color: var(--paper);
   }
 
-  .btn-primary {
-    color: #fff;
-    background: linear-gradient(135deg, var(--coral), #FF8A5C);
-    box-shadow: 0 8px 30px rgba(255, 107, 53, 0.3), 0 0 0 1px rgba(255, 107, 53, 0.4) inset;
+  .btn-solid:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(28, 25, 23, 0.15);
+    background: #292524;
   }
 
-  .btn-primary:hover {
-    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.4), 0 0 0 1px rgba(255, 107, 53, 0.5) inset;
+  .btn-outline {
+    border: 1.5px solid var(--stone-300);
+    color: var(--ink);
+    background: transparent;
   }
 
-  .btn-ghost {
-    color: var(--text);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(4px);
+  .btn-outline:hover {
+    transform: translateY(-1px);
+    border-color: var(--stone-400);
+    background: var(--white);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
   }
 
-  .btn-ghost:hover {
-    border-color: rgba(255, 255, 255, 0.35);
-    background: rgba(255, 255, 255, 0.08);
+  /* ─── Sections ─── */
+
+  .sect {
+    border-top: 1px solid var(--stone-200);
+    padding: clamp(3rem, 7vw, 5rem) 0;
   }
 
-  /* Hero marginalia */
-  .hero-marginalia {
-    position: absolute;
-    right: 2rem;
-    top: 2.5rem;
-    z-index: 2;
-    display: none;
-    flex-direction: column;
-    gap: 0.35rem;
-    max-width: 180px;
-    opacity: 0.4;
-    transition: opacity 300ms ease;
-  }
-
-  .hero:hover .hero-marginalia {
-    opacity: 0.65;
-  }
-
-  .marginalia-ref {
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    color: var(--violet);
-    letter-spacing: 0.05em;
-  }
-
-  .marginalia-note {
+  .sect h2 {
     font-family: var(--serif);
-    font-size: 0.78rem;
-    font-style: italic;
-    color: var(--text-dim);
-    line-height: 1.5;
-    border-left: 2px solid rgba(124, 58, 237, 0.3);
-    padding-left: 0.6rem;
+    font-size: clamp(1.6rem, 3.8vw, 2.4rem);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--ink);
   }
 
-  /* ═══════════════════════
-     SECTIONS
-     ═══════════════════════ */
-  .section {
-    margin-top: clamp(4rem, 9vw, 7rem);
-  }
-
-  .section-head {
-    position: relative;
-    padding-left: 2.5rem;
-  }
-
-  .section-ref {
-    position: absolute;
-    left: 0;
-    top: 0.15rem;
-    font-family: var(--serif);
-    font-size: 0.85rem;
-    font-style: italic;
-    color: rgba(124, 58, 237, 0.5);
-  }
-
-  .section-wikilink {
-    margin: 0;
-    font-family: var(--mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
-    color: #A78BFA;
-  }
-
-  .section h2 {
-    margin: 0.5rem 0 0;
-    font-family: var(--serif);
-    font-size: clamp(1.5rem, 3.5vw, 2.4rem);
-    letter-spacing: -0.02em;
-    color: #F9FBFF;
-    font-weight: 700;
-  }
-
-  .section-body {
-    margin: 1.25rem 0 0;
-    padding-left: 2.5rem;
-    max-width: 68ch;
-    line-height: 1.85;
-    color: var(--text-dim);
-    text-wrap: pretty;
-  }
-
-  /* Annotation decoration */
-  .section-annotation {
-    margin-top: 1.5rem;
-    padding-left: 2.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-
-  .annotation-line {
-    width: 40px;
-    height: 1px;
-    background: rgba(124, 58, 237, 0.3);
-  }
-
-  .annotation-text {
-    font-family: var(--mono);
-    font-size: 0.7rem;
-    color: rgba(167, 139, 250, 0.5);
-    letter-spacing: 0.04em;
-  }
-
-  /* ═══════════════════════
-     FLOW PIPELINE
-     ═══════════════════════ */
-  .flow-pipeline {
+  .prose {
     margin-top: 1.25rem;
-    padding-left: 2.5rem;
+    font-size: clamp(1rem, 1.4vw, 1.08rem);
+    line-height: 1.82;
+    color: var(--stone-600);
+    max-width: 58ch;
+  }
+
+  /* ─── Flow ─── */
+
+  .flow {
+    margin-top: 1.5rem;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
-    font-size: clamp(0.88rem, 1.5vw, 1rem);
-    color: #D3D8EA;
+    gap: 0.6rem;
+    font-size: 0.95rem;
+    color: var(--stone-500);
   }
 
-  .flow-node {
-    padding: 0.25rem 0;
-  }
-
-  .flow-connector {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-  }
-
-  .flow-line-seg {
-    width: 20px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--coral));
-  }
-
-  .flow-arrow {
-    color: var(--coral);
+  .flow-sep {
+    color: var(--brand);
     font-weight: 700;
-    font-size: 1.1em;
   }
 
   .flow-cmd {
     font-family: var(--mono);
-    border-radius: 6px;
-    border: 1px solid rgba(124, 58, 237, 0.45);
-    background: rgba(124, 58, 237, 0.12);
-    padding: 0.2rem 0.5rem;
-    color: #D9CAFF;
-    font-size: 0.95em;
+    font-size: 0.85em;
+    background: var(--accent);
+    color: var(--white);
+    padding: 0.18rem 0.55rem;
+    border-radius: 5px;
   }
 
-  /* ═══════════════════════
-     INDEX CARDS
-     ═══════════════════════ */
-  .card-grid {
-    margin-top: 1.5rem;
+  /* ─── Steps ─── */
+
+  .steps {
+    margin-top: 2.5rem;
     display: grid;
-    gap: 1.1rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
   }
 
-  .steps-grid {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    padding-left: 2.5rem;
-  }
-
-  .features-grid {
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    padding-left: 2.5rem;
-  }
-
-  /* Card — physical index card */
-  .card {
-    position: relative;
-    border-radius: 4px;
-    background: var(--paper-bg);
-    color: var(--ink);
-    box-shadow:
-      0 1px 0 var(--paper-dark),
-      0 2px 0 rgba(180, 160, 120, 0.5),
-      0 16px 40px -8px rgba(0, 0, 0, 0.4);
-    transition: transform 250ms ease, box-shadow 250ms ease;
-    overflow: visible;
-  }
-
-  /* Tab at top — like a real index card tab */
-  .card-tab {
-    position: absolute;
-    top: -8px;
-    left: 20px;
-    width: 48px;
-    height: 8px;
-    background: linear-gradient(180deg, #E8D0A4, var(--paper));
-    border-radius: 3px 3px 0 0;
-    border: 1px solid rgba(180, 160, 120, 0.4);
-    border-bottom: none;
-  }
-
-  .card-inner {
-    padding: 1rem 1rem 0.8rem;
-    position: relative;
-  }
-
-  /* Lined paper effect */
-  .card-inner::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-      repeating-linear-gradient(
-        180deg,
-        transparent 0px,
-        transparent 27px,
-        rgba(100, 80, 60, 0.08) 27px,
-        rgba(100, 80, 60, 0.08) 28px
-      );
-    pointer-events: none;
-    border-radius: 4px;
-  }
-
-  /* Red margin line */
-  .card-inner::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 42px;
-    bottom: 0;
-    width: 1px;
-    background: rgba(200, 60, 60, 0.15);
-    pointer-events: none;
-  }
-
-  /* Bottom ruled line */
-  .card-rule {
-    height: 1px;
-    margin: 0 1rem 0.8rem;
-    background: rgba(100, 80, 60, 0.12);
-  }
-
-  /* Dashed inner border — like old card template */
-  .card::after {
-    content: "";
-    position: absolute;
-    inset: 6px;
-    border: 1px dashed rgba(100, 80, 60, 0.15);
-    border-radius: 2px;
-    pointer-events: none;
-  }
-
-  .card:hover {
-    transform: translateY(-6px) rotate(0deg) !important;
-    box-shadow:
-      0 1px 0 var(--paper-dark),
-      0 2px 0 rgba(180, 160, 120, 0.5),
-      0 24px 50px -8px rgba(0, 0, 0, 0.5),
-      0 0 30px -5px rgba(124, 58, 237, 0.15);
-  }
-
-  /* Card head with ref number + wikilink */
-  .card-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 0.2rem;
-  }
-
-  .card-ref {
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    color: rgba(100, 80, 60, 0.5);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .card-wikilink {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: #5B3DB0;
-  }
-
-  .card-icon {
-    margin: 0.15rem 0 0;
-    font-size: 1.15rem;
-  }
-
-  .card h3 {
-    margin: 0.2rem 0 0;
+  .step-num {
+    display: block;
     font-family: var(--serif);
+    font-size: 2.5rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--stone-200);
+  }
+
+  .step-icon {
+    display: block;
+    margin-top: 0.75rem;
     font-size: 1.1rem;
+  }
+
+  .step h3 {
+    margin-top: 0.4rem;
+    font-size: 1.02rem;
     font-weight: 700;
-    color: var(--ink);
     letter-spacing: -0.01em;
+    color: var(--ink);
   }
 
-  .card-desc {
-    margin: 0.4rem 0 0;
+  .step p {
+    margin-top: 0.35rem;
     font-size: 0.9rem;
-    line-height: 1.65;
-    color: var(--ink-muted);
+    line-height: 1.62;
+    color: var(--stone-500);
   }
 
-  /* Varied rotation for organic scatter */
-  .card-rot-0 { transform: rotate(-1.2deg); }
-  .card-rot-1 { transform: rotate(0.8deg); }
-  .card-rot-2 { transform: rotate(-0.5deg); }
+  .wiki {
+    display: inline-block;
+    margin-top: 0.6rem;
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
 
-  /* ═══════════════════════
-     TERMINAL
-     ═══════════════════════ */
-  .terminal {
-    margin-top: 1.5rem;
-    margin-left: 2.5rem;
-    max-width: 560px;
+  /* ─── Features ─── */
+
+  .feat-grid {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--stone-200);
+    border: 1px solid var(--stone-200);
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
-    background: #101010;
-    box-shadow:
-      0 20px 50px -10px rgba(0, 0, 0, 0.5),
-      0 0 0 1px rgba(255, 255, 255, 0.04) inset;
   }
 
-  .terminal-bar {
+  .feat {
+    padding: 1.35rem 1.4rem;
+    background: var(--white);
+    transition: background 200ms ease;
+  }
+
+  .feat:hover {
+    background: var(--stone-100);
+  }
+
+  .feat .wiki {
+    margin-top: 0;
+    margin-bottom: 0.15rem;
+  }
+
+  .feat h3 {
+    margin-top: 0.3rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .feat p {
+    margin-top: 0.3rem;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--stone-500);
+  }
+
+  /* ─── Terminal ─── */
+
+  .term {
+    margin-top: 1.5rem;
+    max-width: 480px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--ink);
+    box-shadow: 0 25px 60px -15px rgba(28, 25, 23, 0.25);
+  }
+
+  .term-chrome {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.55rem 0.75rem;
-    background: linear-gradient(180deg, #2c2c2c, #242424);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 6px;
+    padding: 11px 14px;
+    background: #292524;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  .terminal-title {
+  .term-title {
     margin: 0 auto;
-    transform: translateX(-1.2rem);
-    font-size: 0.72rem;
+    transform: translateX(-14px);
+    font-size: 0.7rem;
     font-weight: 500;
-    color: #8A8F9C;
-    letter-spacing: 0.03em;
+    color: var(--stone-400);
+    letter-spacing: 0.02em;
   }
 
   .dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    display: inline-block;
   }
 
-  .dot-red { background: #FF5F57; }
-  .dot-yellow { background: #FFBD2E; }
-  .dot-green { background: #28C840; }
-
-  .terminal-body {
-    padding: 1rem 1.1rem 1.2rem;
-    position: relative;
-    background:
-      radial-gradient(circle at 80% 15%, rgba(124, 58, 237, 0.12) 0%, transparent 45%),
-      radial-gradient(circle at 15% 90%, rgba(255, 107, 53, 0.08) 0%, transparent 45%),
-      #0A0A0B;
+  .dot-r {
+    background: #ef4444;
+  }
+  .dot-y {
+    background: #eab308;
+  }
+  .dot-g {
+    background: #22c55e;
   }
 
-  .terminal-label {
+  .term-body {
+    padding: 1.1rem 1.2rem;
+  }
+
+  .term-body pre {
     margin: 0;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #6B7280;
-    font-family: var(--mono);
-  }
-
-  .terminal-body pre {
-    margin: 0.7rem 0 0;
     overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(0, 0, 0, 0.5);
-    padding: 0.7rem 0.9rem;
   }
 
-  .terminal-body code {
+  .term-body code {
     font-family: var(--mono);
-    font-size: 0.92rem;
-    color: #F0D8CF;
+    font-size: 0.88rem;
+    color: var(--stone-200);
   }
 
   .prompt {
-    color: var(--coral);
+    color: var(--brand);
     margin-right: 0.5rem;
   }
 
-  /* Blinking cursor */
-  .terminal-cursor {
-    position: absolute;
-    bottom: 1.55rem;
-    right: 1.4rem;
-    width: 8px;
-    height: 16px;
-    background: var(--coral);
-    opacity: 0.7;
-    animation: blink 1.2s step-end infinite;
-    border-radius: 1px;
+  /* ─── Footer ─── */
+
+  .ft {
+    border-top: 1px solid var(--stone-200);
+    padding: 1.75rem 0 2.5rem;
   }
 
-  /* ═══════════════════════
-     FOOTER
-     ═══════════════════════ */
-  .zc-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
-    padding: 2rem 0 2.8rem;
-  }
-
-  .footer-inner {
+  .ft-row {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.9rem;
+    gap: 0.6rem;
   }
 
-  .zc-footer p {
-    margin: 0;
-    font-size: 0.88rem;
-    color: #7B829A;
+  .ft p {
+    font-size: 0.84rem;
+    color: var(--stone-400);
   }
 
-  .footer-links {
-    display: inline-flex;
-    gap: 1rem;
-    font-size: 0.88rem;
+  .ft-links {
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.84rem;
   }
 
-  .footer-links a {
-    color: #7B829A;
+  .ft-links a {
+    color: var(--stone-400);
     text-decoration: none;
     transition: color 150ms ease;
   }
 
-  .footer-links a:hover {
-    color: var(--text);
+  .ft-links a:hover {
+    color: var(--ink);
   }
 
-  /* ═══════════════════════
-     ANIMATIONS
-     ═══════════════════════ */
-  @keyframes edge-travel {
-    from { stroke-dashoffset: 0; }
-    to { stroke-dashoffset: -48; }
-  }
+  /* ─── Responsive ─── */
 
-  @keyframes node-pulse {
-    0%, 100% {
-      opacity: 0.6;
-      r: inherit;
-    }
-    50% {
-      opacity: 1;
-    }
-  }
-
-  @keyframes halo-breathe {
-    0%, 100% {
-      opacity: 0.15;
-      transform: scale(0.8);
-    }
-    50% {
-      opacity: 0.4;
-      transform: scale(1.2);
-    }
-  }
-
-  @keyframes blink {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 0; }
-  }
-
-  /* ═══════════════════════
-     RESPONSIVE
-     ═══════════════════════ */
-  @media (min-width: 860px) {
-    .nav {
-      display: inline-flex;
-    }
-
-    .hero-marginalia {
+  @media (min-width: 768px) {
+    .hd-nav {
       display: flex;
     }
 
-    .footer-inner {
+    .ft-row {
       flex-direction: row;
       justify-content: space-between;
       align-items: center;
     }
   }
 
-  @media (max-width: 720px) {
-    .zc-container,
-    .zc-main {
-      width: min(1120px, calc(100% - 1.2rem));
+  @media (max-width: 640px) {
+    .steps {
+      grid-template-columns: 1fr;
+      gap: 1.75rem;
     }
 
-    .hero {
-      min-height: 480px;
-      border-radius: 16px;
-    }
-
-    .hero-content {
-      margin-top: 9rem;
-      padding: 1rem;
-    }
-
-    .hero-actions {
-      gap: 0.6rem;
-    }
-
-    .btn {
-      width: 100%;
-    }
-
-    .section-head {
-      padding-left: 0;
-    }
-
-    .section-ref {
-      display: none;
-    }
-
-    .section-body {
-      padding-left: 0;
-      line-height: 1.7;
-    }
-
-    .section-annotation {
-      padding-left: 0;
-    }
-
-    .flow-pipeline {
-      padding-left: 0;
-    }
-
-    .steps-grid,
-    .features-grid {
-      padding-left: 0;
-    }
-
-    .terminal {
-      margin-left: 0;
-    }
-
-    .flow-line-seg {
-      width: 12px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .features-grid {
+    .feat-grid {
       grid-template-columns: 1fr;
     }
 
-    .card-tab {
-      width: 36px;
+    .btn-solid,
+    .btn-outline {
+      width: 100%;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.25rem, 10vw, 3.5rem);
     }
   }
 
-  /* ── Reduced motion ── */
   @media (prefers-reduced-motion: reduce) {
-    .graph-edges line,
-    .graph-nodes .node,
-    .halo,
-    .terminal-cursor,
-    .btn,
-    .card,
-    .nav-cta,
-    .nav a::after {
-      animation: none !important;
+    .btn-solid,
+    .btn-outline,
+    .feat,
+    .hd-nav a,
+    .hd-cta,
+    .ft-links a {
       transition: none !important;
     }
   }
