@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { join } from "node:path"
-import { confirm, intro, isCancel, select, spinner, text } from "@clack/prompts"
+import { confirm, intro, isCancel, log, select, spinner, text } from "@clack/prompts"
 
 import { firePostInitEvent, installOpenClawHook, patchOpenClawConfig } from "../lib/openclaw"
 import { resolveUserPath } from "../lib/paths"
@@ -136,35 +136,28 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   s.stop("Setup complete")
 
-  console.log("")
-  console.log(`│  Vault path:  ${toTildePath(vaultPath)}`)
+  const summaryLines = [`Vault path:  ${toTildePath(vaultPath)}`]
 
   const plugins = [...pluginResult.downloaded, ...pluginResult.failed]
   if (plugins.length > 0) {
-    console.log(`│  Plugins:     ${plugins.join(", ")}`)
+    summaryLines.push(`Plugins:     ${plugins.join(", ")}`)
   }
 
-  console.log("│  Skill:       zettelclaw")
+  summaryLines.push("Skill:       zettelclaw")
 
-  const hooks: string[] = []
   if (hookInstallStatus === "installed" || hookInstallStatus === "skipped") {
-    hooks.push("zettelclaw")
+    summaryLines.push("Hooks:       zettelclaw")
   }
-  if (hooks.length > 0) {
-    console.log(`│  Hooks:       ${hooks.join(", ")}`)
-  }
+
+  log.message(summaryLines.join("\n"))
 
   if (pluginResult.failed.length > 0) {
-    console.log(`│`)
-    console.log(`│  ⚠ Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
+    log.warn(`Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
   }
 
   if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {
-    console.log("│")
-    console.log("│  ⚠ Restart OpenClaw gateway for hook and config changes to take effect.")
+    log.warn("Restart OpenClaw gateway for hook and config changes to take effect.")
   }
-
-  console.log("")
 
   // Prompt to notify the agent to update workspace files
   if (openclawRequested) {
@@ -181,16 +174,18 @@ export async function runInit(options: InitOptions): Promise<void> {
       const projectPath = join(import.meta.dirname, "../..")
       const sent = await firePostInitEvent(vaultPath, projectPath)
       if (sent) {
-        console.log("│  ✓ Agent notified — it will update AGENTS.md and HEARTBEAT.md")
+        log.success("Agent notified — it will update AGENTS.md and HEARTBEAT.md")
       } else {
-        console.log("│  ⚠ Could not reach the agent. Is the OpenClaw gateway running?")
-        console.log("│    You can manually update using the templates in: templates/")
+        log.warn(
+          "Could not reach the agent. Is the OpenClaw gateway running?\nYou can manually update using the templates in: templates/",
+        )
       }
     } else {
-      console.log("│  Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.")
-      console.log("│    Template files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md")
+      log.message(
+        "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.\nTemplate files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md",
+      )
     }
   }
 
-  console.log("\nDone! Open it in Obsidian to get started.")
+  log.success("Done! Open it in Obsidian to get started.")
 }
