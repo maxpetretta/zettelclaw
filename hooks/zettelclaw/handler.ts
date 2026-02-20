@@ -1,4 +1,5 @@
 import { access, appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 
 import { extractSessionSummary, type ExtractedNote, type SessionSummary } from "./lib/extract";
@@ -35,6 +36,65 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function logWarning(message: string): void {
   console.warn(`[zettelclaw hook] ${message}`);
+}
+
+function logInfo(message: string): void {
+  console.log(`[zettelclaw hook] ${message}`);
+}
+
+/** Check if the official Obsidian CLI (1.12+) is available and responding */
+function isObsidianCliAvailable(): boolean {
+  try {
+    const result = spawnSync("obsidian", ["version"], {
+      encoding: "utf8",
+      timeout: 5_000,
+    });
+    return result.status === 0 && !result.error;
+  } catch {
+    return false;
+  }
+}
+
+/** Create a note using Obsidian CLI with template */
+function cliCreateNote(name: string, template: string): boolean {
+  try {
+    const result = spawnSync("obsidian", ["create", `name=${name}`, `template=${template}`, "silent"], {
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+    // CLI exit codes lie — check output for errors
+    const output = (result.stdout ?? "") + (result.stderr ?? "");
+    if (output.toLowerCase().includes("error:")) return false;
+    return result.status === 0 && !result.error;
+  } catch {
+    return false;
+  }
+}
+
+/** Set a frontmatter property via Obsidian CLI */
+function cliSetProperty(path: string, name: string, value: string): boolean {
+  try {
+    const result = spawnSync("obsidian", ["property:set", `name=${name}`, `value=${value}`, `path=${path}`], {
+      encoding: "utf8",
+      timeout: 5_000,
+    });
+    return result.status === 0 && !result.error;
+  } catch {
+    return false;
+  }
+}
+
+/** Append content to a file via Obsidian CLI */
+function cliAppend(path: string, content: string): boolean {
+  try {
+    const result = spawnSync("obsidian", ["append", `path=${path}`, `content=${content}`], {
+      encoding: "utf8",
+      timeout: 5_000,
+    });
+    return result.status === 0 && !result.error;
+  } catch {
+    return false;
+  }
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -148,6 +208,7 @@ async function writeExtractedNotes(
   notesDirectory: string,
   extractedNotes: ExtractedNote[],
   dateStamp: string,
+  useCli: boolean,
 ): Promise<string[]> {
   const writtenTitles: string[] = [];
 
@@ -162,10 +223,29 @@ async function writeExtractedNotes(
       continue;
     }
 
-    const frontmatter = buildNoteFrontmatter(note, dateStamp);
     const body = (note.body.trim().length > 0 ? note.body.trim() : note.summary.trim()).trim();
-    const content = `${frontmatter}${body}\n`;
+    const tags = normalizeTags(note.tags);
 
+    if (useCli) {
+      // Try creating via Obsidian CLI with template
+      const templateName = note.type === "note" ? "note" : note.type;
+      const created = cliCreateNote(safeTitle, templateName);
+      if (created) {
+        // Set properties and append body via CLI
+        if (note.summary.trim()) cliSetProperty(`01 Notes/${safeTitle}.md`, "summary", note.summary.trim());
+        if (tags.length > 0) cliSetProperty(`01 Notes/${safeTitle}.md`, "tags", tags.join(","));
+        cliSetProperty(`01 Notes/${safeTitle}.md`, "source", `[[${dateStamp}]]`);
+        if (body) cliAppend(`01 Notes/${safeTitle}.md`, body);
+        writtenTitles.push(safeTitle);
+        continue;
+      }
+      // CLI failed — fall through to file tools
+      logWarning(`CLI create failed for "${safeTitle}", falling back to file tools`);
+    }
+
+    // File tools fallback
+    const frontmatter = buildNoteFrontmatter(note, dateStamp);
+    const content = `${frontmatter}${body}\n`;
     await writeFile(notePath, content, "utf8");
     writtenTitles.push(safeTitle);
   }
@@ -178,14 +258,28 @@ function renderBullets(items: string[]): string {
   return items.map((item) => item.startsWith("- ") ? item : `- ${item}`).join("\n");
 }
 
-async function writeJournalEntry(vaultPath: string, timestamp: Date, summary: SessionSummary): Promise<void> {
+async function writeJournalEntry(vaultPath: string, timestamp: Date, summary: SessionSummary, useCli: boolean): Promise<void> {
   const journalDir = await resolveJournalDirectory(vaultPath);
   const dateStamp = formatDate(timestamp);
   const journalPath = join(journalDir, `${dateStamp}.md`);
 
   await mkdir(journalDir, { recursive: true });
 
-  const isNew = !(await pathExists(journalPath));
+  let isNew = !(await pathExists(journalPath));
+
+  // Try creating journal via CLI with template if it doesn't exist
+  if (isNew && useCli) {
+    const created = cliCreateNote(dateStamp, "journal");
+    if (created) {
+      // Verify it was actually created (CLI may place it elsewhere)
+      if (await pathExists(journalPath)) {
+        isNew = false; // Template created it with frontmatter, now append content
+        logInfo(`Journal ${dateStamp} created via Obsidian CLI`);
+      } else {
+        logWarning(`CLI created journal but not at expected path, falling back to file tools`);
+      }
+    }
+  }
 
   if (isNew) {
     // Create journal using the template format
@@ -314,6 +408,14 @@ export const handler: HookHandler = async (event) => {
     const eventDate = toDate(event.timestamp);
     const dateStamp = formatDate(eventDate);
 
+    // Check if Obsidian CLI is available (preferred for template-based creation)
+    const useCli = isObsidianCliAvailable();
+    if (useCli) {
+      logInfo("Obsidian CLI detected — using templates for note creation");
+    } else {
+      logInfo("Obsidian CLI not available — using file tools fallback");
+    }
+
     // Journal entry is ALWAYS written — it's the primary output of the hook.
     // Atomic notes are only created when a genuinely reusable concept was discussed.
     const result = await extractSessionSummary(transcript, {
@@ -323,12 +425,12 @@ export const handler: HookHandler = async (event) => {
     });
 
     // Write/update journal entry (always)
-    await writeJournalEntry(vaultPath, eventDate, result);
+    await writeJournalEntry(vaultPath, eventDate, result, useCli);
 
     // Write atomic notes only if any were extracted
     let writtenTitles: string[] = [];
     if (result.notes.length > 0) {
-      writtenTitles = await writeExtractedNotes(notesDirectory, result.notes, dateStamp);
+      writtenTitles = await writeExtractedNotes(notesDirectory, result.notes, dateStamp, useCli);
     }
 
     if (writtenTitles.length > 0) {
