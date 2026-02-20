@@ -40,16 +40,16 @@ Use `memory_search` first — it indexes both the workspace and vault.
 ### Structured queries
 ```bash
 # Find by type
-grep -rl 'type: project' "<vault>/01 Notes/"
+rg -l 'type: project' "<vault>/01 Notes/"
 
 # Active projects
-grep -rl 'status: active' "<vault>/01 Notes/" | xargs grep -l 'type: project'
+rg -l 'status: active' "<vault>/01 Notes/" | xargs rg -l 'type: project'
 
 # Notes tagged "ai"
-grep -rl 'tags:.*ai' "<vault>/01 Notes/"
+rg -l 'tags:.*ai' "<vault>/01 Notes/"
 
 # Full-text search
-grep -rl "search term" "<vault>/01 Notes/"
+rg -l "search term" "<vault>/01 Notes/"
 
 # Recent notes
 find "<vault>/01 Notes/" -name "*.md" -mtime -7 | sort
@@ -241,10 +241,10 @@ obsidian backlinks path="01 Notes/SafeShell.md"
 obsidian search query="hook architecture" format=json matches
 ```
 
-If Obsidian CLI is unavailable, use grep:
+If Obsidian CLI is unavailable, use `rg`:
 ```bash
 # Find potential unresolved links (crude but works)
-grep -roh '\[\[[^]]*\]\]' "<vault>/01 Notes/" | sort -u | while read link; do
+rg -o '\[\[[^]]*\]\]' "<vault>/01 Notes/" | sort -u | while read link; do
   name=$(echo "$link" | sed 's/\[\[//;s/\]\]//')
   [ ! -f "<vault>/01 Notes/${name}.md" ] && echo "Unresolved: $link"
 done

@@ -1,7 +1,10 @@
-import { spawnSync } from "node:child_process"
+import { spawn } from "node:child_process"
 import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
+
+import { contentToText } from "./content"
+import { asRecord } from "./json"
 
 const SYSTEM_PROMPT = `You are a knowledge extraction agent. Given a conversation transcript, produce a structured journal entry and optionally extract atomic notes.
 
@@ -60,43 +63,16 @@ export interface SessionSummary {
   notes: ExtractedNote[]
 }
 
+export interface ExtractionResult {
+  success: boolean
+  summary: SessionSummary
+  message?: string
+}
+
 interface ExtractOptions {
   cfg?: unknown
   model?: string | undefined
-  logger?: ((message: string) => void) | undefined
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>
-  }
-
-  return {}
-}
-
-function contentToString(value: unknown): string {
-  if (typeof value === "string") {
-    return value.trim()
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => contentToString(item))
-      .filter((item) => item.length > 0)
-      .join("\n")
-      .trim()
-  }
-
-  if (!value || typeof value !== "object") {
-    return ""
-  }
-
-  const record = value as Record<string, unknown>
-  if (typeof record.text === "string") {
-    return record.text.trim()
-  }
-
-  return contentToString(record.content)
+  logger?: (message: string) => void
 }
 
 function parseNoteArray(value: unknown): ExtractedNote[] {
@@ -175,7 +151,6 @@ function parseSummaryOutput(rawOutput: string): SessionSummary | null {
           notes: parseNoteArray(record.notes),
         }
       }
-      // Legacy format: bare array of notes
       if (Array.isArray(parsed)) {
         return {
           done: [],
@@ -270,24 +245,80 @@ async function readGatewayPort(cfg: unknown): Promise<number> {
 
 const EMPTY_SUMMARY: SessionSummary = { done: [], decisions: [], open: [], journalNotes: [], notes: [] }
 
-function runOpenClawCliSummary(conversation: string, model: string | null): SessionSummary | null {
+interface CommandResult {
+  status: number | null
+  stdout: string
+  stderr: string
+  timedOut: boolean
+  error?: string
+}
+
+async function runCommandWithInput(command: string, args: string[], input: string, timeoutMs: number): Promise<CommandResult> {
+  return await new Promise((resolve) => {
+    const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"] })
+    let stdout = ""
+    let stderr = ""
+    let timedOut = false
+
+    const timer = setTimeout(() => {
+      timedOut = true
+      child.kill("SIGKILL")
+    }, timeoutMs)
+
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk)
+    })
+
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk)
+    })
+
+    child.on("error", (error) => {
+      clearTimeout(timer)
+      resolve({ status: null, stdout, stderr, timedOut, error: error.message })
+    })
+
+    child.on("close", (status) => {
+      clearTimeout(timer)
+      resolve({ status, stdout, stderr, timedOut })
+    })
+
+    child.stdin.write(input)
+    child.stdin.end()
+  })
+}
+
+async function runOpenClawCliSummary(
+  conversation: string,
+  model: string | null,
+  logger: (message: string) => void,
+): Promise<SessionSummary | null> {
   const args = ["llm-task", "--system", SYSTEM_PROMPT, "--json"]
   if (model) {
     args.push("--model", model)
   }
 
-  const result = spawnSync("openclaw", args, {
-    input: conversation,
-    encoding: "utf8",
-    timeout: 45_000,
-  })
+  const result = await runCommandWithInput("openclaw", args, conversation, 45_000)
 
-  if (result.error || result.status !== 0) {
+  if (result.error) {
+    logger(`OpenClaw CLI extraction failed: ${result.error}`)
     return null
   }
 
-  const parsedText = parseCliOutput(result.stdout ?? "")
+  if (result.timedOut) {
+    logger("OpenClaw CLI extraction timed out after 45s")
+    return null
+  }
+
+  if (result.status !== 0) {
+    const message = result.stderr.trim() || `exit code ${String(result.status)}`
+    logger(`OpenClaw CLI extraction failed: ${message}`)
+    return null
+  }
+
+  const parsedText = parseCliOutput(result.stdout)
   if (!parsedText.trim()) {
+    logger("OpenClaw CLI extraction returned empty output")
     return null
   }
 
@@ -298,16 +329,22 @@ async function runGatewayCompletionSummary(
   conversation: string,
   cfg: unknown,
   model: string | null,
+  logger: (message: string) => void,
 ): Promise<SessionSummary | null> {
+  if (!model) {
+    logger("Skipping gateway extraction because no model is configured.")
+    return null
+  }
+
   const port = await readGatewayPort(cfg)
-  const completionModel = model ?? "gpt-4o-mini"
 
   try {
     const response = await fetch(`http://localhost:${port}/v1/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(15_000),
       body: JSON.stringify({
-        model: completionModel,
+        model,
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -316,38 +353,53 @@ async function runGatewayCompletionSummary(
       }),
     })
 
-    if (!response.ok) return null
+    if (!response.ok) {
+      logger(`Gateway extraction failed with HTTP ${String(response.status)}`)
+      return null
+    }
 
     const payload = asRecord(await response.json())
     const choices = Array.isArray(payload.choices) ? payload.choices : []
     const firstChoice = choices[0]
-    if (!firstChoice || typeof firstChoice !== "object") return null
+    if (!firstChoice || typeof firstChoice !== "object") {
+      logger("Gateway extraction returned no choices")
+      return null
+    }
 
     const message = asRecord((firstChoice as Record<string, unknown>).message)
-    const content = contentToString(message.content)
-    if (!content) return null
+    const content = contentToText(message.content)
+    if (!content) {
+      logger("Gateway extraction returned empty message content")
+      return null
+    }
 
     return parseSummaryOutput(content)
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    logger(`Gateway extraction request failed: ${message}`)
     return null
   }
 }
 
-export async function extractSessionSummary(conversation: string, options: ExtractOptions): Promise<SessionSummary> {
-  // biome-ignore lint/suspicious/noEmptyBlockStatements: noop logger fallback
+export async function extractSessionSummary(conversation: string, options: ExtractOptions): Promise<ExtractionResult> {
   const log = options.logger ?? (() => {})
   const configuredModel = options.model?.trim() || readModelFromConfig(options.cfg)
 
-  const cliResult = runOpenClawCliSummary(conversation, configuredModel)
+  const cliResult = await runOpenClawCliSummary(conversation, configuredModel, log)
   if (cliResult !== null) {
-    return cliResult
+    return { success: true, summary: cliResult }
   }
 
-  const gatewayResult = await runGatewayCompletionSummary(conversation, options.cfg, configuredModel)
+  const gatewayResult = await runGatewayCompletionSummary(conversation, options.cfg, configuredModel, log)
   if (gatewayResult !== null) {
-    return gatewayResult
+    return { success: true, summary: gatewayResult }
   }
 
-  log("Failed to extract session summary via openclaw CLI and gateway API fallback.")
-  return EMPTY_SUMMARY
+  const message =
+    configuredModel === null
+      ? "Failed to extract session summary: no model configured in hook config or gateway defaults."
+      : "Failed to extract session summary via OpenClaw CLI and gateway API fallback."
+
+  log(message)
+  return { success: false, summary: EMPTY_SUMMARY, message }
 }

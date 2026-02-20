@@ -8,12 +8,18 @@ Path: {{vaultPath}}
 ## Files to Migrate
 - Workspace: {{workspacePath}}
 - Total files: {{fileCount}}
-- Daily notes: {{dailyFiles}}
-- Other notes: {{otherFiles}}
+- Daily notes: {{dailyCount}}
+- Other notes: {{otherCount}}
 
 ## Process
 
-### Step 1: Process files in batches of 5
+### Step 1: Build file lists and process in batches of 5
+
+List markdown files in `{{workspacePath}}/memory/` and split them into two lists:
+- Daily files matching `YYYY-MM-DD.md`
+- Non-daily files
+
+Then process each list in batches of 5.
 
 For each batch, spawn sub-agents (one per file) using model `{{model}}`.
 

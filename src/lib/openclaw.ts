@@ -1,19 +1,12 @@
+import { spawnSync } from "node:child_process"
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 
+import { asRecord, type JsonRecord } from "./json"
+import { substituteTemplate } from "./template"
 import { pathExists } from "./vault"
 
-const HOOK_SOURCE_DIR = resolve(import.meta.dir, "..", "..", "hooks", "zettelclaw")
-
-type JsonRecord = Record<string, unknown>
-
-function asRecord(value: unknown): JsonRecord {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as JsonRecord
-  }
-
-  return {}
-}
+const HOOK_SOURCE_DIR = resolve(import.meta.dirname, "..", "..", "hooks", "zettelclaw")
 
 function coerceHookEntry(value: unknown): JsonRecord {
   if (typeof value === "boolean") {
@@ -23,27 +16,38 @@ function coerceHookEntry(value: unknown): JsonRecord {
   return asRecord(value)
 }
 
-export async function installOpenClawHook(openclawDir: string): Promise<"installed" | "skipped" | "failed"> {
+export interface HookInstallResult {
+  status: "installed" | "skipped" | "failed"
+  message?: string
+}
+
+export async function installOpenClawHook(openclawDir: string): Promise<HookInstallResult> {
   const hookPath = join(openclawDir, "hooks", "zettelclaw")
 
   try {
     if (await pathExists(hookPath)) {
-      return "skipped"
+      return { status: "skipped" }
     }
 
     if (!(await pathExists(HOOK_SOURCE_DIR))) {
-      return "failed"
+      return { status: "failed", message: `Missing bundled hook at ${HOOK_SOURCE_DIR}` }
     }
 
     await mkdir(dirname(hookPath), { recursive: true })
     await cp(HOOK_SOURCE_DIR, hookPath, { recursive: true })
-    return "installed"
-  } catch {
-    return "failed"
+    return { status: "installed" }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { status: "failed", message: `Could not install hook to ${hookPath}: ${message}` }
   }
 }
 
-export async function patchOpenClawConfig(vaultPath: string, openclawDir: string): Promise<boolean> {
+export interface ConfigPatchResult {
+  changed: boolean
+  message?: string
+}
+
+export async function patchOpenClawConfig(vaultPath: string, openclawDir: string): Promise<ConfigPatchResult> {
   const configPath = join(openclawDir, "openclaw.json")
 
   try {
@@ -95,12 +99,13 @@ export async function patchOpenClawConfig(vaultPath: string, openclawDir: string
     }
 
     if (!changed) {
-      return false
+      return { changed: false }
     }
     await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8")
-    return true
-  } catch {
-    return false
+    return { changed: true }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { changed: false, message: `Could not patch ${configPath}: ${message}` }
   }
 }
 
@@ -110,21 +115,27 @@ export async function patchOpenClawConfig(vaultPath: string, openclawDir: string
  *
  * Uses `openclaw system event` CLI. Returns true if the event was sent.
  */
-export async function firePostInitEvent(vaultPath: string, projectPath: string): Promise<boolean> {
-  const { spawnSync } = await import("node:child_process")
+export interface EventFireResult {
+  sent: boolean
+  message?: string
+}
 
+export async function firePostInitEvent(vaultPath: string, projectPath: string): Promise<EventFireResult> {
   // Read the post-init event template
   const templatePath = join(projectPath, "templates", "post-init-event.md")
   let template: string
   try {
     template = await readFile(templatePath, "utf8")
-  } catch {
-    console.warn("[zettelclaw] Could not read post-init event template")
-    return false
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { sent: false, message: `Could not read template ${templatePath}: ${message}` }
   }
 
   // Substitute variables
-  const eventText = template.replaceAll("{{VAULT_PATH}}", vaultPath).replaceAll("{{PROJECT_PATH}}", projectPath)
+  const eventText = substituteTemplate(template, {
+    VAULT_PATH: vaultPath,
+    PROJECT_PATH: projectPath,
+  })
 
   // Fire the system event via OpenClaw CLI
   const result = spawnSync("openclaw", ["system", "event", "--text", eventText, "--mode", "now"], {
@@ -140,10 +151,15 @@ export async function firePostInitEvent(vaultPath: string, projectPath: string):
     })
 
     if (fallback.error || fallback.status !== 0) {
-      console.warn("[zettelclaw] Could not fire post-init system event (is the gateway running?)")
-      return false
+      const errorMessage =
+        fallback.error?.message ??
+        fallback.stderr?.trim() ??
+        result.error?.message ??
+        result.stderr?.trim() ??
+        "unknown error"
+      return { sent: false, message: `Could not fire post-init event via OpenClaw CLI: ${errorMessage}` }
     }
   }
 
-  return true
+  return { sent: true }
 }

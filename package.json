@@ -9,6 +9,8 @@
   "files": [
     "src",
     "hooks",
+    "templates",
+    "skill",
     "vault",
     "README.md"
   ],

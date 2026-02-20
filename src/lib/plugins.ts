@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, rename, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 
 interface PluginSource {
@@ -55,7 +55,10 @@ async function downloadAsset(repo: string, asset: string): Promise<Buffer | null
   const url = `https://github.com/${repo}/releases/latest/download/${asset}`
 
   try {
-    const response = await fetch(url, { redirect: "follow" })
+    const response = await fetch(url, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(15_000),
+    })
 
     if (!response.ok) {
       return null
@@ -69,7 +72,8 @@ async function downloadAsset(repo: string, asset: string): Promise<Buffer | null
 
 async function downloadPlugin(pluginDir: string, plugin: PluginSource): Promise<boolean> {
   const targetDir = join(pluginDir, plugin.id)
-  await mkdir(targetDir, { recursive: true })
+  const stageDir = join(pluginDir, `.tmp-${plugin.id}-${Date.now()}`)
+  await mkdir(stageDir, { recursive: true })
 
   let success = true
 
@@ -77,19 +81,28 @@ async function downloadPlugin(pluginDir: string, plugin: PluginSource): Promise<
     const data = await downloadAsset(plugin.repo, asset)
 
     if (data !== null) {
-      await writeFile(join(targetDir, asset), data)
+      await writeFile(join(stageDir, asset), data)
     } else if (asset === "main.js" || asset === "manifest.json") {
       success = false
     }
     // styles.css is optional — missing is fine
   }
 
+  if (!success) {
+    await rm(stageDir, { recursive: true, force: true })
+    return false
+  }
+
+  await rm(targetDir, { recursive: true, force: true })
+  await rename(stageDir, targetDir)
+
   return success
 }
 
 async function downloadTheme(themesDir: string, theme: ThemeSource): Promise<boolean> {
   const targetDir = join(themesDir, theme.name)
-  await mkdir(targetDir, { recursive: true })
+  const stageDir = join(themesDir, `.tmp-${theme.name}-${Date.now()}`)
+  await mkdir(stageDir, { recursive: true })
 
   let success = true
 
@@ -97,11 +110,19 @@ async function downloadTheme(themesDir: string, theme: ThemeSource): Promise<boo
     const data = await downloadAsset(theme.repo, asset)
 
     if (data !== null) {
-      await writeFile(join(targetDir, asset), data)
+      await writeFile(join(stageDir, asset), data)
     } else {
       success = false
     }
   }
+
+  if (!success) {
+    await rm(stageDir, { recursive: true, force: true })
+    return false
+  }
+
+  await rm(targetDir, { recursive: true, force: true })
+  await rename(stageDir, targetDir)
 
   return success
 }
@@ -130,13 +151,18 @@ export async function downloadPlugins(vaultPath: string, options: DownloadOption
     plugins.push(...MINIMAL_PLUGINS)
   }
 
-  for (const plugin of plugins) {
-    const ok = await downloadPlugin(pluginDir, plugin)
+  const pluginOutcomes = await Promise.all(
+    plugins.map(async (plugin) => ({
+      plugin,
+      ok: await downloadPlugin(pluginDir, plugin),
+    })),
+  )
 
-    if (ok) {
-      result.downloaded.push(plugin.id)
+  for (const outcome of pluginOutcomes) {
+    if (outcome.ok) {
+      result.downloaded.push(outcome.plugin.id)
     } else {
-      result.failed.push(plugin.id)
+      result.failed.push(outcome.plugin.id)
     }
   }
 

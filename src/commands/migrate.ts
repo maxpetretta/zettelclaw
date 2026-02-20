@@ -3,13 +3,14 @@ import { cp, readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { intro, log, select, spinner, text } from "@clack/prompts"
 
-import { DEFAULT_OPENCLAW_WORKSPACE_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
+import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
+import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES } from "../lib/folders"
+import { asRecord, asStringArray } from "../lib/json"
 import { resolveUserPath } from "../lib/paths"
+import { substituteTemplate } from "../lib/template"
 import { isDirectory, pathExists } from "../lib/vault"
 
-type JsonRecord = Record<string, unknown>
-const NOTES_FOLDER_CANDIDATES = ["01 Notes", "Notes"] as const
-const JOURNAL_FOLDER_CANDIDATES = ["03 Journal", "02 Journal", "Daily", "Journal"] as const
+const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
 
 export interface MigrateOptions {
   yes: boolean
@@ -37,28 +38,21 @@ interface VaultLayout {
   journalFolder: string
 }
 
-function asRecord(value: unknown): JsonRecord {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as JsonRecord
-  }
-
-  return {}
-}
-
-function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return value.filter((entry): entry is string => typeof entry === "string")
-}
-
 function isDailyFile(filename: string): boolean {
   return /^\d{4}-\d{2}-\d{2}\.md$/u.test(filename)
 }
 
 function parseModels(json: string): ModelInfo[] {
-  const parsed = asRecord(JSON.parse(json))
+  let parsedValue: unknown
+
+  try {
+    parsedValue = JSON.parse(json)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`OpenClaw returned invalid model JSON: ${message}`)
+  }
+
+  const parsed = asRecord(parsedValue)
   const rawModels = Array.isArray(parsed.models) ? parsed.models : []
 
   return rawModels
@@ -109,15 +103,15 @@ function selectYesModel(models: ModelInfo[]): ModelInfo {
 }
 
 function resolveRequestedModel(models: ModelInfo[], requested: string): ModelInfo | undefined {
-  return models.find((model) => model.key === requested || model.alias === requested)
-}
+  const normalizedRequest = requested.trim().toLowerCase()
 
-function substituteTemplate(template: string, values: Record<string, string>): string {
-  let output = template
-  for (const [key, value] of Object.entries(values)) {
-    output = output.replaceAll(`{{${key}}}`, value)
-  }
-  return output
+  return models.find((model) => {
+    const candidates = [model.key, model.alias, model.name]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .map((value) => value.toLowerCase())
+
+    return candidates.includes(normalizedRequest)
+  })
 }
 
 async function detectVaultFromOpenClawConfig(): Promise<string | undefined> {
@@ -130,10 +124,13 @@ async function detectVaultFromOpenClawConfig(): Promise<string | undefined> {
   try {
     const raw = await readFile(configPath, "utf8")
     const config = asRecord(JSON.parse(raw))
+    const directMemorySearch = asRecord(config.memorySearch)
     const agents = asRecord(config.agents)
     const defaults = asRecord(agents.defaults)
-    const memorySearch = asRecord(defaults.memorySearch)
-    const extraPaths = Array.isArray(memorySearch.extraPaths) ? memorySearch.extraPaths : []
+    const defaultsMemorySearch = asRecord(defaults.memorySearch)
+
+    const extraPathsCandidates = [directMemorySearch.extraPaths, defaultsMemorySearch.extraPaths]
+    const extraPaths = extraPathsCandidates.flatMap((value) => (Array.isArray(value) ? value : []))
 
     for (const candidate of extraPaths) {
       if (typeof candidate !== "string") {
@@ -153,7 +150,7 @@ async function detectVaultFromOpenClawConfig(): Promise<string | undefined> {
 }
 
 async function promptVaultPath(): Promise<string> {
-  const defaultPath = join(process.cwd(), "zettelclaw")
+  const defaultPath = resolveUserPath(DEFAULT_VAULT_PATH)
 
   return unwrapPrompt(
     await text({
@@ -234,18 +231,20 @@ async function readMemorySummary(memoryPath: string): Promise<MemorySummary> {
 
 async function chooseBackupPath(workspacePath: string): Promise<{ source: string; backup: string; label: string }> {
   const source = join(workspacePath, "memory")
-  let index = 0
+  const maxAttempts = 10_000
 
-  while (true) {
+  for (let index = 0; index < maxAttempts; index += 1) {
     const label = index === 0 ? "memory.bak" : `memory.bak.${index}`
     const backup = join(workspacePath, label)
 
     if (!(await pathExists(backup))) {
       return { source, backup, label }
     }
-
-    index += 1
   }
+
+  throw new Error(
+    `Could not find an available backup path under ${toTildePath(workspacePath)} after ${maxAttempts} attempts`,
+  )
 }
 
 function readModelsFromOpenClaw(): ModelInfo[] {
@@ -254,8 +253,15 @@ function readModelsFromOpenClaw(): ModelInfo[] {
     timeout: 10_000,
   })
 
-  if (result.error || result.status !== 0 || !result.stdout) {
-    throw new Error("Could not list models from OpenClaw. Is the gateway running?")
+  if (result.error) {
+    throw new Error(`Could not list models from OpenClaw: ${result.error.message}`)
+  }
+
+  if (result.status !== 0 || !result.stdout) {
+    const stderr = result.stderr?.trim()
+    throw new Error(
+      stderr ? `OpenClaw model list failed: ${stderr}` : "Could not list models from OpenClaw. Is the gateway running?",
+    )
   }
 
   const models = parseModels(result.stdout)
@@ -274,7 +280,8 @@ async function chooseModel(models: ModelInfo[], options: MigrateOptions): Promis
   if (options.model) {
     const selected = resolveRequestedModel(models, options.model)
     if (!selected) {
-      throw new Error(`Model not found: ${options.model}`)
+      const available = models.map((model) => (model.alias ? `${model.key} (${model.alias})` : model.key)).join(", ")
+      throw new Error(`Model not found: ${options.model}. Available models: ${available}`)
     }
     return selected
   }
@@ -311,16 +318,21 @@ async function chooseModel(models: ModelInfo[], options: MigrateOptions): Promis
 
 const MIGRATE_SESSION = "zettelclaw-migrate"
 
-async function fireMigrateEvent(values: Record<string, string>): Promise<boolean> {
+interface MigrateEventResult {
+  sent: boolean
+  message?: string
+}
+
+async function fireMigrateEvent(values: Record<string, string>): Promise<MigrateEventResult> {
   const projectPath = join(import.meta.dirname, "../..")
   const templatePath = join(projectPath, "templates", "migrate-event.md")
 
   let template = ""
   try {
     template = await readFile(templatePath, "utf8")
-  } catch {
-    console.warn("[zettelclaw] Could not read migrate event template")
-    return false
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { sent: false, message: `Could not read migrate template ${templatePath}: ${message}` }
   }
 
   const eventText = substituteTemplate(template, values)
@@ -332,7 +344,7 @@ async function fireMigrateEvent(values: Record<string, string>): Promise<boolean
       "--at",
       "+0s",
       "--session",
-      "isolated",
+      MIGRATE_SESSION,
       "--name",
       MIGRATE_SESSION,
       "--message",
@@ -348,7 +360,16 @@ async function fireMigrateEvent(values: Record<string, string>): Promise<boolean
     },
   )
 
-  return !result.error && result.status === 0
+  if (result.error) {
+    return { sent: false, message: `Failed to schedule migration event: ${result.error.message}` }
+  }
+
+  if (result.status !== 0) {
+    const stderr = result.stderr?.trim()
+    return { sent: false, message: stderr.length ? stderr : `openclaw cron add exited with code ${result.status}` }
+  }
+
+  return { sent: true }
 }
 
 export async function runMigrate(options: MigrateOptions): Promise<void> {
@@ -402,19 +423,19 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   const modelLabel = selectedModel.alias ? `${selectedModel.name} (${selectedModel.alias})` : selectedModel.name
   log.message(`Using model: ${modelLabel}`)
 
-  const sent = await fireMigrateEvent({
+  const eventResult = await fireMigrateEvent({
     vaultPath,
     workspacePath,
     model: selectedModel.key,
     notesFolder: layout.notesFolder,
     journalFolder: layout.journalFolder,
     fileCount: String(summary.files.length),
-    dailyFiles: JSON.stringify(summary.dailyFiles),
-    otherFiles: JSON.stringify(summary.otherFiles),
+    dailyCount: String(summary.dailyFiles.length),
+    otherCount: String(summary.otherFiles.length),
   })
 
-  if (!sent) {
-    log.warn("Could not fire migration event. Is the OpenClaw gateway running?")
+  if (!eventResult.sent) {
+    log.warn(eventResult.message ?? "Could not fire migration event. Is the OpenClaw gateway running?")
     return
   }
 

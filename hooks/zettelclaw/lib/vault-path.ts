@@ -2,13 +2,8 @@ import { access, readdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join, resolve } from "node:path"
 
-function asRecord(value: unknown): Record<string, unknown> {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>
-  }
-
-  return {}
-}
+import { FALLBACK_VAULT_CANDIDATES } from "./folders"
+import { asRecord } from "./json"
 
 function expandHome(inputPath: string): string {
   if (inputPath === "~") {
@@ -46,11 +41,9 @@ async function findVaultPath(candidatePath: string): Promise<string | null> {
   try {
     const entries = await readdir(resolved, { withFileTypes: true })
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue
-      }
+    const sortedDirectories = entries.filter((entry) => entry.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))
 
+    for (const entry of sortedDirectories) {
       const childPath = join(resolved, entry.name)
       if (await hasObsidianVault(childPath)) {
         return childPath
@@ -63,6 +56,20 @@ async function findVaultPath(candidatePath: string): Promise<string | null> {
   return null
 }
 
+function readExtraPathsFromConfig(cfg: unknown): unknown[] {
+  const cfgRecord = asRecord(cfg)
+
+  const directMemorySearch = asRecord(cfgRecord.memorySearch)
+  const agents = asRecord(cfgRecord.agents)
+  const defaults = asRecord(agents.defaults)
+  const defaultMemorySearch = asRecord(defaults.memorySearch)
+
+  const directPaths = Array.isArray(directMemorySearch.extraPaths) ? directMemorySearch.extraPaths : []
+  const defaultPaths = Array.isArray(defaultMemorySearch.extraPaths) ? defaultMemorySearch.extraPaths : []
+
+  return [...directPaths, ...defaultPaths]
+}
+
 export async function resolveVaultPath(cfg: unknown, hookConfig: unknown): Promise<string | null> {
   const hookRecord = asRecord(hookConfig)
   const explicitVaultPath = hookRecord.vaultPath
@@ -73,11 +80,7 @@ export async function resolveVaultPath(cfg: unknown, hookConfig: unknown): Promi
     return discovered ?? resolvedExplicit
   }
 
-  const cfgRecord = asRecord(cfg)
-  const memorySearch = asRecord(cfgRecord.memorySearch)
-  const extraPaths = Array.isArray(memorySearch.extraPaths) ? memorySearch.extraPaths : []
-
-  for (const candidate of extraPaths) {
+  for (const candidate of readExtraPathsFromConfig(cfg)) {
     if (typeof candidate !== "string" || candidate.trim().length === 0) {
       continue
     }
@@ -88,7 +91,7 @@ export async function resolveVaultPath(cfg: unknown, hookConfig: unknown): Promi
     }
   }
 
-  for (const candidate of ["~/dev/obsidian", "~/obsidian", "~/Documents/obsidian"]) {
+  for (const candidate of FALLBACK_VAULT_CANDIDATES) {
     const resolved = await findVaultPath(candidate)
     if (resolved) {
       return resolved

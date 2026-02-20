@@ -17,6 +17,7 @@ coverage
 
 # os/editor
 .DS_Store
+**/.DS_Store
 .idea
 .cache
 .eslintcache

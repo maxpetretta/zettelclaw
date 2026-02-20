@@ -1,11 +1,12 @@
 import { spawnSync } from "node:child_process"
 import { dirname, join } from "node:path"
 import { confirm, intro, log, select, spinner, text } from "@clack/prompts"
-import { DEFAULT_OPENCLAW_WORKSPACE_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
+import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import { firePostInitEvent, installOpenClawHook, patchOpenClawConfig } from "../lib/openclaw"
 import { resolveUserPath } from "../lib/paths"
 import { downloadPlugins } from "../lib/plugins"
 import {
+  type CopyResult,
   configureAgentFolder,
   configureApp,
   configureCommunityPlugins,
@@ -14,7 +15,6 @@ import {
   copyVaultSeed,
   createAgentSymlinks,
   isDirectory,
-  type NotesMode,
   pathExists,
   type SyncMethod,
 } from "../lib/vault"
@@ -59,7 +59,7 @@ async function promptVaultPath(defaultPath: string): Promise<string> {
 }
 
 async function promptSyncMethod(defaultMethod: SyncMethod): Promise<SyncMethod> {
-  return unwrapPrompt(
+  const selection = unwrapPrompt(
     await select({
       message: "How do you want to sync your vault?",
       initialValue: defaultMethod,
@@ -69,13 +69,19 @@ async function promptSyncMethod(defaultMethod: SyncMethod): Promise<SyncMethod> 
         { value: "none", label: "None" },
       ],
     }),
-  ) as SyncMethod
+  )
+
+  if (selection === "git" || selection === "obsidian-sync" || selection === "none") {
+    return selection
+  }
+
+  throw new Error(`Invalid sync method selected: ${String(selection)}`)
 }
 
 export async function runInit(options: InitOptions): Promise<void> {
   intro("🦞 Welcome to Zettelclaw")
 
-  const defaultVaultPath = join(process.cwd(), "zettelclaw")
+  const defaultVaultPath = resolveUserPath(DEFAULT_VAULT_PATH)
   const rawVaultPath = options.vaultPath ?? (options.yes ? defaultVaultPath : await promptVaultPath(defaultVaultPath))
   const vaultPath = resolveUserPath(rawVaultPath)
 
@@ -86,7 +92,6 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   const syncMethod = options.yes ? "git" : await promptSyncMethod("git")
-  const mode: NotesMode = "notes"
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
   const workspaceDetected = await isDirectory(workspacePath)
   const openclawRequested = workspaceDetected
@@ -99,7 +104,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   s.start("Configuring vault")
 
   await configureAgentFolder(vaultPath, includeAgentFolder)
-  await copyVaultSeed(vaultPath, { mode, overwrite: false, includeAgent: includeAgentFolder })
+  await copyVaultSeed(vaultPath, { overwrite: false, includeAgent: includeAgentFolder })
   await configureCoreSync(vaultPath, syncMethod)
   await configureCommunityPlugins(vaultPath, {
     enabled: true,
@@ -116,17 +121,25 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   let configPatched = false
   let hookInstallStatus: "installed" | "skipped" | "failed" | null = null
+  let hookInstallMessage: string | undefined
+  let configPatchMessage: string | undefined
+  let symlinkResult: CopyResult = { added: [], skipped: [], failed: [] }
 
   if (shouldCreateSymlinks) {
-    await createAgentSymlinks(vaultPath, workspacePath)
+    symlinkResult = await createAgentSymlinks(vaultPath, workspacePath)
   }
 
   if (openclawRequested) {
-    hookInstallStatus = await installOpenClawHook(openclawDir)
-    configPatched = await patchOpenClawConfig(vaultPath, openclawDir)
+    const hookInstallResult = await installOpenClawHook(openclawDir)
+    hookInstallStatus = hookInstallResult.status
+    hookInstallMessage = hookInstallResult.message
+
+    const configPatchResult = await patchOpenClawConfig(vaultPath, openclawDir)
+    configPatched = configPatchResult.changed
+    configPatchMessage = configPatchResult.message
   }
 
-  await configureApp(vaultPath, mode, includeAgentFolder)
+  await configureApp(vaultPath, includeAgentFolder)
 
   let gitInitError: string | null = null
 
@@ -158,8 +171,28 @@ export async function runInit(options: InitOptions): Promise<void> {
     log.warn(`Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
   }
 
+  if (symlinkResult.failed.length > 0) {
+    log.warn(
+      `Could not create some agent symlinks (likely permissions):\n${symlinkResult.failed.map((line) => `- ${line}`).join("\n")}`,
+    )
+  }
+
   if (gitInitError) {
     log.warn(`Could not initialize Git repository: ${gitInitError}`)
+  }
+
+  if (!workspaceDetected) {
+    log.warn(
+      `OpenClaw workspace not found at ${toTildePath(workspacePath)}. Skipped hook install, config patch, and agent symlinks.`,
+    )
+  }
+
+  if (hookInstallStatus === "failed") {
+    log.warn(hookInstallMessage ?? "Could not install OpenClaw hook.")
+  }
+
+  if (configPatchMessage) {
+    log.warn(configPatchMessage)
   }
 
   if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {
@@ -179,13 +212,12 @@ export async function runInit(options: InitOptions): Promise<void> {
 
     if (shouldNotify) {
       const projectPath = join(import.meta.dirname, "../..")
-      const sent = await firePostInitEvent(vaultPath, projectPath)
-      if (sent) {
+      const eventResult = await firePostInitEvent(vaultPath, projectPath)
+      if (eventResult.sent) {
         log.success("Agent notified — it will update AGENTS.md and HEARTBEAT.md")
       } else {
-        log.warn(
-          "Could not reach the agent. Is the OpenClaw gateway running?\nYou can manually update using the templates in: templates/",
-        )
+        const reason = eventResult.message ?? "Could not reach the agent. Is the OpenClaw gateway running?"
+        log.warn(`${reason}\nYou can manually update using the templates in: templates/`)
       }
     } else {
       log.message(

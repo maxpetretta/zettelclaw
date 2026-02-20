@@ -6,7 +6,7 @@ import { runInit } from "./commands/init"
 import { runMigrate } from "./commands/migrate"
 
 interface ParsedArgs {
-  command?: string | undefined
+  command: string | undefined
   flags: {
     yes: boolean
     vaultPath?: string | undefined
@@ -25,7 +25,7 @@ function usage(): string {
     "  zettelclaw migrate [options]  Migrate OpenClaw workspace memory into the vault",
     "",
     "Init options:",
-    "  --vault <path>      Set vault path (default: ./zettelclaw)",
+    "  --vault <path>      Set vault path (default: ~/zettelclaw)",
     "  --workspace <path>  Override OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --yes               Accept all defaults non-interactively",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",

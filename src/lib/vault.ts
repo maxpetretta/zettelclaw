@@ -13,16 +13,24 @@ import {
 } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 
-export type NotesMode = "notes" | "root"
+import {
+  AGENT_FOLDER_ALIASES,
+  FOLDERS_WITH_AGENT,
+  FOLDERS_WITHOUT_AGENT,
+  getVaultFolders,
+  JOURNAL_FOLDER_ALIASES,
+  LEGACY_FOLDERS,
+} from "./folders"
+
 export type SyncMethod = "git" | "obsidian-sync" | "none"
 
 export interface CopyResult {
   added: string[]
   skipped: string[]
+  failed: string[]
 }
 
 export interface CopyVaultOptions {
-  mode: NotesMode
   overwrite: boolean
   includeAgent: boolean
 }
@@ -31,61 +39,9 @@ interface CorePlugins {
   [pluginId: string]: boolean
 }
 
-export interface VaultFolders {
-  inbox: string
-  notes: string
-  journal: string
-  agent: string
-  templates: string
-  attachments: string
-}
-
-const TEMPLATE_ROOT = resolve(import.meta.dir, "..", "..", "vault")
+const TEMPLATE_ROOT = resolve(import.meta.dirname, "..", "..", "vault")
 const AGENT_FILES = ["AGENTS.md", "SOUL.md", "IDENTITY.md", "USER.md", "TOOLS.md", "MEMORY.md"] as const
-
-const TEMPLATE_FILES = ["journal.md", "note.md", "project.md", "research.md", "contact.md", "writing.md"]
-
-const FOLDERS_WITH_AGENT: VaultFolders = {
-  inbox: "00 Inbox",
-  notes: "01 Notes",
-  journal: "03 Journal",
-  agent: "02 Agent",
-  templates: "04 Templates",
-  attachments: "05 Attachments",
-}
-
-const FOLDERS_WITHOUT_AGENT: VaultFolders = {
-  inbox: "00 Inbox",
-  notes: "01 Notes",
-  journal: "02 Journal",
-  agent: "02 Agent",
-  templates: "03 Templates",
-  attachments: "04 Attachments",
-}
-
-const LEGACY_FOLDERS: VaultFolders = {
-  inbox: "Inbox",
-  notes: "Notes",
-  journal: "Daily",
-  agent: "Agent",
-  templates: "Templates",
-  attachments: "Attachments",
-}
-
 const TEMPLATE_PATH_PREFIX = /^(?:\d{2} )?Templates\//
-const JOURNAL_FOLDER_ALIASES: readonly string[] = [
-  FOLDERS_WITH_AGENT.journal,
-  FOLDERS_WITHOUT_AGENT.journal,
-  "02 Daily",
-  "03 Daily",
-  "Daily",
-  "Journal",
-] as const
-const AGENT_FOLDER_ALIASES: readonly string[] = [FOLDERS_WITH_AGENT.agent, "03 Agent", LEGACY_FOLDERS.agent] as const
-
-export function getVaultFolders(includeAgent: boolean): VaultFolders {
-  return includeAgent ? FOLDERS_WITH_AGENT : FOLDERS_WITHOUT_AGENT
-}
 
 export async function pathExists(path: string): Promise<boolean> {
   try {
@@ -105,19 +61,14 @@ export async function isDirectory(path: string): Promise<boolean> {
   }
 }
 
-export async function directoryHasEntries(path: string): Promise<boolean> {
-  const entries = await readdir(path)
-  return entries.length > 0
-}
-
 async function walkFiles(baseDir: string, relativeDir = ""): Promise<string[]> {
-  const currentDir = relativeDir ? join(baseDir, relativeDir) : baseDir
+  const currentDir = relativeDir ? join(baseDir, ...relativeDir.split("/")) : baseDir
   const entries = await readdir(currentDir, { withFileTypes: true })
 
   const files: string[] = []
 
   for (const entry of entries) {
-    const relativePath = relativeDir ? join(relativeDir, entry.name) : entry.name
+    const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name
 
     if (entry.isDirectory()) {
       files.push(...(await walkFiles(baseDir, relativePath)))
@@ -136,10 +87,6 @@ function pathIsInsideFolder(relativePath: string, folder: string): boolean {
 
 function remapSeedPath(relativePath: string, options: CopyVaultOptions): string | null {
   let mapped = relativePath
-
-  if (options.mode === "root" && pathIsInsideFolder(mapped, FOLDERS_WITH_AGENT.notes)) {
-    return null
-  }
 
   if (!options.includeAgent) {
     if (pathIsInsideFolder(mapped, FOLDERS_WITH_AGENT.agent)) {
@@ -162,14 +109,117 @@ function remapSeedPath(relativePath: string, options: CopyVaultOptions): string 
   return mapped
 }
 
-async function detectTemplatesFolderName(vaultPath: string): Promise<string> {
-  for (const folder of [FOLDERS_WITH_AGENT.templates, FOLDERS_WITHOUT_AGENT.templates, LEGACY_FOLDERS.templates]) {
-    if (await pathExists(join(vaultPath, folder))) {
-      return folder
+export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions): Promise<CopyResult> {
+  await mkdir(vaultPath, { recursive: true })
+
+  const files = await walkFiles(TEMPLATE_ROOT)
+  const result: CopyResult = {
+    added: [],
+    skipped: [],
+    failed: [],
+  }
+
+  for (const relativePath of files) {
+    const mappedRelativePath = remapSeedPath(relativePath, options)
+
+    if (!mappedRelativePath) {
+      continue
+    }
+
+    const source = join(TEMPLATE_ROOT, ...relativePath.split("/"))
+    const destination = join(vaultPath, ...mappedRelativePath.split("/"))
+
+    await mkdir(dirname(destination), { recursive: true })
+
+    const exists = await pathExists(destination)
+
+    if (exists && !options.overwrite) {
+      result.skipped.push(mappedRelativePath)
+      continue
+    }
+
+    await copyFile(source, destination)
+    result.added.push(mappedRelativePath)
+  }
+
+  return result
+}
+
+export async function removePathIfExists(path: string): Promise<void> {
+  await rm(path, { recursive: true, force: true })
+}
+
+function isSymlinkPermissionError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code
+  return code === "EPERM" || code === "EACCES" || code === "ENOTSUP"
+}
+
+export async function createAgentSymlinks(vaultPath: string, workspacePath: string): Promise<CopyResult> {
+  const agentFolder = FOLDERS_WITH_AGENT.agent
+  const agentDir = join(vaultPath, agentFolder)
+  await mkdir(agentDir, { recursive: true })
+
+  const result: CopyResult = {
+    added: [],
+    skipped: [],
+    failed: [],
+  }
+
+  for (const file of AGENT_FILES) {
+    const linkPath = join(agentDir, file)
+    const targetPath = join(workspacePath, file)
+    const relativePath = `${agentFolder}/${file}`
+
+    let existingStats: Awaited<ReturnType<typeof lstat>> | null = null
+    try {
+      existingStats = await lstat(linkPath)
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code !== "ENOENT") {
+        throw new Error(
+          `Could not inspect existing link ${linkPath}: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
+    }
+
+    if (existingStats) {
+      if (existingStats.isSymbolicLink()) {
+        const existingTarget = await readlink(linkPath)
+        if (existingTarget === targetPath) {
+          result.skipped.push(relativePath)
+          continue
+        }
+      }
+
+      result.skipped.push(relativePath)
+      continue
+    }
+
+    try {
+      await symlink(targetPath, linkPath)
+      result.added.push(relativePath)
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === "EEXIST") {
+        result.skipped.push(relativePath)
+        continue
+      }
+
+      if (isSymlinkPermissionError(error)) {
+        const message = error instanceof Error ? error.message : String(error)
+        result.failed.push(`${relativePath}: ${message}`)
+        continue
+      }
+
+      throw new Error(
+        `Could not create symlink ${linkPath} -> ${targetPath}: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
-  return FOLDERS_WITH_AGENT.templates
+  await removePathIfExists(join(agentDir, ".gitkeep"))
+
+  return result
 }
 
 async function moveFolderIfPossible(vaultPath: string, sourceFolder: string, destinationFolder: string): Promise<void> {
@@ -211,144 +261,43 @@ async function moveFirstAliasToCanonical(
   }
 }
 
-export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions): Promise<CopyResult> {
-  await mkdir(vaultPath, { recursive: true })
-
-  const files = await walkFiles(TEMPLATE_ROOT)
-  const result: CopyResult = {
-    added: [],
-    skipped: [],
+async function folderContainsOnlyManagedAgentEntries(pathToFolder: string): Promise<boolean> {
+  if (!(await pathExists(pathToFolder))) {
+    return false
   }
 
-  for (const relativePath of files) {
-    const mappedRelativePath = remapSeedPath(relativePath, options)
+  const entries = await readdir(pathToFolder, { withFileTypes: true })
 
-    if (!mappedRelativePath) {
+  if (entries.length === 0) {
+    return true
+  }
+
+  for (const entry of entries) {
+    if (entry.name === ".gitkeep") {
       continue
     }
 
-    const source = join(TEMPLATE_ROOT, relativePath)
-    const destination = join(vaultPath, mappedRelativePath)
+    const entryPath = join(pathToFolder, entry.name)
+    const stats = await lstat(entryPath)
 
-    await mkdir(dirname(destination), { recursive: true })
-
-    const exists = await pathExists(destination)
-
-    if (exists && !options.overwrite) {
-      result.skipped.push(mappedRelativePath)
-      continue
+    if (!stats.isSymbolicLink()) {
+      return false
     }
-
-    await copyFile(source, destination)
-    result.added.push(mappedRelativePath)
   }
 
-  return result
+  return true
 }
 
-export async function copyVaultTemplatesOnly(vaultPath: string, overwrite: boolean): Promise<CopyResult> {
-  await mkdir(vaultPath, { recursive: true })
+async function removeManagedAgentFolderIfSafe(vaultPath: string, folderName: string): Promise<void> {
+  const folderPath = join(vaultPath, folderName)
 
-  const sourceTemplatesFolder = FOLDERS_WITH_AGENT.templates
-  const destinationTemplatesFolder = await detectTemplatesFolderName(vaultPath)
-  const templateFiles = await walkFiles(join(TEMPLATE_ROOT, sourceTemplatesFolder))
-  const result: CopyResult = {
-    added: [],
-    skipped: [],
+  if (!(await pathExists(folderPath))) {
+    return
   }
 
-  for (const relativePath of templateFiles) {
-    const source = join(TEMPLATE_ROOT, sourceTemplatesFolder, relativePath)
-    const destination = join(vaultPath, destinationTemplatesFolder, relativePath)
-
-    await mkdir(dirname(destination), { recursive: true })
-
-    const exists = await pathExists(destination)
-
-    if (exists && !overwrite) {
-      result.skipped.push(join(destinationTemplatesFolder, relativePath))
-      continue
-    }
-
-    await copyFile(source, destination)
-    result.added.push(join(destinationTemplatesFolder, relativePath))
+  if (await folderContainsOnlyManagedAgentEntries(folderPath)) {
+    await removePathIfExists(folderPath)
   }
-
-  return result
-}
-
-export async function detectNotesMode(vaultPath: string): Promise<NotesMode> {
-  if (await pathExists(join(vaultPath, FOLDERS_WITH_AGENT.notes))) {
-    return "notes"
-  }
-
-  if (await pathExists(join(vaultPath, LEGACY_FOLDERS.notes))) {
-    return "notes"
-  }
-
-  return "root"
-}
-
-export async function removePathIfExists(path: string): Promise<void> {
-  await rm(path, { recursive: true, force: true })
-}
-
-export async function createAgentSymlinks(vaultPath: string, workspacePath: string): Promise<CopyResult> {
-  const agentFolder = FOLDERS_WITH_AGENT.agent
-  const agentDir = join(vaultPath, agentFolder)
-  await mkdir(agentDir, { recursive: true })
-
-  const result: CopyResult = {
-    added: [],
-    skipped: [],
-  }
-
-  for (const file of AGENT_FILES) {
-    const linkPath = join(agentDir, file)
-    const targetPath = join(workspacePath, file)
-    const relativePath = `${agentFolder}/${file}`
-
-    let existingStats: Awaited<ReturnType<typeof lstat>> | null = null
-    try {
-      existingStats = await lstat(linkPath)
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code
-      if (code !== "ENOENT") {
-        throw error
-      }
-    }
-
-    if (existingStats) {
-      if (existingStats.isSymbolicLink()) {
-        const existingTarget = await readlink(linkPath)
-        if (existingTarget === targetPath) {
-          result.skipped.push(relativePath)
-          continue
-        }
-      }
-
-      result.skipped.push(relativePath)
-      continue
-    }
-
-    try {
-      await symlink(targetPath, linkPath)
-      result.added.push(relativePath)
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code
-      if (code === "EEXIST") {
-        result.skipped.push(relativePath)
-        continue
-      }
-
-      throw error
-    }
-  }
-
-  // Once real symlinks are present, the placeholder keeper is unnecessary.
-  await removePathIfExists(join(agentDir, ".gitkeep"))
-
-  return result
 }
 
 export async function configureAgentFolder(vaultPath: string, enabled: boolean): Promise<void> {
@@ -367,7 +316,7 @@ export async function configureAgentFolder(vaultPath: string, enabled: boolean):
   }
 
   for (const agentFolder of AGENT_FOLDER_ALIASES) {
-    await removePathIfExists(join(vaultPath, agentFolder))
+    await removeManagedAgentFolderIfSafe(vaultPath, agentFolder)
   }
 
   await moveFirstAliasToCanonical(vaultPath, FOLDERS_WITHOUT_AGENT.journal, JOURNAL_FOLDER_ALIASES)
@@ -416,15 +365,17 @@ function rewriteTemplatePaths(value: unknown, templatesFolder: string): unknown 
   return value
 }
 
-export async function configureApp(pathToVault: string, mode: NotesMode, includeAgent: boolean): Promise<void> {
+export async function configureApp(pathToVault: string, includeAgent: boolean): Promise<void> {
   const folders = getVaultFolders(includeAgent)
   const journalTemplatePath = `${folders.templates}/journal.md`
 
   const appPath = join(pathToVault, ".obsidian", "app.json")
+  const existingAppConfig = await readJsonFileOrDefault<Record<string, unknown>>(appPath, {})
   const appConfig = {
+    ...existingAppConfig,
     attachmentFolderPath: folders.attachments,
     newFileLocation: "folder",
-    newFileFolderPath: mode === "notes" ? folders.notes : "",
+    newFileFolderPath: folders.notes,
   }
 
   await writeJsonFile(appPath, appConfig)
@@ -500,7 +451,7 @@ export async function configureApp(pathToVault: string, mode: NotesMode, include
 
 export async function configureCoreSync(pathToVault: string, method: SyncMethod): Promise<void> {
   const corePluginsPath = join(pathToVault, ".obsidian", "core-plugins.json")
-  const plugins = await readJsonFile<CorePlugins>(corePluginsPath)
+  const plugins = await readJsonFileOrDefault<CorePlugins>(corePluginsPath, {})
   plugins.sync = method === "obsidian-sync"
   await writeJsonFile(corePluginsPath, plugins)
 }
@@ -574,42 +525,32 @@ export async function configureCommunityPlugins(pathToVault: string, options: Co
   }
 }
 
-function stripTemplaterSyntax(content: string): string {
-  return content
-    .replace(/^created:\s*<%\s*tp\.date\.now\("YYYY-MM-DD"\)\s*%>\s*$/gm, 'created: ""')
-    .replace(/^updated:\s*<%\s*tp\.date\.now\("YYYY-MM-DD"\)\s*%>\s*$/gm, 'updated: ""')
-}
-
-export async function configureTemplatesForCommunity(pathToVault: string, enabled: boolean): Promise<void> {
-  if (enabled) {
-    return
-  }
-
-  const templatesFolder = await detectTemplatesFolderName(pathToVault)
-
-  for (const templateFile of TEMPLATE_FILES) {
-    const templatePath = join(pathToVault, templatesFolder, templateFile)
-    const existing = await readFile(templatePath, "utf8")
-    const next = stripTemplaterSyntax(existing)
-    await writeFile(templatePath, next, "utf8")
-  }
-}
-
 export async function configureMinimalTheme(pathToVault: string, enabled: boolean): Promise<void> {
   const appearancePath = join(pathToVault, ".obsidian", "appearance.json")
   const themePath = join(pathToVault, ".obsidian", "themes", "Minimal")
 
   if (!enabled) {
-    await removePathIfExists(appearancePath)
+    const appearance = await readJsonFileOrDefault<Record<string, unknown>>(appearancePath, {})
+
+    if (appearance.cssTheme === "Minimal") {
+      const { cssTheme: _cssTheme, ...rest } = appearance
+      if (Object.keys(rest).length === 0) {
+        await removePathIfExists(appearancePath)
+      } else {
+        await writeJsonFile(appearancePath, rest)
+      }
+    }
+
     await removePathIfExists(themePath)
     return
   }
 
-  await writeJsonFile(appearancePath, {
+  const appearance = await readJsonFileOrDefault<Record<string, unknown>>(appearancePath, {})
+  const nextAppearance = {
+    ...appearance,
     cssTheme: "Minimal",
-  })
+  }
+  await writeJsonFile(appearancePath, nextAppearance)
 
-  // Theme files (manifest.json + theme.css) are downloaded by plugins.ts
-  // Just ensure the directory exists
   await mkdir(themePath, { recursive: true })
 }

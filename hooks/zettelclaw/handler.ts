@@ -2,6 +2,8 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 
 import { type ExtractedNote, extractSessionSummary, type SessionSummary } from "./lib/extract"
+import { JOURNAL_FOLDER_CANDIDATES, NOTES_FOLDER_CANDIDATES } from "./lib/folders"
+import { asRecord } from "./lib/json"
 import { readRecentSessionMessages } from "./lib/session"
 import { resolveVaultPath } from "./lib/vault-path"
 
@@ -24,14 +26,6 @@ interface HookEvent {
 }
 
 type HookHandler = (event: HookEvent) => Promise<void>
-
-function asRecord(value: unknown): Record<string, unknown> {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>
-  }
-
-  return {}
-}
 
 function logWarning(message: string): void {
   console.warn(`[zettelclaw hook] ${message}`)
@@ -65,25 +59,26 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-// formatTime removed — unused after journal refactor
-
 function parseMessageCount(configValue: unknown): number {
+  const defaultCount = 20
+  const maxCount = 200
+
   if (typeof configValue === "number" && Number.isFinite(configValue) && configValue > 0) {
-    return Math.max(1, Math.floor(configValue))
+    return Math.min(maxCount, Math.max(1, Math.floor(configValue)))
   }
 
   if (typeof configValue === "string") {
     const parsed = Number.parseInt(configValue, 10)
     if (Number.isFinite(parsed) && parsed > 0) {
-      return parsed
+      return Math.min(maxCount, parsed)
     }
   }
 
-  return 20
+  return defaultCount
 }
 
 async function resolveNotesDirectory(vaultPath: string): Promise<string | null> {
-  for (const folder of ["01 Notes", "Notes"]) {
+  for (const folder of NOTES_FOLDER_CANDIDATES) {
     const candidate = join(vaultPath, folder)
     if (await pathExists(candidate)) {
       return candidate
@@ -94,20 +89,23 @@ async function resolveNotesDirectory(vaultPath: string): Promise<string | null> 
 }
 
 async function resolveJournalDirectory(vaultPath: string): Promise<string> {
-  for (const folder of ["03 Journal", "02 Journal", "Journal", "Daily"]) {
+  for (const folder of JOURNAL_FOLDER_CANDIDATES) {
     const candidate = join(vaultPath, folder)
     if (await pathExists(candidate)) {
       return candidate
     }
   }
 
-  return join(vaultPath, "03 Journal")
+  return join(vaultPath, JOURNAL_FOLDER_CANDIDATES[0])
 }
 
 function sanitizeTitleForFilename(title: string): string {
   return title
-    .replace(/[\\/:*?"<>|]/g, "")
+    .replace(/[\\/:*?"<>|#^]/g, "")
+    .replace(/^\.+/, "")
     .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240)
     .trim()
 }
 
@@ -160,7 +158,7 @@ async function writeExtractedNotes(
       continue
     }
 
-    const body = (note.body.trim().length > 0 ? note.body.trim() : note.summary.trim()).trim()
+    const body = note.body.trim().length > 0 ? note.body.trim() : note.summary.trim()
     const frontmatter = buildNoteFrontmatter(note, dateStamp)
     const content = `${frontmatter}${body}\n`
     await writeFile(notePath, content, "utf8")
@@ -185,7 +183,6 @@ async function writeJournalEntry(vaultPath: string, timestamp: Date, summary: Se
   const isNew = !(await pathExists(journalPath))
 
   if (isNew) {
-    // Create journal using the template format
     const sections: string[] = [
       "---",
       "type: journal",
@@ -227,14 +224,11 @@ async function writeJournalEntry(vaultPath: string, timestamp: Date, summary: Se
 
     await writeFile(journalPath, sections.join("\n"), "utf8")
   } else {
-    // Append to existing journal — add bullets under the right sections
     const existing = await readFile(journalPath, "utf8")
     let updated = existing
 
-    // Update the `updated` frontmatter field
     updated = updated.replace(/^(updated:\s*).+$/m, `$1${dateStamp}`)
 
-    // Helper: append bullets before the next ## heading or EOF
     function appendToSection(content: string, heading: string, bullets: string[]): string {
       if (bullets.length === 0) return content
       const rendered = renderBullets(bullets)
@@ -247,7 +241,6 @@ async function writeJournalEntry(vaultPath: string, timestamp: Date, summary: Se
         const after = content.slice(sectionEnd)
         return `${before}\n${rendered}\n${after}`
       }
-      // Section doesn't exist — append it
       return `${content.trimEnd()}\n\n## ${heading}\n\n${rendered}\n`
     }
 
@@ -295,13 +288,17 @@ export const handler: HookHandler = async (event) => {
 
     const vaultPath = await resolveVaultPath(cfg, hookConfig)
     if (!vaultPath) {
-      logWarning("No vault path found; skipping extraction.")
+      const message = "No vault path found; skipping extraction."
+      logWarning(message)
+      event.messages.push(`🦞 ${message}`)
       return
     }
 
     const notesDirectory = await resolveNotesDirectory(vaultPath)
     if (!notesDirectory) {
-      logWarning(`No Notes folder found in vault: ${vaultPath}`)
+      const message = `No Notes folder found in vault: ${vaultPath}`
+      logWarning(message)
+      event.messages.push(`🦞 ${message}`)
       return
     }
 
@@ -309,18 +306,20 @@ export const handler: HookHandler = async (event) => {
     const eventDate = toDate(event.timestamp)
     const dateStamp = formatDate(eventDate)
 
-    // Journal entry is ALWAYS written — it's the primary output of the hook.
-    // Atomic notes are only created when a genuinely reusable concept was discussed.
-    const result = await extractSessionSummary(transcript, {
+    const extraction = await extractSessionSummary(transcript, {
       cfg,
       model: typeof hookConfig.model === "string" ? hookConfig.model : undefined,
       logger: logWarning,
     })
 
-    // Write/update journal entry (always)
+    if (!extraction.success) {
+      event.messages.push(`🦞 ${extraction.message ?? "Could not extract session summary"}`)
+      return
+    }
+
+    const result = extraction.summary
     await writeJournalEntry(vaultPath, eventDate, result)
 
-    // Write atomic notes only if any were extracted
     let writtenTitles: string[] = []
     if (result.notes.length > 0) {
       writtenTitles = await writeExtractedNotes(notesDirectory, result.notes, dateStamp)
@@ -334,6 +333,7 @@ export const handler: HookHandler = async (event) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     logWarning(`Unexpected error: ${message}`)
+    event.messages.push(`🦞 Hook failed: ${message}`)
   }
 }
 

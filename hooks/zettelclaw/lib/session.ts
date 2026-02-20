@@ -1,5 +1,7 @@
-import { readdir, readFile, stat } from "node:fs/promises"
+import { open, readdir, stat } from "node:fs/promises"
 import { basename, dirname, join, resolve } from "node:path"
+
+import { contentToText } from "./content"
 
 export interface ConversationTurn {
   role: "user" | "assistant"
@@ -14,6 +16,8 @@ interface SessionEventLike {
     sessionId?: string
   }
 }
+
+const MAX_SESSION_READ_BYTES = 2_000_000
 
 function normalizeRole(value: unknown): "user" | "assistant" | null {
   if (typeof value !== "string") {
@@ -30,46 +34,6 @@ function normalizeRole(value: unknown): "user" | "assistant" | null {
   }
 
   return null
-}
-
-function contentToText(value: unknown): string {
-  if (typeof value === "string") {
-    return value.trim()
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => contentToText(item))
-      .filter((item) => item.length > 0)
-      .join("\n")
-      .trim()
-  }
-
-  if (!value || typeof value !== "object") {
-    return ""
-  }
-
-  const record = value as Record<string, unknown>
-  const directText = typeof record.text === "string" ? record.text : ""
-  if (directText.trim().length > 0) {
-    return directText.trim()
-  }
-
-  if ("content" in record) {
-    const nested = contentToText(record.content)
-    if (nested.length > 0) {
-      return nested
-    }
-  }
-
-  if ("value" in record) {
-    const nested = contentToText(record.value)
-    if (nested.length > 0) {
-      return nested
-    }
-  }
-
-  return ""
 }
 
 function extractTurn(rawEntry: unknown): ConversationTurn | null {
@@ -108,9 +72,24 @@ function extractTurn(rawEntry: unknown): ConversationTurn | null {
   return null
 }
 
+async function readTail(pathToFile: string, maxBytes: number): Promise<string> {
+  const handle = await open(pathToFile, "r")
+
+  try {
+    const fileStat = await handle.stat()
+    const length = Math.min(fileStat.size, maxBytes)
+    const offset = Math.max(0, fileStat.size - length)
+    const buffer = Buffer.alloc(length)
+    await handle.read(buffer, 0, length, offset)
+    return buffer.toString("utf8")
+  } finally {
+    await handle.close()
+  }
+}
+
 async function readSessionTurns(pathToSession: string): Promise<ConversationTurn[]> {
   try {
-    const raw = await readFile(pathToSession, "utf8")
+    const raw = await readTail(pathToSession, MAX_SESSION_READ_BYTES)
     const lines = raw
       .split("\n")
       .map((line) => line.trim())
