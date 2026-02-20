@@ -3,7 +3,6 @@
 import { log } from "@clack/prompts"
 
 import { runInit } from "./commands/init"
-import { runUpgrade } from "./commands/upgrade"
 
 interface ParsedArgs {
   command?: string | undefined
@@ -22,7 +21,6 @@ function usage(): string {
     "",
     "Usage:",
     "  zettelclaw init [options]     Set up a new Zettelclaw vault",
-    "  zettelclaw upgrade [options]  Add new templates to an existing vault",
     "",
     "Init options:",
     "  --vault <path>      Set vault path (default: current directory)",
@@ -30,10 +28,6 @@ function usage(): string {
     "  --openclaw          Force OpenClaw integration and hook setup",
     "  --yes               Accept all defaults non-interactively",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",
-    "",
-    "Upgrade options:",
-    "  --vault <path>      Vault path (default: current directory)",
-    "  --yes               Accept all defaults",
   ].join("\n")
 }
 
@@ -142,14 +136,6 @@ async function main(): Promise<void> {
       vaultPath: parsed.flags.vaultPath,
       minimal: parsed.flags.minimal,
       workspacePath: parsed.flags.workspacePath,
-    })
-    return
-  }
-
-  if (parsed.command === "upgrade") {
-    await runUpgrade({
-      yes: parsed.flags.yes,
-      vaultPath: parsed.flags.vaultPath,
     })
     return
   }
