@@ -352,7 +352,7 @@ async function fireMigrateEvent(values: Record<string, string>): Promise<boolean
 }
 
 export async function runMigrate(options: MigrateOptions): Promise<void> {
-  intro("🦞 Zettelclaw migration")
+  intro("🦞 Migrate to Zettelclaw")
 
   const vaultPath = await detectVaultPath(options)
   if (!(vaultPath && (await isDirectory(vaultPath)))) {
