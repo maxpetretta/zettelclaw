@@ -22,12 +22,12 @@
     "fix": "biome check --write ."
   },
   "dependencies": {
-    "@clack/prompts": "^1.0.1"
+    "@clack/prompts": "1.0.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.3",
-    "@types/bun": "latest",
-    "@typescript/native-preview": "^7.0.0-dev.20260219.1",
-    "typescript": "^5.9.3"
+    "@biomejs/biome": "2.4.3",
+    "@types/bun": "1.2.5",
+    "@typescript/native-preview": "7.0.0-dev.20260219.1",
+    "typescript": "5.9.3"
   }
 }
