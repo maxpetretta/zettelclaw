@@ -1,0 +1,673 @@
+---
+import Layout from "@/layouts/Layout.astro"
+
+const steps = [
+  {
+    num: "01",
+    icon: "🛠️",
+    title: "Init",
+    description:
+      "Run one command and Zettelclaw sets up a vault structure designed for human + agent collaboration.",
+    wikilink: "[[init]]",
+  },
+  {
+    num: "02",
+    icon: "💬",
+    title: "Converse",
+    description:
+      "Use OpenClaw with your Obsidian vault as shared context so ideas stay connected to durable notes.",
+    wikilink: "[[conversation]]",
+  },
+  {
+    num: "03",
+    icon: "🧠",
+    title: "Extract",
+    description:
+      "Turn conversations into atomic notes, links, and journal insights that compound over time.",
+    wikilink: "[[atomic-note]]",
+  },
+]
+
+const features = [
+  {
+    title: "Atomic notes",
+    description:
+      "Capture one idea per note so knowledge remains reusable, composable, and easy for agents to reason over.",
+    wikilink: "[[atomic-notes]]",
+  },
+  {
+    title: "Journal extraction",
+    description:
+      "Promote raw daily reflections into lasting notes without losing provenance.",
+    wikilink: "[[journal-extraction]]",
+  },
+  {
+    title: "Vault search",
+    description:
+      "Find and surface linked context quickly across your entire graph of notes.",
+    wikilink: "[[vault-search]]",
+  },
+  {
+    title: "OpenClaw integration",
+    description:
+      "Built to work directly with OpenClaw workflows and agent-native collaboration.",
+    wikilink: "[[openclaw-integration]]",
+  },
+  {
+    title: "Obsidian-native",
+    description:
+      "No lock-in: plain markdown files in your Obsidian vault with your existing plugin ecosystem.",
+    wikilink: "[[obsidian-native]]",
+  },
+  {
+    title: "Open source",
+    description:
+      "Inspect, extend, and adapt the system to your own workflows and team knowledge conventions.",
+    wikilink: "[[open-source]]",
+  },
+]
+---
+
+<Layout>
+  <div class="pg">
+    <header class="hd">
+      <div class="wrap hd-row">
+        <a href="#top" class="logo">
+          <span aria-hidden="true">🦞</span>
+          <span>Zettelclaw</span>
+        </a>
+        <nav class="hd-nav" aria-label="Primary">
+          <a href="#what">About</a>
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#quickstart">Quick start</a>
+        </nav>
+        <a href="https://github.com/maxpetretta/zettelclaw" class="hd-cta">
+          GitHub <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero reveal">
+        <div class="wrap">
+          <p class="kicker">Agent-native PKM for Obsidian + OpenClaw</p>
+          <h1>Your AI agent&apos;s<br /><em>second brain</em></h1>
+          <p class="lead">
+            Zettelclaw turns your Obsidian vault into a shared knowledge system
+            between you and your AI agent.
+          </p>
+          <div class="hero-actions">
+            <a
+              href="https://github.com/maxpetretta/zettelclaw"
+              class="btn-solid">View on GitHub</a
+            >
+            <a href="#quickstart" class="btn-outline">Quick start</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="what" class="sect reveal">
+        <div class="wrap">
+          <h2>What is Zettelclaw?</h2>
+          <p class="prose">
+            Zettelclaw is an agent-native personal knowledge management system
+            built on Obsidian and OpenClaw. It applies Zettelkasten principles:
+            atomic notes, emergent structure, and links over folders. Instead of
+            treating AI as a detached chat history, it gives your agent access to
+            the same living vault you rely on. The result is shared context that
+            compounds into long-term knowledge.
+          </p>
+        </div>
+      </section>
+
+      <section id="how" class="sect">
+        <div class="wrap">
+          <h2 class="reveal">How it works</h2>
+          <div class="flow reveal">
+            <span>conversation</span>
+            <span class="flow-sep">&rarr;</span>
+            <code class="flow-cmd">/new</code>
+            <span class="flow-sep">&rarr;</span>
+            <span>atomic notes in vault</span>
+          </div>
+          <div class="steps">
+            {steps.map((s) => (
+              <article class="step reveal">
+                <span class="step-num">{s.num}</span>
+                <span class="step-icon" aria-hidden="true">{s.icon}</span>
+                <h3>{s.title}</h3>
+                <p>{s.description}</p>
+                <span class="wiki">{s.wikilink}</span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="sect">
+        <div class="wrap">
+          <h2 class="reveal">Features</h2>
+          <div class="feat-grid">
+            {features.map((f) => (
+              <article class="feat reveal">
+                <span class="wiki">{f.wikilink}</span>
+                <h3>{f.title}</h3>
+                <p>{f.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="quickstart" class="sect reveal">
+        <div class="wrap">
+          <h2>Quick start</h2>
+          <div class="term" role="group" aria-label="Terminal command">
+            <div class="term-chrome">
+              <span class="dot dot-r"></span>
+              <span class="dot dot-y"></span>
+              <span class="dot dot-g"></span>
+              <span class="term-title">Terminal</span>
+            </div>
+            <div class="term-body">
+              <pre><code><span class="prompt">$</span> npx zettelclaw init</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="ft">
+      <div class="wrap ft-row">
+        <p>Built with 🦞 by the OpenClaw community</p>
+        <div class="ft-links">
+          <a href="https://github.com/maxpetretta/zettelclaw">GitHub</a>
+          <a href="https://www.npmjs.com/package/zettelclaw">npm</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</Layout>
+
+<style is:global>
+  @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
+</style>
+
+<style>
+  :global(body) {
+    background: #faf9f6 !important;
+  }
+
+  :global(::selection) {
+    background: rgba(124, 58, 237, 0.14) !important;
+    color: inherit !important;
+  }
+
+  .pg {
+    --paper: #faf9f6;
+    --ink: #1c1917;
+    --stone-600: #57534e;
+    --stone-500: #78716c;
+    --stone-400: #a8a29e;
+    --stone-300: #d6d3d1;
+    --stone-200: #e7e5e4;
+    --stone-100: #f5f5f4;
+    --brand: #ea580c;
+    --accent: #7c3aed;
+    --white: #ffffff;
+    --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+      "Liberation Mono", monospace;
+
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  /* ─── Header ─── */
+
+  .hd {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(250, 249, 246, 0.9);
+    backdrop-filter: blur(16px) saturate(1.5);
+    border-bottom: 1px solid var(--stone-200);
+  }
+
+  .hd-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+
+  .hd-nav {
+    display: none;
+    align-items: center;
+    gap: 2rem;
+    font-size: 0.84rem;
+  }
+
+  .hd-nav a {
+    color: var(--stone-400);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  .hd-nav a:hover {
+    color: var(--ink);
+  }
+
+  .hd-cta {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--stone-500);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  .hd-cta:hover {
+    color: var(--brand);
+  }
+
+  /* ─── Hero ─── */
+
+  .hero {
+    padding: clamp(5rem, 14vw, 10rem) 0 clamp(4rem, 9vw, 7rem);
+    background: linear-gradient(
+      180deg,
+      rgba(234, 88, 12, 0.025) 0%,
+      transparent 50%
+    );
+  }
+
+  .kicker {
+    font-size: 0.76rem;
+    font-weight: 650;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--brand);
+  }
+
+  .hero h1 {
+    margin-top: 1.25rem;
+    font-family: var(--serif);
+    font-size: clamp(2.75rem, 8vw, 5.2rem);
+    font-weight: 400;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .hero h1 em {
+    font-style: italic;
+  }
+
+  .lead {
+    margin-top: 1.5rem;
+    font-size: clamp(1.02rem, 1.6vw, 1.15rem);
+    line-height: 1.72;
+    color: var(--stone-500);
+    max-width: 44ch;
+  }
+
+  .hero-actions {
+    margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  /* ─── Buttons ─── */
+
+  .btn-solid,
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 1.35rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 8px;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      background 160ms ease;
+  }
+
+  .btn-solid {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .btn-solid:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(28, 25, 23, 0.15);
+    background: #292524;
+  }
+
+  .btn-outline {
+    border: 1.5px solid var(--stone-300);
+    color: var(--ink);
+    background: transparent;
+  }
+
+  .btn-outline:hover {
+    transform: translateY(-1px);
+    border-color: var(--stone-400);
+    background: var(--white);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ─── Sections ─── */
+
+  .sect {
+    border-top: 1px solid var(--stone-200);
+    padding: clamp(3rem, 7vw, 5rem) 0;
+  }
+
+  .sect h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 3.8vw, 2.4rem);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .prose {
+    margin-top: 1.25rem;
+    font-size: clamp(1rem, 1.4vw, 1.08rem);
+    line-height: 1.82;
+    color: var(--stone-600);
+    max-width: 58ch;
+  }
+
+  /* ─── Flow ─── */
+
+  .flow {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.95rem;
+    color: var(--stone-500);
+  }
+
+  .flow-sep {
+    color: var(--brand);
+    font-weight: 700;
+  }
+
+  .flow-cmd {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: var(--accent);
+    color: var(--white);
+    padding: 0.18rem 0.55rem;
+    border-radius: 5px;
+  }
+
+  /* ─── Steps ─── */
+
+  .steps {
+    margin-top: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .step-num {
+    display: block;
+    font-family: var(--serif);
+    font-size: 2.5rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--stone-200);
+  }
+
+  .step-icon {
+    display: block;
+    margin-top: 0.75rem;
+    font-size: 1.1rem;
+  }
+
+  .step h3 {
+    margin-top: 0.4rem;
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .step p {
+    margin-top: 0.35rem;
+    font-size: 0.9rem;
+    line-height: 1.62;
+    color: var(--stone-500);
+  }
+
+  .wiki {
+    display: inline-block;
+    margin-top: 0.6rem;
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+
+  /* ─── Features ─── */
+
+  .feat-grid {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--stone-200);
+    border: 1px solid var(--stone-200);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .feat {
+    padding: 1.35rem 1.4rem;
+    background: var(--white);
+    transition: background 200ms ease;
+  }
+
+  .feat:hover {
+    background: var(--stone-100);
+  }
+
+  .feat .wiki {
+    margin-top: 0;
+    margin-bottom: 0.15rem;
+  }
+
+  .feat h3 {
+    margin-top: 0.3rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .feat p {
+    margin-top: 0.3rem;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--stone-500);
+  }
+
+  /* ─── Terminal ─── */
+
+  .term {
+    margin-top: 1.5rem;
+    max-width: 480px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--ink);
+    box-shadow: 0 25px 60px -15px rgba(28, 25, 23, 0.25);
+  }
+
+  .term-chrome {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 14px;
+    background: #292524;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .term-title {
+    margin: 0 auto;
+    transform: translateX(-14px);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--stone-400);
+    letter-spacing: 0.02em;
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .dot-r {
+    background: #ef4444;
+  }
+  .dot-y {
+    background: #eab308;
+  }
+  .dot-g {
+    background: #22c55e;
+  }
+
+  .term-body {
+    padding: 1.1rem 1.2rem;
+  }
+
+  .term-body pre {
+    margin: 0;
+    overflow-x: auto;
+  }
+
+  .term-body code {
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    color: var(--stone-200);
+  }
+
+  .prompt {
+    color: var(--brand);
+    margin-right: 0.5rem;
+  }
+
+  /* ─── Footer ─── */
+
+  .ft {
+    border-top: 1px solid var(--stone-200);
+    padding: 1.75rem 0 2.5rem;
+  }
+
+  .ft-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .ft p {
+    font-size: 0.84rem;
+    color: var(--stone-400);
+  }
+
+  .ft-links {
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.84rem;
+  }
+
+  .ft-links a {
+    color: var(--stone-400);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  .ft-links a:hover {
+    color: var(--ink);
+  }
+
+  /* ─── Responsive ─── */
+
+  @media (min-width: 768px) {
+    .hd-nav {
+      display: flex;
+    }
+
+    .ft-row {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .steps {
+      grid-template-columns: 1fr;
+      gap: 1.75rem;
+    }
+
+    .feat-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .btn-solid,
+    .btn-outline {
+      width: 100%;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.25rem, 10vw, 3.5rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-solid,
+    .btn-outline,
+    .feat,
+    .hd-nav a,
+    .hd-cta,
+    .ft-links a {
+      transition: none !important;
+    }
+  }
+</style>
