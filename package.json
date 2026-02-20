@@ -16,13 +16,19 @@
     "start": "bun run src/index.ts",
     "init": "bun run src/index.ts init",
     "upgrade": "bun run src/index.ts upgrade",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "check": "biome check . && tsgo --noEmit"
   },
   "dependencies": {
     "@clack/prompts": "^1.0.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.3",
     "@types/bun": "latest",
+    "@typescript/native-preview": "^7.0.0-dev.20260219.1",
     "typescript": "^5.9.3"
   }
 }

@@ -1,45 +1,45 @@
-import { access, appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process"
+import { access, mkdir, readFile, writeFile } from "node:fs/promises"
+import { join } from "node:path"
 
-import { extractSessionSummary, type ExtractedNote, type SessionSummary } from "./lib/extract";
-import { readRecentSessionMessages } from "./lib/session";
-import { resolveVaultPath } from "./lib/vault-path";
+import { type ExtractedNote, extractSessionSummary, type SessionSummary } from "./lib/extract"
+import { readRecentSessionMessages } from "./lib/session"
+import { resolveVaultPath } from "./lib/vault-path"
 
 interface HookEvent {
-  type: string;
-  action: string;
-  sessionKey: string;
-  timestamp: Date;
-  messages: string[];
+  type: string
+  action: string
+  sessionKey: string
+  timestamp: Date
+  messages: string[]
   context: {
-    cfg?: any;
-    sessionEntry?: any;
-    previousSessionEntry?: any;
-    sessionId?: string;
-    sessionFile?: string;
-    commandSource?: string;
-    senderId?: string;
-    workspaceDir?: string;
-  };
+    cfg?: unknown
+    sessionEntry?: unknown
+    previousSessionEntry?: unknown
+    sessionId?: string
+    sessionFile?: string
+    commandSource?: string
+    senderId?: string
+    workspaceDir?: string
+  }
 }
 
-type HookHandler = (event: HookEvent) => Promise<void>;
+type HookHandler = (event: HookEvent) => Promise<void>
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
+    return value as Record<string, unknown>
   }
 
-  return {};
+  return {}
 }
 
 function logWarning(message: string): void {
-  console.warn(`[zettelclaw hook] ${message}`);
+  console.warn(`[zettelclaw hook] ${message}`)
 }
 
 function logInfo(message: string): void {
-  console.log(`[zettelclaw hook] ${message}`);
+  console.log(`[zettelclaw hook] ${message}`)
 }
 
 /** Check if the official Obsidian CLI (1.12+) is available and responding */
@@ -48,10 +48,10 @@ function isObsidianCliAvailable(): boolean {
     const result = spawnSync("obsidian", ["version"], {
       encoding: "utf8",
       timeout: 5_000,
-    });
-    return result.status === 0 && !result.error;
+    })
+    return result.status === 0 && !result.error
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -61,13 +61,13 @@ function cliCreateNote(name: string, template: string): boolean {
     const result = spawnSync("obsidian", ["create", `name=${name}`, `template=${template}`, "silent"], {
       encoding: "utf8",
       timeout: 10_000,
-    });
+    })
     // CLI exit codes lie — check output for errors
-    const output = (result.stdout ?? "") + (result.stderr ?? "");
-    if (output.toLowerCase().includes("error:")) return false;
-    return result.status === 0 && !result.error;
+    const output = (result.stdout ?? "") + (result.stderr ?? "")
+    if (output.toLowerCase().includes("error:")) return false
+    return result.status === 0 && !result.error
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -77,10 +77,10 @@ function cliSetProperty(path: string, name: string, value: string): boolean {
     const result = spawnSync("obsidian", ["property:set", `name=${name}`, `value=${value}`, `path=${path}`], {
       encoding: "utf8",
       timeout: 5_000,
-    });
-    return result.status === 0 && !result.error;
+    })
+    return result.status === 0 && !result.error
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -90,106 +90,104 @@ function cliAppend(path: string, content: string): boolean {
     const result = spawnSync("obsidian", ["append", `path=${path}`, `content=${content}`], {
       encoding: "utf8",
       timeout: 5_000,
-    });
-    return result.status === 0 && !result.error;
+    })
+    return result.status === 0 && !result.error
   } catch {
-    return false;
+    return false
   }
 }
 
 async function pathExists(path: string): Promise<boolean> {
   try {
-    await access(path);
-    return true;
+    await access(path)
+    return true
   } catch {
-    return false;
+    return false
   }
 }
 
 function toDate(value: unknown): Date {
   if (value instanceof Date && Number.isFinite(value.valueOf())) {
-    return value;
+    return value
   }
 
   if (typeof value === "string") {
-    const parsed = new Date(value);
+    const parsed = new Date(value)
     if (Number.isFinite(parsed.valueOf())) {
-      return parsed;
+      return parsed
     }
   }
 
-  return new Date();
+  return new Date()
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10)
 }
 
-function formatTime(date: Date): string {
-  return date.toTimeString().slice(0, 5);
-}
+// formatTime removed — unused after journal refactor
 
 function parseMessageCount(configValue: unknown): number {
   if (typeof configValue === "number" && Number.isFinite(configValue) && configValue > 0) {
-    return Math.max(1, Math.floor(configValue));
+    return Math.max(1, Math.floor(configValue))
   }
 
   if (typeof configValue === "string") {
-    const parsed = Number.parseInt(configValue, 10);
+    const parsed = Number.parseInt(configValue, 10)
     if (Number.isFinite(parsed) && parsed > 0) {
-      return parsed;
+      return parsed
     }
   }
 
-  return 20;
+  return 20
 }
 
 async function resolveNotesDirectory(vaultPath: string): Promise<string | null> {
   for (const folder of ["01 Notes", "Notes"]) {
-    const candidate = join(vaultPath, folder);
+    const candidate = join(vaultPath, folder)
     if (await pathExists(candidate)) {
-      return candidate;
+      return candidate
     }
   }
 
-  return null;
+  return null
 }
 
 async function resolveJournalDirectory(vaultPath: string): Promise<string> {
   for (const folder of ["03 Journal", "02 Journal", "Journal", "Daily"]) {
-    const candidate = join(vaultPath, folder);
+    const candidate = join(vaultPath, folder)
     if (await pathExists(candidate)) {
-      return candidate;
+      return candidate
     }
   }
 
-  return join(vaultPath, "03 Journal");
+  return join(vaultPath, "03 Journal")
 }
 
 function sanitizeTitleForFilename(title: string): string {
   return title
     .replace(/[\\/:*?"<>|]/g, "")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
 }
 
 function normalizeTags(tags: string[]): string[] {
-  const unique = new Set<string>();
+  const unique = new Set<string>()
 
   for (const tag of tags) {
-    const normalized = tag.trim().toLowerCase().replace(/\s+/g, "-");
+    const normalized = tag.trim().toLowerCase().replace(/\s+/g, "-")
     if (normalized.length > 0) {
-      unique.add(normalized);
+      unique.add(normalized)
     }
   }
 
-  return [...unique];
+  return [...unique]
 }
 
 function buildNoteFrontmatter(note: ExtractedNote, dateStamp: string): string {
-  const tags = normalizeTags(note.tags);
-  const tagsValue = tags.map((tag) => JSON.stringify(tag)).join(", ");
-  const summary = note.summary.trim().length > 0 ? note.summary.trim() : note.title;
+  const tags = normalizeTags(note.tags)
+  const tagsValue = tags.map((tag) => JSON.stringify(tag)).join(", ")
+  const summary = note.summary.trim().length > 0 ? note.summary.trim() : note.title
 
   return [
     "---",
@@ -201,7 +199,7 @@ function buildNoteFrontmatter(note: ExtractedNote, dateStamp: string): string {
     `updated: ${dateStamp}`,
     "---",
     "",
-  ].join("\n");
+  ].join("\n")
 }
 
 async function writeExtractedNotes(
@@ -210,73 +208,78 @@ async function writeExtractedNotes(
   dateStamp: string,
   useCli: boolean,
 ): Promise<string[]> {
-  const writtenTitles: string[] = [];
+  const writtenTitles: string[] = []
 
   for (const note of extractedNotes) {
-    const safeTitle = sanitizeTitleForFilename(note.title);
+    const safeTitle = sanitizeTitleForFilename(note.title)
     if (!safeTitle) {
-      continue;
+      continue
     }
 
-    const notePath = join(notesDirectory, `${safeTitle}.md`);
+    const notePath = join(notesDirectory, `${safeTitle}.md`)
     if (await pathExists(notePath)) {
-      continue;
+      continue
     }
 
-    const body = (note.body.trim().length > 0 ? note.body.trim() : note.summary.trim()).trim();
-    const tags = normalizeTags(note.tags);
+    const body = (note.body.trim().length > 0 ? note.body.trim() : note.summary.trim()).trim()
+    const tags = normalizeTags(note.tags)
 
     if (useCli) {
       // Try creating via Obsidian CLI with template
-      const templateName = note.type === "note" ? "note" : note.type;
-      const created = cliCreateNote(safeTitle, templateName);
+      const templateName = note.type === "note" ? "note" : note.type
+      const created = cliCreateNote(safeTitle, templateName)
       if (created) {
         // Set properties and append body via CLI
-        if (note.summary.trim()) cliSetProperty(`01 Notes/${safeTitle}.md`, "summary", note.summary.trim());
-        if (tags.length > 0) cliSetProperty(`01 Notes/${safeTitle}.md`, "tags", tags.join(","));
-        cliSetProperty(`01 Notes/${safeTitle}.md`, "source", `[[${dateStamp}]]`);
-        if (body) cliAppend(`01 Notes/${safeTitle}.md`, body);
-        writtenTitles.push(safeTitle);
-        continue;
+        if (note.summary.trim()) cliSetProperty(`01 Notes/${safeTitle}.md`, "summary", note.summary.trim())
+        if (tags.length > 0) cliSetProperty(`01 Notes/${safeTitle}.md`, "tags", tags.join(","))
+        cliSetProperty(`01 Notes/${safeTitle}.md`, "source", `[[${dateStamp}]]`)
+        if (body) cliAppend(`01 Notes/${safeTitle}.md`, body)
+        writtenTitles.push(safeTitle)
+        continue
       }
       // CLI failed — fall through to file tools
-      logWarning(`CLI create failed for "${safeTitle}", falling back to file tools`);
+      logWarning(`CLI create failed for "${safeTitle}", falling back to file tools`)
     }
 
     // File tools fallback
-    const frontmatter = buildNoteFrontmatter(note, dateStamp);
-    const content = `${frontmatter}${body}\n`;
-    await writeFile(notePath, content, "utf8");
-    writtenTitles.push(safeTitle);
+    const frontmatter = buildNoteFrontmatter(note, dateStamp)
+    const content = `${frontmatter}${body}\n`
+    await writeFile(notePath, content, "utf8")
+    writtenTitles.push(safeTitle)
   }
 
-  return writtenTitles;
+  return writtenTitles
 }
 
 function renderBullets(items: string[]): string {
-  if (items.length === 0) return "";
-  return items.map((item) => item.startsWith("- ") ? item : `- ${item}`).join("\n");
+  if (items.length === 0) return ""
+  return items.map((item) => (item.startsWith("- ") ? item : `- ${item}`)).join("\n")
 }
 
-async function writeJournalEntry(vaultPath: string, timestamp: Date, summary: SessionSummary, useCli: boolean): Promise<void> {
-  const journalDir = await resolveJournalDirectory(vaultPath);
-  const dateStamp = formatDate(timestamp);
-  const journalPath = join(journalDir, `${dateStamp}.md`);
+async function writeJournalEntry(
+  vaultPath: string,
+  timestamp: Date,
+  summary: SessionSummary,
+  useCli: boolean,
+): Promise<void> {
+  const journalDir = await resolveJournalDirectory(vaultPath)
+  const dateStamp = formatDate(timestamp)
+  const journalPath = join(journalDir, `${dateStamp}.md`)
 
-  await mkdir(journalDir, { recursive: true });
+  await mkdir(journalDir, { recursive: true })
 
-  let isNew = !(await pathExists(journalPath));
+  let isNew = !(await pathExists(journalPath))
 
   // Try creating journal via CLI with template if it doesn't exist
   if (isNew && useCli) {
-    const created = cliCreateNote(dateStamp, "journal");
+    const created = cliCreateNote(dateStamp, "journal")
     if (created) {
       // Verify it was actually created (CLI may place it elsewhere)
       if (await pathExists(journalPath)) {
-        isNew = false; // Template created it with frontmatter, now append content
-        logInfo(`Journal ${dateStamp} created via Obsidian CLI`);
+        isNew = false // Template created it with frontmatter, now append content
+        logInfo(`Journal ${dateStamp} created via Obsidian CLI`)
       } else {
-        logWarning(`CLI created journal but not at expected path, falling back to file tools`);
+        logWarning(`CLI created journal but not at expected path, falling back to file tools`)
       }
     }
   }
@@ -291,129 +294,127 @@ async function writeJournalEntry(vaultPath: string, timestamp: Date, summary: Se
       `updated: ${dateStamp}`,
       "---",
       "",
-    ];
+    ]
 
     if (summary.done.length > 0) {
-      sections.push("## Done", "", renderBullets(summary.done), "");
+      sections.push("## Done", "", renderBullets(summary.done), "")
     } else {
-      sections.push("## Done", "", "");
+      sections.push("## Done", "", "")
     }
 
     if (summary.decisions.length > 0) {
-      sections.push("## Decisions", "", renderBullets(summary.decisions), "");
+      sections.push("## Decisions", "", renderBullets(summary.decisions), "")
     } else {
-      sections.push("## Decisions", "", "");
+      sections.push("## Decisions", "", "")
     }
 
     if (summary.open.length > 0) {
-      sections.push("## Open", "", renderBullets(summary.open), "");
+      sections.push("## Open", "", renderBullets(summary.open), "")
     } else {
-      sections.push("## Open", "", "");
+      sections.push("## Open", "", "")
     }
 
     if (summary.journalNotes.length > 0 || summary.notes.length > 0) {
-      const noteItems = [...summary.journalNotes];
+      const noteItems = [...summary.journalNotes]
       if (summary.notes.length > 0) {
-        const links = summary.notes.map((n) => `[[${n.title}]]`).join(", ");
-        noteItems.push(`Extracted notes: ${links}`);
+        const links = summary.notes.map((n) => `[[${n.title}]]`).join(", ")
+        noteItems.push(`Extracted notes: ${links}`)
       }
-      sections.push("## Notes", "", renderBullets(noteItems), "");
+      sections.push("## Notes", "", renderBullets(noteItems), "")
     } else {
-      sections.push("## Notes", "", "");
+      sections.push("## Notes", "", "")
     }
 
-    await writeFile(journalPath, sections.join("\n"), "utf8");
+    await writeFile(journalPath, sections.join("\n"), "utf8")
   } else {
     // Append to existing journal — add bullets under the right sections
-    const existing = await readFile(journalPath, "utf8");
-    let updated = existing;
+    const existing = await readFile(journalPath, "utf8")
+    let updated = existing
 
     // Update the `updated` frontmatter field
-    updated = updated.replace(/^(updated:\s*).+$/m, `$1${dateStamp}`);
+    updated = updated.replace(/^(updated:\s*).+$/m, `$1${dateStamp}`)
 
     // Helper: append bullets before the next ## heading or EOF
     function appendToSection(content: string, heading: string, bullets: string[]): string {
-      if (bullets.length === 0) return content;
-      const rendered = renderBullets(bullets);
-      const headingPattern = new RegExp(`(## ${heading}[\\s\\S]*?)(\n## |$)`);
-      const match = content.match(headingPattern);
-      if (match) {
-        const sectionEnd = match.index! + match[1].length;
-        const before = content.slice(0, sectionEnd).trimEnd();
-        const after = content.slice(sectionEnd);
-        return `${before}\n${rendered}\n${after}`;
+      if (bullets.length === 0) return content
+      const rendered = renderBullets(bullets)
+      const headingPattern = new RegExp(`(## ${heading}[\\s\\S]*?)(\n## |$)`)
+      const match = content.match(headingPattern)
+      const matchedSection = match?.[1]
+      if (match && match.index !== undefined && matchedSection) {
+        const sectionEnd = match.index + matchedSection.length
+        const before = content.slice(0, sectionEnd).trimEnd()
+        const after = content.slice(sectionEnd)
+        return `${before}\n${rendered}\n${after}`
       }
       // Section doesn't exist — append it
-      return `${content.trimEnd()}\n\n## ${heading}\n\n${rendered}\n`;
+      return `${content.trimEnd()}\n\n## ${heading}\n\n${rendered}\n`
     }
 
-    updated = appendToSection(updated, "Done", summary.done);
-    updated = appendToSection(updated, "Decisions", summary.decisions);
-    updated = appendToSection(updated, "Open", summary.open);
+    updated = appendToSection(updated, "Done", summary.done)
+    updated = appendToSection(updated, "Decisions", summary.decisions)
+    updated = appendToSection(updated, "Open", summary.open)
 
-    const noteItems = [...summary.journalNotes];
+    const noteItems = [...summary.journalNotes]
     if (summary.notes.length > 0) {
-      const links = summary.notes.map((n) => `[[${n.title}]]`).join(", ");
-      noteItems.push(`Extracted notes: ${links}`);
+      const links = summary.notes.map((n) => `[[${n.title}]]`).join(", ")
+      noteItems.push(`Extracted notes: ${links}`)
     }
-    updated = appendToSection(updated, "Notes", noteItems);
+    updated = appendToSection(updated, "Notes", noteItems)
 
-    await writeFile(journalPath, updated, "utf8");
+    await writeFile(journalPath, updated, "utf8")
   }
 }
 
-function buildConversationTranscript(
-  turns: Array<{ role: "user" | "assistant"; content: string }>,
-): string {
+function buildConversationTranscript(turns: Array<{ role: "user" | "assistant"; content: string }>): string {
   return turns
     .map((turn) => `${turn.role === "user" ? "User" : "Assistant"}: ${turn.content}`)
     .join("\n\n")
-    .trim();
+    .trim()
 }
 
 export const handler: HookHandler = async (event) => {
   try {
-    const isCommandNew =
-      event.type === "command:new" || (event.type === "command" && event.action === "new");
+    const isCommandNew = event.type === "command:new" || (event.type === "command" && event.action === "new")
 
     if (!isCommandNew) {
-      return;
+      return
     }
 
-    const cfg = event.context?.cfg ?? {};
-    const hooks = asRecord(asRecord(asRecord(cfg).hooks).internal);
-    const entries = asRecord(hooks.entries);
-    const hookConfig = asRecord(entries.zettelclaw);
-    const messageLimit = parseMessageCount(hookConfig.messages);
+    const cfg = event.context?.cfg ?? {}
+    const hooks = asRecord(asRecord(asRecord(cfg).hooks).internal)
+    const entries = asRecord(hooks.entries)
+    const hookConfig = asRecord(entries.zettelclaw)
+    const messageLimit = parseMessageCount(hookConfig.messages)
 
-    const turns = await readRecentSessionMessages(event, messageLimit);
+    const turns = await readRecentSessionMessages(event, messageLimit)
     if (turns.length === 0) {
-      event.messages.push("🦞 No extractable insights from this session");
-      return;
+      event.messages.push("🦞 No extractable insights from this session")
+      return
     }
 
-    const vaultPath = await resolveVaultPath(cfg, hookConfig);
+    const vaultPath = await resolveVaultPath(cfg, hookConfig)
     if (!vaultPath) {
-      logWarning("No vault path found; skipping extraction.");
-      return;
+      logWarning("No vault path found; skipping extraction.")
+      return
     }
 
-    const notesDirectory = await resolveNotesDirectory(vaultPath);
+    const notesDirectory = await resolveNotesDirectory(vaultPath)
     if (!notesDirectory) {
-      logWarning(`No Notes folder found in vault: ${vaultPath}`);
-      return;
+      logWarning(`No Notes folder found in vault: ${vaultPath}`)
+      return
     }
 
-    const transcript = buildConversationTranscript(turns);
-    const eventDate = toDate(event.timestamp);
-    const dateStamp = formatDate(eventDate);
+    const transcript = buildConversationTranscript(turns)
+    const eventDate = toDate(event.timestamp)
+    const dateStamp = formatDate(eventDate)
 
     // Check if Obsidian CLI is available (preferred for template-based creation)
-    const useCli = isObsidianCliAvailable();
+    const useCli = isObsidianCliAvailable()
     if (useCli) {
-      logInfo("Obsidian CLI detected — using templates for note creation");
+      logInfo("Obsidian CLI detected — using templates for note creation")
     } else {
-      logInfo("Obsidian CLI not available — using file tools fallback");
+      logInfo("Obsidian CLI not available — using file tools fallback")
     }
 
     // Journal entry is ALWAYS written — it's the primary output of the hook.
@@ -422,26 +423,26 @@ export const handler: HookHandler = async (event) => {
       cfg,
       model: typeof hookConfig.model === "string" ? hookConfig.model : undefined,
       logger: logWarning,
-    });
+    })
 
     // Write/update journal entry (always)
-    await writeJournalEntry(vaultPath, eventDate, result, useCli);
+    await writeJournalEntry(vaultPath, eventDate, result, useCli)
 
     // Write atomic notes only if any were extracted
-    let writtenTitles: string[] = [];
+    let writtenTitles: string[] = []
     if (result.notes.length > 0) {
-      writtenTitles = await writeExtractedNotes(notesDirectory, result.notes, dateStamp, useCli);
+      writtenTitles = await writeExtractedNotes(notesDirectory, result.notes, dateStamp, useCli)
     }
 
     if (writtenTitles.length > 0) {
-      event.messages.push(`🦞 Journal updated, extracted ${writtenTitles.length} notes: ${writtenTitles.join(", ")}`);
+      event.messages.push(`🦞 Journal updated, extracted ${writtenTitles.length} notes: ${writtenTitles.join(", ")}`)
     } else {
-      event.messages.push("🦞 Journal updated");
+      event.messages.push("🦞 Journal updated")
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logWarning(`Unexpected error: ${message}`);
+    const message = error instanceof Error ? error.message : String(error)
+    logWarning(`Unexpected error: ${message}`)
   }
-};
+}
 
-export default handler;
+export default handler

@@ -1,40 +1,40 @@
-import { readdir, readFile, stat } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { readdir, readFile, stat } from "node:fs/promises"
+import { basename, dirname, join, resolve } from "node:path"
 
 export interface ConversationTurn {
-  role: "user" | "assistant";
-  content: string;
+  role: "user" | "assistant"
+  content: string
 }
 
 interface SessionEventLike {
-  sessionKey: string;
+  sessionKey: string
   context?: {
-    sessionFile?: string;
-    workspaceDir?: string;
-    sessionId?: string;
-  };
+    sessionFile?: string
+    workspaceDir?: string
+    sessionId?: string
+  }
 }
 
 function normalizeRole(value: unknown): "user" | "assistant" | null {
   if (typeof value !== "string") {
-    return null;
+    return null
   }
 
-  const normalized = value.toLowerCase();
+  const normalized = value.toLowerCase()
   if (normalized === "user" || normalized === "human") {
-    return "user";
+    return "user"
   }
 
   if (normalized === "assistant" || normalized === "ai" || normalized === "model") {
-    return "assistant";
+    return "assistant"
   }
 
-  return null;
+  return null
 }
 
 function contentToText(value: unknown): string {
   if (typeof value === "string") {
-    return value.trim();
+    return value.trim()
   }
 
   if (Array.isArray(value)) {
@@ -42,138 +42,138 @@ function contentToText(value: unknown): string {
       .map((item) => contentToText(item))
       .filter((item) => item.length > 0)
       .join("\n")
-      .trim();
+      .trim()
   }
 
   if (!value || typeof value !== "object") {
-    return "";
+    return ""
   }
 
-  const record = value as Record<string, unknown>;
-  const directText = typeof record.text === "string" ? record.text : "";
+  const record = value as Record<string, unknown>
+  const directText = typeof record.text === "string" ? record.text : ""
   if (directText.trim().length > 0) {
-    return directText.trim();
+    return directText.trim()
   }
 
   if ("content" in record) {
-    const nested = contentToText(record.content);
+    const nested = contentToText(record.content)
     if (nested.length > 0) {
-      return nested;
+      return nested
     }
   }
 
   if ("value" in record) {
-    const nested = contentToText(record.value);
+    const nested = contentToText(record.value)
     if (nested.length > 0) {
-      return nested;
+      return nested
     }
   }
 
-  return "";
+  return ""
 }
 
 function extractTurn(rawEntry: unknown): ConversationTurn | null {
   if (!rawEntry || typeof rawEntry !== "object") {
-    return null;
+    return null
   }
 
-  const queue: Record<string, unknown>[] = [rawEntry as Record<string, unknown>];
-  const visited = new Set<Record<string, unknown>>();
+  const queue: Record<string, unknown>[] = [rawEntry as Record<string, unknown>]
+  const visited = new Set<Record<string, unknown>>()
 
   while (queue.length > 0) {
-    const candidate = queue.shift();
+    const candidate = queue.shift()
     if (!candidate || visited.has(candidate)) {
-      continue;
+      continue
     }
 
-    visited.add(candidate);
+    visited.add(candidate)
 
-    const role = normalizeRole(candidate.role ?? candidate.speaker ?? candidate.author);
+    const role = normalizeRole(candidate.role ?? candidate.speaker ?? candidate.author)
     const content = contentToText(
       candidate.content ?? candidate.text ?? candidate.message ?? candidate.output ?? candidate.value,
-    );
+    )
 
     if (role && content.length > 0) {
-      return { role, content };
+      return { role, content }
     }
 
     for (const nestedKey of ["message", "payload", "data", "entry", "event"]) {
-      const nestedValue = candidate[nestedKey];
+      const nestedValue = candidate[nestedKey]
       if (nestedValue && typeof nestedValue === "object" && !Array.isArray(nestedValue)) {
-        queue.push(nestedValue as Record<string, unknown>);
+        queue.push(nestedValue as Record<string, unknown>)
       }
     }
   }
 
-  return null;
+  return null
 }
 
 async function readSessionTurns(pathToSession: string): Promise<ConversationTurn[]> {
   try {
-    const raw = await readFile(pathToSession, "utf8");
+    const raw = await readFile(pathToSession, "utf8")
     const lines = raw
       .split("\n")
       .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+      .filter((line) => line.length > 0)
 
-    const turns: ConversationTurn[] = [];
+    const turns: ConversationTurn[] = []
 
     for (const line of lines) {
       try {
-        const parsed = JSON.parse(line);
-        const turn = extractTurn(parsed);
+        const parsed = JSON.parse(line)
+        const turn = extractTurn(parsed)
         if (turn) {
-          turns.push(turn);
+          turns.push(turn)
         }
       } catch {
         // Ignore malformed lines and keep scanning.
       }
     }
 
-    return turns;
+    return turns
   } catch {
-    return [];
+    return []
   }
 }
 
 function resolveSessionFile(event: SessionEventLike): string | null {
-  const sessionFile = event.context?.sessionFile;
+  const sessionFile = event.context?.sessionFile
   if (typeof sessionFile === "string" && sessionFile.trim().length > 0) {
-    return resolve(sessionFile);
+    return resolve(sessionFile)
   }
 
-  const workspaceDir = event.context?.workspaceDir;
+  const workspaceDir = event.context?.workspaceDir
   if (typeof workspaceDir === "string" && workspaceDir.trim().length > 0) {
-    const sessionId = event.context?.sessionId ?? event.sessionKey;
+    const sessionId = event.context?.sessionId ?? event.sessionKey
     if (typeof sessionId === "string" && sessionId.length > 0) {
-      return resolve(join(workspaceDir, "sessions", `${sessionId}.jsonl`));
+      return resolve(join(workspaceDir, "sessions", `${sessionId}.jsonl`))
     }
   }
 
-  return null;
+  return null
 }
 
 async function findResetFiles(pathToSession: string): Promise<string[]> {
   try {
-    const dir = dirname(pathToSession);
-    const baseName = basename(pathToSession);
-    const entries = await readdir(dir, { withFileTypes: true });
+    const dir = dirname(pathToSession)
+    const baseName = basename(pathToSession)
+    const entries = await readdir(dir, { withFileTypes: true })
 
     const matched = entries
       .filter((entry) => entry.isFile() && entry.name.startsWith(`${baseName}.reset.`))
-      .map((entry) => join(dir, entry.name));
+      .map((entry) => join(dir, entry.name))
 
     const withMtime = await Promise.all(
       matched.map(async (path) => ({
         path,
         mtime: (await stat(path)).mtimeMs,
       })),
-    );
+    )
 
-    withMtime.sort((a, b) => b.mtime - a.mtime);
-    return withMtime.map((entry) => entry.path);
+    withMtime.sort((a, b) => b.mtime - a.mtime)
+    return withMtime.map((entry) => entry.path)
   } catch {
-    return [];
+    return []
   }
 }
 
@@ -181,24 +181,24 @@ export async function readRecentSessionMessages(
   event: SessionEventLike,
   maxMessages: number,
 ): Promise<ConversationTurn[]> {
-  const sessionFile = resolveSessionFile(event);
+  const sessionFile = resolveSessionFile(event)
   if (!sessionFile) {
-    return [];
+    return []
   }
 
-  const candidates = [sessionFile, ...(await findResetFiles(sessionFile))];
-  let fallback: ConversationTurn[] = [];
+  const candidates = [sessionFile, ...(await findResetFiles(sessionFile))]
+  let fallback: ConversationTurn[] = []
 
   for (const candidate of candidates) {
-    const turns = await readSessionTurns(candidate);
+    const turns = await readSessionTurns(candidate)
     if (turns.length >= 2) {
-      return turns.slice(-maxMessages);
+      return turns.slice(-maxMessages)
     }
 
     if (turns.length > fallback.length) {
-      fallback = turns;
+      fallback = turns
     }
   }
 
-  return fallback.slice(-maxMessages);
+  return fallback.slice(-maxMessages)
 }

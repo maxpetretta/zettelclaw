@@ -1,22 +1,22 @@
 #!/usr/bin/env bun
 
-import { log } from "@clack/prompts";
+import { log } from "@clack/prompts"
 
-import { runInit } from "./commands/init";
-import { runUpgrade } from "./commands/upgrade";
+import { runInit } from "./commands/init"
+import { runUpgrade } from "./commands/upgrade"
 
 interface ParsedArgs {
-  command?: string;
+  command?: string | undefined
   flags: {
-    openclaw: boolean;
-    yes: boolean;
-    vaultPath?: string;
-    root: boolean;
-    minimal: boolean;
-    noOpenclaw: boolean;
-    workspacePath?: string;
-    initGit?: boolean;
-  };
+    openclaw: boolean
+    yes: boolean
+    vaultPath?: string | undefined
+    root: boolean
+    minimal: boolean
+    noOpenclaw: boolean
+    workspacePath?: string | undefined
+    initGit?: boolean | undefined
+  }
 }
 
 function usage(): string {
@@ -40,20 +40,20 @@ function usage(): string {
     "Upgrade options:",
     "  --vault <path>      Vault path (default: current directory)",
     "  --yes               Accept all defaults",
-  ].join("\n");
+  ].join("\n")
 }
 
 function takeValue(args: string[], index: number, key: string): string {
-  const value = args[index + 1];
+  const value = args[index + 1]
   if (!value || value.startsWith("--")) {
-    throw new Error(`Missing value for ${key}`);
+    throw new Error(`Missing value for ${key}`)
   }
 
-  return value;
+  return value
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const [, , command, ...rest] = argv;
+  const [, , command, ...rest] = argv
 
   const parsed: ParsedArgs = {
     command,
@@ -65,93 +65,93 @@ function parseArgs(argv: string[]): ParsedArgs {
       noOpenclaw: false,
       initGit: true,
     },
-  };
+  }
 
   if (command === "--help" || command === "-h") {
-    parsed.command = "help";
-    return parsed;
+    parsed.command = "help"
+    return parsed
   }
 
   for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
+    const arg = rest[index]
     if (!arg) {
-      continue;
+      continue
     }
 
     if (arg === "--help" || arg === "-h") {
-      parsed.command = "help";
-      continue;
+      parsed.command = "help"
+      continue
     }
 
     if (arg === "--openclaw") {
-      parsed.flags.openclaw = true;
-      continue;
+      parsed.flags.openclaw = true
+      continue
     }
 
     if (arg === "--yes") {
-      parsed.flags.yes = true;
-      continue;
+      parsed.flags.yes = true
+      continue
     }
 
     if (arg === "--root") {
-      parsed.flags.root = true;
-      continue;
+      parsed.flags.root = true
+      continue
     }
 
     if (arg === "--minimal") {
-      parsed.flags.minimal = true;
-      continue;
+      parsed.flags.minimal = true
+      continue
     }
 
     if (arg === "--git") {
-      parsed.flags.initGit = true;
-      continue;
+      parsed.flags.initGit = true
+      continue
     }
 
     if (arg === "--no-git") {
-      parsed.flags.initGit = false;
-      continue;
+      parsed.flags.initGit = false
+      continue
     }
 
     if (arg === "--no-openclaw") {
-      parsed.flags.noOpenclaw = true;
-      continue;
+      parsed.flags.noOpenclaw = true
+      continue
     }
 
     if (arg.startsWith("--vault=")) {
-      parsed.flags.vaultPath = arg.slice("--vault=".length);
-      continue;
+      parsed.flags.vaultPath = arg.slice("--vault=".length)
+      continue
     }
 
     if (arg === "--vault") {
-      parsed.flags.vaultPath = takeValue(rest, index, "--vault");
-      index += 1;
-      continue;
+      parsed.flags.vaultPath = takeValue(rest, index, "--vault")
+      index += 1
+      continue
     }
 
     if (arg.startsWith("--workspace=")) {
-      parsed.flags.workspacePath = arg.slice("--workspace=".length);
-      continue;
+      parsed.flags.workspacePath = arg.slice("--workspace=".length)
+      continue
     }
 
     if (arg === "--workspace") {
-      parsed.flags.workspacePath = takeValue(rest, index, "--workspace");
-      index += 1;
-      continue;
+      parsed.flags.workspacePath = takeValue(rest, index, "--workspace")
+      index += 1
+      continue
     }
 
-    throw new Error(`Unknown argument: ${arg}`);
+    throw new Error(`Unknown argument: ${arg}`)
   }
 
-  return parsed;
+  return parsed
 }
 
 async function main(): Promise<void> {
-  const parsed = parseArgs(process.argv);
+  const parsed = parseArgs(process.argv)
 
   if (!parsed.command || parsed.command === "help") {
-    console.log(usage());
-    return;
+    console.log(usage())
+    return
   }
 
   if (parsed.command === "init") {
@@ -164,24 +164,24 @@ async function main(): Promise<void> {
       noOpenclaw: parsed.flags.noOpenclaw,
       workspacePath: parsed.flags.workspacePath,
       initGit: parsed.flags.initGit,
-    });
-    return;
+    })
+    return
   }
 
   if (parsed.command === "upgrade") {
     await runUpgrade({
       yes: parsed.flags.yes,
       vaultPath: parsed.flags.vaultPath,
-    });
-    return;
+    })
+    return
   }
 
-  console.log(usage());
-  throw new Error(`Unknown command: ${parsed.command}`);
+  console.log(usage())
+  throw new Error(`Unknown command: ${parsed.command}`)
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  log.error(message);
-  process.exit(1);
-});
+  const message = error instanceof Error ? error.message : String(error)
+  log.error(message)
+  process.exit(1)
+})
