@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { cp, readdir, readFile } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { intro, log, select, spinner, text } from "@clack/prompts"
 
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
@@ -230,6 +230,24 @@ async function readMemorySummary(memoryPath: string): Promise<MemorySummary> {
   }
 }
 
+async function chooseMemoryMdBackupPath(sourcePath: string): Promise<{ backupPath: string; label: string }> {
+  const dir = dirname(sourcePath)
+  const maxAttempts = 10_000
+
+  for (let index = 0; index < maxAttempts; index += 1) {
+    const label = index === 0 ? "MEMORY.md.bak" : `MEMORY.md.bak.${index}`
+    const backupPath = join(dir, label)
+
+    if (!(await pathExists(backupPath))) {
+      return { backupPath, label }
+    }
+  }
+
+  throw new Error(
+    `Could not find an available backup path for MEMORY.md after ${maxAttempts} attempts`,
+  )
+}
+
 async function chooseBackupPath(workspacePath: string): Promise<{ source: string; backup: string; label: string }> {
   const source = join(workspacePath, "memory")
   const maxAttempts = 10_000
@@ -413,6 +431,19 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
     throw new Error(`Could not back up memory directory: ${message}`)
   }
   log.success(`Backed up memory/ → ${backup.label}/`)
+
+  // Back up MEMORY.md (migrate updates it)
+  const memoryMdPath = join(workspacePath, "MEMORY.md")
+  if (await pathExists(memoryMdPath)) {
+    const memoryMdBak = await chooseMemoryMdBackupPath(memoryMdPath)
+    try {
+      await cp(memoryMdPath, memoryMdBak.backupPath)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Could not back up MEMORY.md: ${message}`)
+    }
+    log.success(`Backed up MEMORY.md → ${memoryMdBak.label}`)
+  }
 
   const s = spinner()
   s.start("Loading available models")
