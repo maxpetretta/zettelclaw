@@ -37,7 +37,7 @@ function unwrapPrompt<T>(value: T | symbol): T {
 }
 
 function toTildePath(p: string): string {
-  const home = process.env["HOME"] ?? ""
+  const home = process.env.HOME ?? ""
   return home && p.startsWith(home) ? `~${p.slice(home.length)}` : p
 }
 

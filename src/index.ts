@@ -3,6 +3,7 @@
 import { log } from "@clack/prompts"
 
 import { runInit } from "./commands/init"
+import { runMigrate } from "./commands/migrate"
 
 interface ParsedArgs {
   command?: string | undefined
@@ -12,6 +13,7 @@ interface ParsedArgs {
     vaultPath?: string | undefined
     minimal: boolean
     workspacePath?: string | undefined
+    model?: string | undefined
   }
 }
 
@@ -21,6 +23,7 @@ function usage(): string {
     "",
     "Usage:",
     "  zettelclaw init [options]     Set up a new Zettelclaw vault",
+    "  zettelclaw migrate [options]  Migrate OpenClaw workspace memory into the vault",
     "",
     "Init options:",
     "  --vault <path>      Set vault path (default: current directory)",
@@ -28,6 +31,12 @@ function usage(): string {
     "  --openclaw          Force OpenClaw integration and hook setup",
     "  --yes               Accept all defaults non-interactively",
     "  --minimal           Install Minimal theme with Minimal Settings and Hider",
+    "",
+    "Migrate options:",
+    "  --vault <path>      Vault path (auto-detected if not provided)",
+    "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
+    "  --model <name>      Model alias/key for migration sub-agents",
+    "  --yes               Accept defaults non-interactively",
   ].join("\n")
 }
 
@@ -115,6 +124,17 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue
     }
 
+    if (arg.startsWith("--model=")) {
+      parsed.flags.model = arg.slice("--model=".length)
+      continue
+    }
+
+    if (arg === "--model") {
+      parsed.flags.model = takeValue(rest, index, "--model")
+      index += 1
+      continue
+    }
+
     throw new Error(`Unknown argument: ${arg}`)
   }
 
@@ -136,6 +156,16 @@ async function main(): Promise<void> {
       vaultPath: parsed.flags.vaultPath,
       minimal: parsed.flags.minimal,
       workspacePath: parsed.flags.workspacePath,
+    })
+    return
+  }
+
+  if (parsed.command === "migrate") {
+    await runMigrate({
+      yes: parsed.flags.yes,
+      vaultPath: parsed.flags.vaultPath,
+      workspacePath: parsed.flags.workspacePath,
+      model: parsed.flags.model,
     })
     return
   }
