@@ -16,11 +16,10 @@
     "start": "bun run src/index.ts",
     "init": "bun run src/index.ts init",
     "upgrade": "bun run src/index.ts upgrade",
-    "typecheck": "tsgo --noEmit",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
-    "check": "biome check . && tsgo --noEmit"
+    "lint": "biome check . && tsgo --noEmit",
+    "lint:biome": "biome check .",
+    "lint:typecheck": "tsgo --noEmit",
+    "fix": "biome check --write ."
   },
   "dependencies": {
     "@clack/prompts": "^1.0.1"
