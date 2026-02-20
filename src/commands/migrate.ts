@@ -166,8 +166,6 @@ async function promptVaultPath(): Promise<string> {
       message: "Where is your Zettelclaw vault?",
       placeholder: toTildePath(defaultPath),
       defaultValue: defaultPath,
-      validate: (value) =>
-        typeof value !== "string" || value.trim().length === 0 ? "Vault path is required" : undefined,
     }),
   )
 }
