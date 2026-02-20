@@ -308,7 +308,7 @@ obsidian vault
 
 ## What NOT To Do
 
-- Do NOT create subfolders inside `01 Notes/`
+- Do NOT create new directories or subfolders — EVER — unless the user explicitly asks. The vault structure is fixed.
 - Do NOT add `status` to notes, journals, contacts, or writings
 - Do NOT use singular tags (`project` → use `projects`)
 - Do NOT create notes without frontmatter

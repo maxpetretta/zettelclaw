@@ -40,4 +40,5 @@ Use the `zettelclaw` skill for full details. Quick reference:
 - Filenames are Title Case. Tags are always pluralized. Dates are `YYYY-MM-DD`.
 - Link aggressively with `[[wikilinks]]` — even to notes that don't exist yet.
 - Use `obsidian` CLI when available (preferred), fall back to file tools.
-- Do NOT create subfolders in `01 Notes/`. Do NOT add `status` to notes/journals/contacts/writings.
+- Do NOT create new directories or subfolders — EVER — unless the user explicitly asks. The vault structure is fixed.
+- Do NOT add `status` to notes/journals/contacts/writings.
