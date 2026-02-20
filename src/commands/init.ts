@@ -66,7 +66,7 @@ async function promptSyncMethod(defaultMethod: SyncMethod): Promise<SyncMethod> 
 }
 
 export async function runInit(options: InitOptions): Promise<void> {
-  intro("Zettelclaw init")
+  intro("🦞 Welcome to Zettelclaw")
 
   const defaultVaultPath = join(process.cwd(), "zettelclaw")
   const rawVaultPath = options.vaultPath ?? (options.yes ? defaultVaultPath : await promptVaultPath(defaultVaultPath))
