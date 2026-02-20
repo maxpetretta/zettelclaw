@@ -51,7 +51,7 @@ const MINIMAL_THEME: ThemeSource = {
   assets: ["manifest.json", "theme.css"],
 }
 
-async function downloadAsset(repo: string, asset: string): Promise<Buffer | null> {
+async function downloadAsset(repo: string, asset: string): Promise<Uint8Array | null> {
   const url = `https://github.com/${repo}/releases/latest/download/${asset}`
 
   try {
@@ -64,7 +64,7 @@ async function downloadAsset(repo: string, asset: string): Promise<Buffer | null
       return null
     }
 
-    return Buffer.from(await response.arrayBuffer())
+    return new Uint8Array(await response.arrayBuffer())
   } catch {
     return null
   }

@@ -14,6 +14,7 @@
         "useSimplifiedLogicExpression": "error"
       },
       "correctness": {
+        "useHookAtTopLevel": "error",
         "noUnusedImports": "error",
         "noUndeclaredVariables": "error",
         "noUnusedVariables": {
@@ -34,6 +35,7 @@
         "noDelete": "error"
       },
       "security": {
+        "noDangerouslySetInnerHtmlWithChildren": "error",
         "noGlobalEval": "error"
       },
       "style": {
@@ -46,9 +48,19 @@
         "useForOf": "error",
         "useThrowOnlyError": "error",
         "useImportType": "error",
-        "useExportType": "error"
+        "useExportType": "error",
+        "useAsConstAssertion": "error",
+        "useDefaultParameterLast": "error",
+        "useEnumInitializers": "error",
+        "useSelfClosingElements": "error",
+        "useSingleVarDeclarator": "error",
+        "noUnusedTemplateLiteral": "error",
+        "useNumberNamespace": "error",
+        "noInferrableTypes": "error",
+        "noUselessElse": "error"
       },
       "suspicious": {
+        "noArrayIndexKey": "warn",
         "noEmptyBlockStatements": "error",
         "useAwait": "error",
         "noDoubleEquals": "error",
@@ -67,8 +79,50 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useConst": "off",
+            "useImportType": "off"
+          },
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/website/src/**/*.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": "off"
+          }
+        }
+      }
+    }
+  ],
   "files": {
-    "includes": ["src/**", "hooks/**"]
+    "includes": [
+      "packages/cli/src/**/*.ts",
+      "packages/cli/hooks/**/*.ts",
+      "packages/website/**/*.ts",
+      "packages/website/**/*.tsx",
+      "packages/website/**/*.mjs",
+      "packages/website/**/*.js",
+      "packages/website/**/*.json",
+      "packages/website/**/*.jsonc",
+      "packages/website/**/*.astro",
+      "packages/website/**/*.css",
+      "!**/.vercel",
+      "!**/node_modules",
+      "!**/.astro",
+      "!**/dist"
+    ]
   },
   "formatter": {
     "indentStyle": "space",
@@ -89,6 +143,12 @@
     "formatter": {
       "indentStyle": "space",
       "lineWidth": 120
+    }
+  },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
     }
   },
   "vcs": {

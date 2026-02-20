@@ -1,0 +1,30 @@
+---
+import "@fontsource-variable/inter/standard.css"
+import "@fontsource-variable/inter/standard-italic.css"
+import "@/styles/global.css"
+
+interface Props {
+  title?: string
+  description?: string
+}
+
+const {
+  title = "Zettelclaw | Your AI agent's second brain",
+  description = "Zettelclaw turns your Obsidian vault into a shared knowledge system between you and your AI agent.",
+} = Astro.props
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0b0f14" />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site ?? "https://zettelclaw.com")} />
+  </head>
+  <body class="bg-background text-foreground antialiased">
+    <slot />
+  </body>
+</html>

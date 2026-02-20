@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+}
+
+:root {
+  --background: #0b0f14;
+  --foreground: #eef3fb;
+  --card: #111722;
+  --card-foreground: #f8fafc;
+  --muted: #1b2230;
+  --muted-foreground: #9ca7ba;
+  --border: rgba(255, 255, 255, 0.12);
+  --brand: #ff6b35;
+  --brand-soft: rgba(255, 107, 53, 0.16);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(255, 107, 53, 0.18) 0%, transparent 40%),
+      radial-gradient(circle at 80% 30%, rgba(240, 101, 67, 0.12) 0%, transparent 38%), var(--background);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  ::selection {
+    background: rgba(255, 107, 53, 0.4);
+    color: #ffffff;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  animation-name: fade-up;
+  animation-duration: 0.75s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-timeline: view();
+  animation-range: entry 8% cover 26%;
+}
+
+@supports not (animation-timeline: view()) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}

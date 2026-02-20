@@ -1,0 +1,34 @@
+{
+  "name": "zettelclaw",
+  "version": "0.1.0",
+  "description": "CLI and vault template for the Zettelclaw human+agent knowledge system",
+  "type": "module",
+  "bin": {
+    "zettelclaw": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "hooks",
+    "templates",
+    "skill",
+    "vault"
+  ],
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "init": "bun run src/index.ts init",
+    "migrate": "bun run src/index.ts migrate",
+    "lint": "biome check . && tsgo --noEmit",
+    "lint:biome": "biome check .",
+    "lint:typecheck": "tsgo --noEmit",
+    "fix": "biome check --write ."
+  },
+  "dependencies": {
+    "@clack/prompts": "1.0.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.3",
+    "@types/bun": "1.2.5",
+    "@typescript/native-preview": "7.0.0-dev.20260219.1",
+    "typescript": "5.9.3"
+  }
+}

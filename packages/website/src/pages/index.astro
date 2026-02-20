@@ -1,0 +1,813 @@
+---
+import Layout from "@/layouts/Layout.astro"
+
+const steps = [
+  {
+    icon: "🛠️",
+    title: "Init",
+    description: "Run one command and Zettelclaw sets up a vault structure designed for human + agent collaboration.",
+    wikilink: "[[init]]",
+  },
+  {
+    icon: "💬",
+    title: "Converse",
+    description: "Use OpenClaw with your Obsidian vault as shared context so ideas stay connected to durable notes.",
+    wikilink: "[[conversation]]",
+  },
+  {
+    icon: "🧠",
+    title: "Extract",
+    description: "Turn conversations into atomic notes, links, and journal insights that compound over time.",
+    wikilink: "[[atomic-note]]",
+  },
+]
+
+const features = [
+  {
+    title: "Atomic notes",
+    description:
+      "Capture one idea per note so knowledge remains reusable, composable, and easy for agents to reason over.",
+    wikilink: "[[atomic-notes]]",
+  },
+  {
+    title: "Journal extraction",
+    description: "Promote raw daily reflections into lasting notes without losing provenance.",
+    wikilink: "[[journal-extraction]]",
+  },
+  {
+    title: "Vault search",
+    description: "Find and surface linked context quickly across your entire graph of notes.",
+    wikilink: "[[vault-search]]",
+  },
+  {
+    title: "OpenClaw integration",
+    description: "Built to work directly with OpenClaw workflows and agent-native collaboration.",
+    wikilink: "[[openclaw-integration]]",
+  },
+  {
+    title: "Obsidian-native",
+    description: "No lock-in: plain markdown files in your Obsidian vault with your existing plugin ecosystem.",
+    wikilink: "[[obsidian-native]]",
+  },
+  {
+    title: "Open source",
+    description: "Inspect, extend, and adapt the system to your own workflows and team knowledge conventions.",
+    wikilink: "[[open-source]]",
+  },
+]
+---
+
+<Layout>
+  <div class="page-shell">
+    <header class="site-header">
+      <div class="shell-row">
+        <a href="#top" class="brandmark">
+          <span aria-hidden="true">🦞</span>
+          <span>Zettelclaw</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#what">What is it</a>
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#quickstart">Quick start</a>
+        </nav>
+
+        <a href="https://github.com/maxpetretta/zettelclaw" class="header-cta">GitHub</a>
+      </div>
+    </header>
+
+    <main id="top" class="site-main">
+      <section class="hero reveal">
+        <div class="hero-graph" aria-hidden="true">
+          <svg viewBox="0 0 1200 680" role="presentation" focusable="false">
+            <defs>
+              <linearGradient id="edge-gradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.15" />
+                <stop offset="50%" stop-color="#ffffff" stop-opacity="0.8" />
+                <stop offset="100%" stop-color="#FF6B35" stop-opacity="0.15" />
+              </linearGradient>
+              <filter id="node-glow" x="-80%" y="-80%" width="260%" height="260%">
+                <feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#7C3AED" flood-opacity="0.8" />
+              </filter>
+            </defs>
+
+            <g class="graph-edges">
+              <line x1="98" y1="98" x2="380" y2="170" />
+              <line x1="380" y1="170" x2="610" y2="112" />
+              <line x1="380" y1="170" x2="672" y2="294" />
+              <line x1="610" y1="112" x2="862" y2="190" />
+              <line x1="672" y1="294" x2="862" y2="190" />
+              <line x1="672" y1="294" x2="1034" y2="332" />
+              <line x1="862" y1="190" x2="1082" y2="112" />
+              <line x1="380" y1="170" x2="202" y2="356" />
+              <line x1="202" y1="356" x2="468" y2="458" />
+              <line x1="468" y1="458" x2="770" y2="486" />
+              <line x1="770" y1="486" x2="1034" y2="332" />
+            </g>
+
+            <g class="graph-nodes">
+              <circle style="--d: 0s; --s: 1.0" cx="98" cy="98" r="6" />
+              <circle style="--d: 1.2s; --s: 1.1" cx="380" cy="170" r="8" />
+              <circle style="--d: 2.1s; --s: 0.9" cx="610" cy="112" r="7" />
+              <circle style="--d: 1.5s; --s: 1.2" cx="672" cy="294" r="9" />
+              <circle style="--d: 0.7s; --s: 1" cx="862" cy="190" r="8" />
+              <circle style="--d: 1.9s; --s: 1.05" cx="1034" cy="332" r="7" />
+              <circle style="--d: 0.4s; --s: 0.85" cx="1082" cy="112" r="6" />
+              <circle style="--d: 1.7s; --s: 1" cx="202" cy="356" r="7" />
+              <circle style="--d: 2.5s; --s: 1.1" cx="468" cy="458" r="8" />
+              <circle style="--d: 0.9s; --s: 0.95" cx="770" cy="486" r="7" />
+            </g>
+          </svg>
+        </div>
+
+        <div class="hero-content">
+          <p class="hero-kicker">
+            <span aria-hidden="true">🦞</span>
+            Agent-native PKM for Obsidian + OpenClaw
+          </p>
+
+          <h1>Your AI agent&apos;s second brain</h1>
+
+          <p class="hero-lead">
+            Zettelclaw turns your Obsidian vault into a shared knowledge system between you and your AI agent.
+          </p>
+
+          <div class="hero-actions">
+            <a href="https://github.com/maxpetretta/zettelclaw" class="button-primary">View on GitHub</a>
+            <a href="#quickstart" class="button-secondary">See quick start</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="what" class="section-block reveal">
+        <p class="section-label">[[overview]]</p>
+        <h2>What is Zettelclaw?</h2>
+        <p>
+          Zettelclaw is an agent-native personal knowledge management system built on Obsidian and OpenClaw. It applies
+          Zettelkasten principles: atomic notes, emergent structure, and links over folders. Instead of treating AI as a
+          detached chat history, it gives your agent access to the same living vault you rely on. The result is shared
+          context that compounds into long-term knowledge.
+        </p>
+      </section>
+
+      <section id="how" class="section-block">
+        <p class="section-label reveal">[[workflow]]</p>
+        <h2 class="reveal">How it works</h2>
+        <p class="flow-line reveal">
+          <span>conversation</span>
+          <span class="flow-arrow">→</span>
+          <code>/new</code>
+          <span class="flow-arrow">→</span>
+          <span>atomic notes in vault</span>
+        </p>
+
+        <div class="card-grid steps-grid">
+          {steps.map((step) => (
+            <article class="index-card reveal">
+              <p class="card-wikilink">{step.wikilink}</p>
+              <p class="card-icon" aria-hidden="true">{step.icon}</p>
+              <h3>{step.title}</h3>
+              <p>{step.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="features" class="section-block">
+        <p class="section-label reveal">[[index]]</p>
+        <h2 class="reveal">Features</h2>
+        <div class="card-grid features-grid">
+          {features.map((feature) => (
+            <article class="index-card reveal">
+              <p class="card-wikilink">{feature.wikilink}</p>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="quickstart" class="section-block reveal">
+        <p class="section-label">[[quickstart]]</p>
+        <h2>Quick start</h2>
+        <div class="terminal-widget" role="group" aria-label="Terminal command">
+          <div class="terminal-titlebar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+            <p>Terminal</p>
+          </div>
+          <div class="terminal-body">
+            <p class="terminal-help">Run this command</p>
+            <pre><code><span class="prompt">$</span> npx zettelclaw init</code></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell-row footer-row">
+        <p>Built with 🦞 by the OpenClaw community</p>
+        <div class="footer-links">
+          <a href="https://github.com/maxpetretta/zettelclaw">GitHub</a>
+          <a href="https://www.npmjs.com/package/zettelclaw">npm</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</Layout>
+
+<style>
+  :global(html) {
+    scroll-behavior: smooth;
+  }
+
+  .page-shell {
+    --base: #0d0d0d;
+    --coral: #ff6b35;
+    --violet: #7c3aed;
+    --paper: rgba(245, 230, 200, 0.22);
+    --paper-strong: rgba(245, 230, 200, 0.34);
+    --text-main: #eef1ff;
+    --text-muted: #bec3d7;
+    background:
+      radial-gradient(90% 70% at 15% 0%, rgba(124, 58, 237, 0.18) 0%, transparent 60%),
+      radial-gradient(70% 65% at 88% 12%, rgba(255, 107, 53, 0.15) 0%, transparent 62%),
+      repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.02) 0px,
+        rgba(255, 255, 255, 0.02) 1px,
+        transparent 1px,
+        transparent 40px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.015) 0px,
+        rgba(255, 255, 255, 0.015) 1px,
+        transparent 1px,
+        transparent 40px
+      ),
+      var(--base);
+    color: var(--text-main);
+  }
+
+  .shell-row {
+    margin: 0 auto;
+    width: min(1120px, calc(100% - 2.25rem));
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    background: linear-gradient(to bottom, rgba(13, 13, 13, 0.85), rgba(13, 13, 13, 0.45));
+  }
+
+  .site-header .shell-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 74px;
+  }
+
+  .brandmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+  }
+
+  .brandmark span:first-child {
+    font-size: 1.15rem;
+  }
+
+  .site-nav {
+    display: none;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.92rem;
+  }
+
+  .site-nav a,
+  .footer-links a {
+    color: #cad0e4;
+    text-decoration: none;
+    transition: color 180ms ease;
+  }
+
+  .site-nav a:hover,
+  .footer-links a:hover {
+    color: #fff;
+  }
+
+  .header-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 107, 53, 0.65);
+    padding: 0.45rem 0.95rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ffe9e0;
+    text-decoration: none;
+    background: rgba(255, 107, 53, 0.14);
+    transition: transform 200ms ease, background-color 200ms ease;
+  }
+
+  .header-cta:hover {
+    background: rgba(255, 107, 53, 0.24);
+    transform: translateY(-1px);
+  }
+
+  .site-main {
+    margin: 0 auto;
+    width: min(1120px, calc(100% - 2.25rem));
+    padding-top: clamp(2rem, 4vw, 4.75rem);
+    padding-bottom: 5rem;
+  }
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.06), rgba(12, 12, 12, 0.55));
+    min-height: clamp(470px, 68vh, 620px);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 34px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(120deg, rgba(255, 255, 255, 0.07), transparent 44%),
+      repeating-linear-gradient(
+        -9deg,
+        rgba(255, 255, 255, 0.018) 0,
+        rgba(255, 255, 255, 0.018) 1px,
+        transparent 1px,
+        transparent 18px
+      );
+    pointer-events: none;
+  }
+
+  .hero-graph {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.9;
+  }
+
+  .hero-graph svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .graph-edges line {
+    stroke: url(#edge-gradient);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 10 14;
+    animation: edge-shimmer 8.5s linear infinite;
+  }
+
+  .graph-edges line:nth-child(odd) {
+    animation-duration: 10s;
+  }
+
+  .graph-nodes circle {
+    fill: #ff6b35;
+    filter: url(#node-glow);
+    transform-origin: center;
+    animation: node-pulse 4.8s ease-in-out infinite;
+    animation-delay: var(--d);
+  }
+
+  .graph-nodes circle:nth-child(even) {
+    fill: #7c3aed;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    padding: clamp(1.5rem, 3vw, 2.8rem);
+    margin-top: clamp(11.5rem, 21vw, 15rem);
+  }
+
+  .hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 107, 53, 0.55);
+    background: rgba(255, 107, 53, 0.17);
+    padding: 0.45rem 0.95rem;
+    font-size: 0.73rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: #ffdfd4;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+  }
+
+  .hero h1 {
+    margin-top: 1rem;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+    font-size: clamp(2rem, 5.5vw, 4.2rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .hero-lead {
+    margin-top: 1rem;
+    max-width: 60ch;
+    color: #d4d9e8;
+    font-size: clamp(1rem, 1.8vw, 1.3rem);
+    line-height: 1.8;
+    text-wrap: pretty;
+  }
+
+  .hero-actions {
+    margin-top: 1.7rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .button-primary,
+  .button-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.75rem 1.1rem;
+    border-radius: 0.9rem;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .button-primary {
+    color: #fff;
+    background: linear-gradient(120deg, #ff6b35, #ff7f52);
+    box-shadow: 0 12px 28px rgba(255, 107, 53, 0.3);
+  }
+
+  .button-primary:hover,
+  .button-secondary:hover {
+    transform: translateY(-2px);
+  }
+
+  .button-secondary {
+    color: #e1e5f7;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(11, 11, 11, 0.5);
+  }
+
+  .section-block {
+    margin-top: clamp(3.2rem, 8vw, 6.2rem);
+  }
+
+  .section-label {
+    margin: 0;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: #b391ff;
+  }
+
+  .section-block h2 {
+    margin-top: 0.65rem;
+    font-size: clamp(1.45rem, 3vw, 2.2rem);
+    letter-spacing: -0.015em;
+    color: #f9fbff;
+  }
+
+  .section-block > p:not(.section-label):not(.flow-line) {
+    margin-top: 1.25rem;
+    max-width: 70ch;
+    line-height: 1.9;
+    color: var(--text-muted);
+    text-wrap: pretty;
+  }
+
+  .flow-line {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    color: #d3d8ea;
+    font-size: clamp(0.9rem, 1.7vw, 1rem);
+  }
+
+  .flow-line code {
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace);
+    border-radius: 0.4rem;
+    border: 1px solid rgba(124, 58, 237, 0.5);
+    background: rgba(124, 58, 237, 0.16);
+    padding: 0.16rem 0.45rem;
+    color: #d9caff;
+  }
+
+  .flow-arrow {
+    color: var(--coral);
+    font-weight: 700;
+  }
+
+  .card-grid {
+    margin-top: 1.35rem;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .steps-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .index-card {
+    position: relative;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 1rem 1rem 1.1rem;
+    background:
+      linear-gradient(180deg, rgba(245, 230, 200, 0.34), rgba(245, 230, 200, 0.2)),
+      linear-gradient(110deg, rgba(255, 255, 255, 0.06), rgba(124, 58, 237, 0.05));
+    color: #252525;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.33);
+    transform-origin: center 1.1rem;
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+
+  .index-card::before {
+    content: "";
+    position: absolute;
+    inset: 0.45rem;
+    border-radius: 0.45rem;
+    pointer-events: none;
+    border: 1px dashed rgba(85, 66, 40, 0.24);
+  }
+
+  .index-card:hover {
+    transform: translateY(-5px) rotate(0deg);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  }
+
+  .index-card h3 {
+    margin-top: 0.25rem;
+    font-size: 1.12rem;
+    letter-spacing: -0.01em;
+    color: #161616;
+  }
+
+  .index-card p {
+    margin: 0.55rem 0 0;
+    line-height: 1.65;
+    font-size: 0.94rem;
+    color: #2f2b25;
+  }
+
+  .card-wikilink {
+    margin: 0;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace);
+    font-size: 0.78rem;
+    color: #5032a4;
+  }
+
+  .card-icon {
+    font-size: 1.2rem;
+  }
+
+  .steps-grid .index-card:nth-child(1),
+  .features-grid .index-card:nth-child(1),
+  .features-grid .index-card:nth-child(4) {
+    transform: rotate(-1deg);
+  }
+
+  .steps-grid .index-card:nth-child(2),
+  .features-grid .index-card:nth-child(2),
+  .features-grid .index-card:nth-child(5) {
+    transform: rotate(1.1deg);
+  }
+
+  .steps-grid .index-card:nth-child(3),
+  .features-grid .index-card:nth-child(3),
+  .features-grid .index-card:nth-child(6) {
+    transform: rotate(-0.6deg);
+  }
+
+  .terminal-widget {
+    margin-top: 1.25rem;
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #121212;
+    box-shadow: 0 20px 42px rgba(0, 0, 0, 0.4);
+  }
+
+  .terminal-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(180deg, #2d2d2d, #262626);
+    padding: 0.58rem 0.75rem;
+  }
+
+  .terminal-titlebar p {
+    margin: 0 auto;
+    transform: translateX(-1.3rem);
+    font-size: 0.75rem;
+    color: #d8dde6;
+    letter-spacing: 0.03em;
+  }
+
+  .dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    display: inline-block;
+  }
+
+  .dot-red {
+    background: #ff5f57;
+  }
+
+  .dot-yellow {
+    background: #ffbd2e;
+  }
+
+  .dot-green {
+    background: #28c840;
+  }
+
+  .terminal-body {
+    padding: 1rem;
+    background:
+      radial-gradient(circle at 85% 10%, rgba(124, 58, 237, 0.18), transparent 45%),
+      radial-gradient(circle at 20% 120%, rgba(255, 107, 53, 0.15), transparent 45%),
+      #101011;
+  }
+
+  .terminal-help {
+    margin: 0;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #98a1b5;
+  }
+
+  .terminal-body pre {
+    margin: 0.75rem 0 0;
+    overflow-x: auto;
+    border-radius: 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.75rem 0.95rem;
+  }
+
+  .terminal-body code {
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace);
+    font-size: 0.95rem;
+    color: #fbe0d7;
+  }
+
+  .prompt {
+    color: #ff6b35;
+    margin-right: 0.5rem;
+  }
+
+  .site-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.8rem 0 2.5rem;
+  }
+
+  .footer-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+
+  .site-footer p {
+    margin: 0;
+    font-size: 0.92rem;
+    color: #b4bbce;
+  }
+
+  .footer-links {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.9rem;
+  }
+
+  @keyframes edge-shimmer {
+    0% {
+      stroke-dashoffset: 0;
+      opacity: 0.5;
+    }
+
+    50% {
+      opacity: 1;
+    }
+
+    100% {
+      stroke-dashoffset: -96;
+      opacity: 0.5;
+    }
+  }
+
+  @keyframes node-pulse {
+    0%,
+    100% {
+      opacity: 0.62;
+      transform: scale(calc(0.95 * var(--s)));
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(calc(1.25 * var(--s)));
+    }
+  }
+
+  @media (min-width: 860px) {
+    .site-nav {
+      display: inline-flex;
+    }
+
+    .footer-row {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .terminal-body {
+      padding: 1.2rem 1.25rem 1.25rem;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .shell-row,
+    .site-main {
+      width: min(1120px, calc(100% - 1.3rem));
+    }
+
+    .hero {
+      min-height: 500px;
+    }
+
+    .hero-content {
+      margin-top: 10.8rem;
+      padding: 1.15rem;
+    }
+
+    .hero-actions {
+      gap: 0.6rem;
+    }
+
+    .button-primary,
+    .button-secondary {
+      width: 100%;
+    }
+
+    .section-block > p:not(.section-label):not(.flow-line) {
+      line-height: 1.75;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .graph-edges line,
+    .graph-nodes circle,
+    .button-primary,
+    .button-secondary,
+    .index-card,
+    .header-cta {
+      animation: none;
+      transition: none;
+    }
+  }
+</style>
