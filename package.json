@@ -15,7 +15,7 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "init": "bun run src/index.ts init",
-    "upgrade": "bun run src/index.ts upgrade",
+    "migrate": "bun run src/index.ts migrate",
     "lint": "biome check . && tsgo --noEmit",
     "lint:biome": "biome check .",
     "lint:typecheck": "tsgo --noEmit",
