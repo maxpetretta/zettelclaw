@@ -38,11 +38,16 @@ function unwrapPrompt<T>(value: T | symbol): T {
   return value as T
 }
 
+function toTildePath(p: string): string {
+  const home = process.env["HOME"] ?? ""
+  return home && p.startsWith(home) ? `~${p.slice(home.length)}` : p
+}
+
 async function promptVaultPath(defaultPath: string): Promise<string> {
   return unwrapPrompt(
     await text({
       message: "Where should the vault be created?",
-      placeholder: defaultPath,
+      placeholder: toTildePath(defaultPath),
       defaultValue: defaultPath,
     }),
   )
