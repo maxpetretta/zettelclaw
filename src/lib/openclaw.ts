@@ -223,3 +223,52 @@ export async function appendWorkspaceIntegration(
 
   return { added, skipped };
 }
+
+/**
+ * Fire a system event to tell the running OpenClaw agent to update
+ * AGENTS.md and HEARTBEAT.md with Zettelclaw-aware content.
+ *
+ * Uses `openclaw system event` CLI. Returns true if the event was sent.
+ */
+export async function firePostInitEvent(
+  vaultPath: string,
+  projectPath: string,
+): Promise<boolean> {
+  const { spawnSync } = await import("node:child_process");
+
+  // Read the post-init event template
+  const templatePath = join(projectPath, "templates", "post-init-event.md");
+  let template: string;
+  try {
+    template = await readFile(templatePath, "utf8");
+  } catch {
+    console.warn("[zettelclaw] Could not read post-init event template");
+    return false;
+  }
+
+  // Substitute variables
+  const eventText = template
+    .replaceAll("{{VAULT_PATH}}", vaultPath)
+    .replaceAll("{{PROJECT_PATH}}", projectPath);
+
+  // Fire the system event via OpenClaw CLI
+  const result = spawnSync("openclaw", ["system", "event", "--text", eventText, "--mode", "now"], {
+    encoding: "utf8",
+    timeout: 10_000,
+  });
+
+  if (result.error || result.status !== 0) {
+    // Try the cron wake approach as fallback
+    const fallback = spawnSync("openclaw", ["system", "event", "--text", eventText], {
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+
+    if (fallback.error || fallback.status !== 0) {
+      console.warn("[zettelclaw] Could not fire post-init system event (is the gateway running?)");
+      return false;
+    }
+  }
+
+  return true;
+}

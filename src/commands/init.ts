@@ -3,9 +3,9 @@ import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 
 import {
-  appendWorkspaceIntegration,
   installOpenClawHook,
   patchOpenClawConfig,
+  firePostInitEvent,
 } from "../lib/openclaw";
 import { resolveUserPath } from "../lib/paths";
 import { downloadPlugins } from "../lib/plugins";
@@ -126,25 +126,14 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   let symlinksCreated = false;
   let symlinksSkipped = false;
-  let workspaceUpdated = false;
   let configPatched = false;
   let hookInstallStatus: "installed" | "skipped" | "failed" | null = null;
+  let postInitEventFired = false;
 
   if (shouldCreateSymlinks) {
     const symlinkResult = await createAgentSymlinks(vaultPath, workspacePath);
     symlinksCreated = symlinkResult.added.length > 0;
     symlinksSkipped = symlinkResult.skipped.length > 0;
-
-    if (workspaceDetected) {
-      const integration = await appendWorkspaceIntegration(workspacePath, {
-        vaultPath,
-        notesMode: mode,
-        includeAgent: true,
-        symlinksEnabled: symlinkResult.added.length > 0 || symlinkResult.skipped.length > 0,
-      });
-
-      workspaceUpdated = integration.added.length > 0;
-    }
   }
 
   if (openclawRequested) {
@@ -169,6 +158,13 @@ export async function runInit(options: InitOptions): Promise<void> {
     }
   }
 
+  // Fire post-init system event to tell the agent to update AGENTS.md and HEARTBEAT.md
+  if (openclawRequested) {
+    s.message("Notifying agent to update workspace files");
+    const projectPath = join(import.meta.dirname, "../..");
+    postInitEventFired = await firePostInitEvent(vaultPath, projectPath);
+  }
+
   s.stop("Setup complete");
 
   console.log(`✓ Vault created at ${vaultPath}`);
@@ -187,10 +183,6 @@ export async function runInit(options: InitOptions): Promise<void> {
     console.log(`✓ ${getVaultFolders(true).agent}/ symlinks created`);
   } else if (symlinksSkipped) {
     console.log(`✓ ${getVaultFolders(true).agent}/ symlinks already present`);
-  }
-
-  if (workspaceUpdated) {
-    console.log("✓ Workspace files updated (AGENTS.md, MEMORY.md, HEARTBEAT.md)");
   }
 
   if (hookInstallStatus === "installed") {
@@ -213,8 +205,15 @@ export async function runInit(options: InitOptions): Promise<void> {
     console.log("✓ OpenClaw config patched (memorySearch.extraPaths, hooks.internal)");
   }
 
+  if (postInitEventFired) {
+    console.log("✓ Agent notified — it will update AGENTS.md and HEARTBEAT.md");
+  } else if (openclawRequested) {
+    console.log("⚠ Could not notify agent — manually update AGENTS.md and HEARTBEAT.md");
+    console.log("  Template files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md");
+  }
+
   if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {
-    console.log("\n⚠ Restart OpenClaw gateway for the config change to take effect.");
+    console.log("\n⚠ Restart OpenClaw gateway for hook and config changes to take effect.");
   }
 
   console.log("\nDone! Open it in Obsidian to get started.");
