@@ -59,8 +59,9 @@ const edges = [
     </div>
   </header>
 
-  <!-- ──── HERO ──── -->
-  <section class="hero-section relative overflow-hidden md:mx-5 lg:mx-auto md:max-w-5xl md:mt-6 md:rounded-2xl md:border md:border-border reveal">
+  <main id="top" class="max-w-5xl mx-auto px-5">
+    <!-- ──── HERO ──── -->
+    <section class="hero-section relative overflow-hidden rounded-2xl border border-border mt-6 reveal">
       <!-- Animated constellation graph -->
       <div class="hero-graph" aria-hidden="true">
         <svg viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid slice" role="presentation" focusable="false">
@@ -115,15 +116,15 @@ const edges = [
       <div class="hero-scanlines" aria-hidden="true"></div>
 
       <!-- Hero content -->
-      <div class="relative z-10 px-6 pt-24 pb-16 md:px-10 md:pt-48 md:pb-24">
-        <p class="font-mono text-[8px] sm:text-xs tracking-[0.2em] uppercase text-brand mb-5 inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand-soft px-3.5 py-1.5 backdrop-blur-sm">
+      <div class="relative z-10 px-6 pt-36 pb-16 md:px-10 md:pt-48 md:pb-24">
+        <p class="font-mono sm:text-xs tracking-[0.2em] uppercase text-brand mb-5 inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand-soft px-3.5 py-1.5 backdrop-blur-sm">
           <span aria-hidden="true">🦞</span>
           Agent-native PKM for Obsidian + OpenClaw
         </p>
 
         <h1 class="hero-heading font-extrabold tracking-tighter leading-none text-foreground">
-          <span class="whitespace-nowrap">Conversations fade.</span><br />
-          <span class="hero-accent whitespace-nowrap">Knowledge compounds.</span>
+          Conversations fade.<br />
+          <span class="hero-accent">Knowledge compounds.</span>
         </h1>
 
         <p class="mt-8 text-lg md:text-xl text-[#C8CDDF] max-w-xl leading-relaxed">
@@ -151,9 +152,8 @@ const edges = [
         <span class="font-mono text-xs text-violet-400 tracking-wide">cf. Luhmann, 1992</span>
         <span class="text-sm italic text-muted-foreground leading-relaxed border-l-2 border-violet-500/30 pl-2.5">"One cannot think without writing"</span>
       </aside>
-  </section>
+    </section>
 
-  <main id="top" class="max-w-5xl mx-auto px-5">
     <!-- ──── EXTRACTION DEMO ──── -->
     <section class="py-20" id="demo">
       <p class="font-mono text-xs tracking-[0.2em] uppercase text-brand mb-4 reveal">
@@ -163,7 +163,7 @@ const edges = [
         Your conversations become your vault
       </h2>
 
-      <div class="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-center reveal">
+      <div class="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-start reveal">
         <!-- Chat side -->
         <div class="rounded-xl border border-border bg-card p-5">
           <div class="flex items-center gap-2 text-xs text-muted-foreground font-mono mb-4">
@@ -178,6 +178,16 @@ const edges = [
               Based on your notes in
               <span class="font-mono text-xs text-violet-400">[[Frontend Frameworks]]</span>,
               React's virtual DOM trades memory for speed &mdash; it keeps a lightweight copy of the real DOM to batch and minimize expensive updates&hellip;
+            </div>
+            <div class="flex items-center gap-3 pt-2 text-xs text-muted-foreground">
+              <span class="flex items-center gap-1.5">
+                <code class="font-mono bg-violet-500/15 text-violet-400 px-2 py-0.5 rounded">/new</code>
+                <span>command</span>
+              </span>
+              <span class="text-border">|</span>
+              <span>hooks</span>
+              <span class="text-border">|</span>
+              <span>heartbeat</span>
             </div>
           </div>
         </div>
@@ -255,7 +265,7 @@ const edges = [
           <p class="text-sm text-muted-foreground leading-relaxed">
             Run one command and Zettelclaw creates a new vault structured for human + agent collaboration.
           </p>
-          <span class="font-mono text-xs text-violet-400 mt-3 inline-block">[[Init]]</span>
+          <span class="font-mono text-xs text-violet-400 mt-3 inline-block">[[init]]</span>
         </article>
         <article class="reveal">
           <div class="flex items-baseline gap-3 mb-3">
@@ -266,7 +276,7 @@ const edges = [
           <p class="text-sm text-muted-foreground leading-relaxed">
             Use OpenClaw with the vault as shared context so ideas stay connected to durable notes.
           </p>
-          <span class="font-mono text-xs text-violet-400 mt-3 inline-block">[[Conversation]]</span>
+          <span class="font-mono text-xs text-violet-400 mt-3 inline-block">[[conversation]]</span>
         </article>
         <article class="reveal">
           <div class="flex items-baseline gap-3 mb-3">
@@ -277,7 +287,7 @@ const edges = [
           <p class="text-sm text-muted-foreground leading-relaxed">
             Knowledge flows automatically &mdash; via the <code class="font-mono text-xs bg-violet-500/15 text-violet-400 px-1.5 py-0.5 rounded">/new</code> command, automatic hooks, and heartbeat cycles that turn conversations into atomic notes, links, and journal insights.
           </p>
-          <span class="font-mono text-xs text-violet-400 mt-3 inline-block">[[Atomic Note]]</span>
+          <span class="font-mono text-xs text-violet-400 mt-3 inline-block">[[atomic-note]]</span>
         </article>
       </div>
     </section>
@@ -293,42 +303,42 @@ const edges = [
 
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden reveal">
         <div class="bg-background p-6 hover:bg-card transition-colors">
-          <span class="font-mono text-xs text-violet-400 block mb-3">[[Atomic Notes]]</span>
+          <span class="font-mono text-xs text-violet-400 block mb-3">[[atomic-notes]]</span>
           <h3 class="font-bold text-foreground text-sm mb-1.5">Atomic notes</h3>
           <p class="text-sm text-muted-foreground leading-relaxed">
             Capture one idea per note so knowledge remains reusable, composable, and easy for agents to reason over.
           </p>
         </div>
         <div class="bg-background p-6 hover:bg-card transition-colors">
-          <span class="font-mono text-xs text-violet-400 block mb-3">[[Journal Extraction]]</span>
+          <span class="font-mono text-xs text-violet-400 block mb-3">[[journal-extraction]]</span>
           <h3 class="font-bold text-foreground text-sm mb-1.5">Journal extraction</h3>
           <p class="text-sm text-muted-foreground leading-relaxed">
             Promote raw daily reflections into lasting notes without losing provenance.
           </p>
         </div>
         <div class="bg-background p-6 hover:bg-card transition-colors">
-          <span class="font-mono text-xs text-violet-400 block mb-3">[[Vault Search]]</span>
+          <span class="font-mono text-xs text-violet-400 block mb-3">[[vault-search]]</span>
           <h3 class="font-bold text-foreground text-sm mb-1.5">Vault search</h3>
           <p class="text-sm text-muted-foreground leading-relaxed">
             Find and surface linked context quickly across your entire graph of notes.
           </p>
         </div>
         <div class="bg-background p-6 hover:bg-card transition-colors">
-          <span class="font-mono text-xs text-violet-400 block mb-3">[[OpenClaw Integration]]</span>
+          <span class="font-mono text-xs text-violet-400 block mb-3">[[openclaw-integration]]</span>
           <h3 class="font-bold text-foreground text-sm mb-1.5">OpenClaw integration</h3>
           <p class="text-sm text-muted-foreground leading-relaxed">
             Built to work directly with OpenClaw workflows and agent-native collaboration.
           </p>
         </div>
         <div class="bg-background p-6 hover:bg-card transition-colors">
-          <span class="font-mono text-xs text-violet-400 block mb-3">[[Obsidian Native]]</span>
+          <span class="font-mono text-xs text-violet-400 block mb-3">[[obsidian-native]]</span>
           <h3 class="font-bold text-foreground text-sm mb-1.5">Obsidian-native</h3>
           <p class="text-sm text-muted-foreground leading-relaxed">
             No lock-in: plain markdown files in your Obsidian vault with your existing plugin ecosystem.
           </p>
         </div>
         <div class="bg-background p-6 hover:bg-card transition-colors">
-          <span class="font-mono text-xs text-violet-400 block mb-3">[[Open Source]]</span>
+          <span class="font-mono text-xs text-violet-400 block mb-3">[[open-source]]</span>
           <h3 class="font-bold text-foreground text-sm mb-1.5">Open source</h3>
           <p class="text-sm text-muted-foreground leading-relaxed">
             Inspect, extend, and adapt the system to your own workflows and team knowledge conventions.
@@ -352,11 +362,7 @@ const edges = [
             <span class="w-3 h-3 rounded-full bg-[#ff5f57]"></span>
             <span class="w-3 h-3 rounded-full bg-[#ffbd2e]"></span>
             <span class="w-3 h-3 rounded-full bg-[#28c840]"></span>
-            <span class="flex-1"></span>
-            <button
-              onclick="navigator.clipboard.writeText('npx zettelclaw init');const b=this;b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1500)"
-              class="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 rounded hover:bg-white/5 cursor-pointer"
-            >Copy</button>
+            <span class="text-xs text-muted-foreground mx-auto -translate-x-4">Terminal</span>
           </div>
           <div class="p-5 font-mono text-sm">
             <div class="flex items-center">
@@ -395,9 +401,13 @@ const edges = [
   <footer class="border-t border-border mt-10 py-8">
     <div class="max-w-5xl mx-auto px-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <p class="text-sm text-muted-foreground">
-        Built with 🦞 by <a href="https://x.com/maxpetretta" class="text-foreground hover:text-brand transition-colors">Max Petretta</a>
+        Built with 🦞 by the OpenClaw community
       </p>
       <div class="flex gap-5 text-sm">
+        <a
+          href="https://github.com/maxpetretta/zettelclaw"
+          class="text-muted-foreground hover:text-foreground transition-colors"
+        >GitHub</a>
         <a
           href="https://www.npmjs.com/package/zettelclaw"
           class="text-muted-foreground hover:text-foreground transition-colors"
@@ -421,16 +431,8 @@ const edges = [
       0 0 120px -40px rgba(124, 58, 237, 0.15);
   }
 
-  @media (max-width: 767px) {
-    .hero-section {
-      -webkit-mask-image: linear-gradient(to bottom, black 0%, black 85%, transparent 100%);
-      mask-image: linear-gradient(to bottom, black 0%, black 85%, transparent 100%);
-      box-shadow: none;
-    }
-  }
-
   .hero-heading {
-    font-size: clamp(1.75rem, 6.5vw, 5rem);
+    font-size: clamp(2.25rem, 6.5vw, 5rem);
   }
 
   .hero-accent {
