@@ -288,6 +288,8 @@ async function chooseModel(
   return { selected, eventModel: selected.key }
 }
 
+const MIGRATE_SESSION = "zettelclaw-migrate"
+
 async function fireMigrateEvent(values: Record<string, string>): Promise<boolean> {
   const projectPath = join(import.meta.dirname, "../..")
   const templatePath = join(projectPath, "templates", "migrate-event.md")
@@ -301,23 +303,31 @@ async function fireMigrateEvent(values: Record<string, string>): Promise<boolean
   }
 
   const eventText = substituteTemplate(template, values)
-  const result = spawnSync("openclaw", ["system", "event", "--text", eventText, "--mode", "now"], {
-    encoding: "utf8",
-    timeout: 10_000,
-  })
-
-  if (result.error || result.status !== 0) {
-    const fallback = spawnSync("openclaw", ["system", "event", "--text", eventText], {
+  const result = spawnSync(
+    "openclaw",
+    [
+      "cron",
+      "add",
+      "--at",
+      "+0s",
+      "--session",
+      "isolated",
+      "--name",
+      MIGRATE_SESSION,
+      "--message",
+      eventText,
+      "--announce",
+      "--delete-after-run",
+      "--timeout-seconds",
+      "600",
+    ],
+    {
       encoding: "utf8",
-      timeout: 10_000,
-    })
+      timeout: 15_000,
+    },
+  )
 
-    if (fallback.error || fallback.status !== 0) {
-      return false
-    }
-  }
-
-  return true
+  return !result.error && result.status === 0
 }
 
 export async function runMigrate(options: MigrateOptions): Promise<void> {
@@ -376,5 +386,6 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
     return
   }
 
-  log.success(`Migration started! Your agent will process ${summary.files.length} files and report progress.`)
+  log.success(`Migration started! Your agent will process ${summary.files.length} files.`)
+  log.message(`Watch progress with:\n  openclaw tui --session ${MIGRATE_SESSION}`)
 }
