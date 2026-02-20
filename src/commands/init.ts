@@ -97,16 +97,18 @@ export async function runInit(options: InitOptions): Promise<void> {
   const syncMethod = options.yes ? "git" : await promptSyncMethod("git");
   const mode: NotesMode = options.root ? "root" : "notes";
   const workspacePath = resolveUserPath(options.workspacePath ?? "~/.openclaw/workspace");
-  const workspaceDetected = !options.noOpenclaw && (await isDirectory(workspacePath));
-  const openclawRequested = !options.noOpenclaw && (options.openclaw || workspaceDetected);
+  const workspaceDetected = await isDirectory(workspacePath);
+  const openclawRequested = options.openclaw || (!options.noOpenclaw && workspaceDetected);
+  const includeAgentFolder = openclawRequested;
+  const shouldCreateSymlinks = openclawRequested && (options.openclaw || workspaceDetected);
   const shouldInitGit = options.initGit ?? true;
   const openclawDir = resolveUserPath(join(workspacePath, ".."));
 
   const s = spinner();
   s.start("Configuring vault");
 
-  await configureAgentFolder(vaultPath, workspaceDetected);
-  await copyVaultSeed(vaultPath, { mode, overwrite: false, includeAgent: workspaceDetected });
+  await configureAgentFolder(vaultPath, includeAgentFolder);
+  await copyVaultSeed(vaultPath, { mode, overwrite: false, includeAgent: includeAgentFolder });
   await configureCoreSync(vaultPath, syncMethod);
   await configureCommunityPlugins(vaultPath, {
     enabled: true,
@@ -123,22 +125,26 @@ export async function runInit(options: InitOptions): Promise<void> {
   });
 
   let symlinksCreated = false;
+  let symlinksSkipped = false;
   let workspaceUpdated = false;
   let configPatched = false;
   let hookInstallStatus: "installed" | "skipped" | "failed" | null = null;
 
-  if (workspaceDetected) {
+  if (shouldCreateSymlinks) {
     const symlinkResult = await createAgentSymlinks(vaultPath, workspacePath);
     symlinksCreated = symlinkResult.added.length > 0;
+    symlinksSkipped = symlinkResult.skipped.length > 0;
 
-    const integration = await appendWorkspaceIntegration(workspacePath, {
-      vaultPath,
-      notesMode: mode,
-      includeAgent: true,
-      symlinksEnabled: symlinkResult.added.length > 0 || symlinkResult.skipped.length > 0,
-    });
+    if (workspaceDetected) {
+      const integration = await appendWorkspaceIntegration(workspacePath, {
+        vaultPath,
+        notesMode: mode,
+        includeAgent: true,
+        symlinksEnabled: symlinkResult.added.length > 0 || symlinkResult.skipped.length > 0,
+      });
 
-    workspaceUpdated = integration.added.length > 0;
+      workspaceUpdated = integration.added.length > 0;
+    }
   }
 
   if (openclawRequested) {
@@ -146,7 +152,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     configPatched = await patchOpenClawConfig(vaultPath, openclawDir);
   }
 
-  await configureApp(vaultPath, mode, workspaceDetected);
+  await configureApp(vaultPath, mode, includeAgentFolder);
 
   let gitInitialized = false;
 
@@ -178,7 +184,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   if (symlinksCreated) {
-    console.log(`✓ ${getVaultFolders(true).agent}/ symlinks created (OpenClaw workspace detected)`);
+    console.log(`✓ ${getVaultFolders(true).agent}/ symlinks created`);
+  } else if (symlinksSkipped) {
+    console.log(`✓ ${getVaultFolders(true).agent}/ symlinks already present`);
   }
 
   if (workspaceUpdated) {

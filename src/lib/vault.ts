@@ -48,7 +48,6 @@ const AGENT_FILES = [
   "USER.md",
   "TOOLS.md",
   "MEMORY.md",
-  "HEARTBEAT.md",
 ] as const;
 
 const TEMPLATE_FILES = ["journal.md", "note.md", "project.md", "research.md", "contact.md", "writing.md"];
@@ -338,24 +337,43 @@ export async function createAgentSymlinks(
   for (const file of AGENT_FILES) {
     const linkPath = join(agentDir, file);
     const targetPath = join(workspacePath, file);
+    const relativePath = `${agentFolder}/${file}`;
 
-    if (await pathExists(linkPath)) {
-      const stats = await lstat(linkPath);
+    let existingStats: Awaited<ReturnType<typeof lstat>> | null = null;
+    try {
+      existingStats = await lstat(linkPath);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT") {
+        throw error;
+      }
+    }
 
-      if (stats.isSymbolicLink()) {
+    if (existingStats) {
+      if (existingStats.isSymbolicLink()) {
         const existingTarget = await readlink(linkPath);
         if (existingTarget === targetPath) {
-          result.skipped.push(`${agentFolder}/${file}`);
+          result.skipped.push(relativePath);
           continue;
         }
       }
 
-      result.skipped.push(`${agentFolder}/${file}`);
+      result.skipped.push(relativePath);
       continue;
     }
 
-    await symlink(targetPath, linkPath);
-    result.added.push(`${agentFolder}/${file}`);
+    try {
+      await symlink(targetPath, linkPath);
+      result.added.push(relativePath);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EEXIST") {
+        result.skipped.push(relativePath);
+        continue;
+      }
+
+      throw error;
+    }
   }
 
   // Once real symlinks are present, the placeholder keeper is unnecessary.
