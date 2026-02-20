@@ -143,10 +143,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     summaryLines.push(`Plugins:     ${plugins.join(", ")}`)
   }
 
-  summaryLines.push("Skill:       zettelclaw")
+  summaryLines.push("Skill:       /zettelclaw")
 
   if (hookInstallStatus === "installed" || hookInstallStatus === "skipped") {
-    summaryLines.push("Hooks:       zettelclaw")
+    summaryLines.push("On /new:      extract journal + notes to vault")
   }
 
   log.message(summaryLines.join("\n"))
@@ -174,13 +174,16 @@ export async function runInit(options: InitOptions): Promise<void> {
       const projectPath = join(import.meta.dirname, "../..")
       const sent = await firePostInitEvent(vaultPath, projectPath)
       if (sent) {
+        log.message("")
         log.success("Agent notified — it will update AGENTS.md and HEARTBEAT.md")
       } else {
+        log.message("")
         log.warn(
           "Could not reach the agent. Is the OpenClaw gateway running?\nYou can manually update using the templates in: templates/",
         )
       }
     } else {
+      log.message("")
       log.message(
         "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.\nTemplate files are in: templates/agents-memory.md, agents-heartbeat.md, heartbeat.md",
       )
