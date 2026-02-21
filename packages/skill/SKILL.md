@@ -115,13 +115,13 @@ Example — appending to a project log:
 
 Journals live in `03 Journal/` as `YYYY-MM-DD.md`:
 - For manual journal creation, read `<vault>/04 Templates/journal.md` (fallback `<vault>/Templates/journal.md`).
-- Hook-generated updates append bullets under day-level `Done` / `Decisions` / `Facts` / `Open`, then record the source in `---` + `## Session Sources` as `- SESSION_ID — HH:MM`.
+- Hook-generated updates append bullets under day-level `Done` / `Decisions` / `Facts` / `Open`, then record the source in `---` + `## Sessions` as `- SESSION_ID — HH:MM`.
 
 The Zettelclaw hook automatically appends journal capture on `/new` and `/reset`. Hook capture is journal-only:
 
 - Append-only to today's journal
 - Uses one daily set of `Done` / `Decisions` / `Facts` / `Open` headings
-- Adds session provenance in `## Session Sources` bullets (`SESSION_ID — HH:MM`)
+- Adds session provenance in `## Sessions` bullets (`SESSION_ID — HH:MM`)
 - No wikilinks
 - No vault navigation
 - No note creation
@@ -162,7 +162,7 @@ Discussed [[SafeShell]] architecture with [[Max Petretta]]. The approach mirrors
 
 For periodic maintenance (nightly cron, agent-only):
 
-1. Review the past 24 hours of journal daily sections and `Session Sources`
+1. Review the past 24 hours of journal daily sections and `Sessions`
 2. Update existing `project`/`research`/`contact` notes in `01 Notes/` (append-only, update frontmatter `updated`, and add reciprocal links back to journal day/session)
 3. Synthesize net-new durable concepts into evergreen notes in `00 Inbox/`
 4. Retro-link journals with `[[wikilinks]]` and verify two-way relationships with typed notes

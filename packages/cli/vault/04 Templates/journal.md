@@ -14,4 +14,4 @@ updated: <% tp.date.now("YYYY-MM-DD") %>
 ## Open
 
 ---
-## Session Sources
+## Sessions

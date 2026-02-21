@@ -113,7 +113,7 @@ function buildStarterJournalEntry(dateStamp: string, timeStamp: string): string 
     "- Use [[Use Reclaw To Import Old Conversation History]] to import old conversation history.",
     "",
     "---",
-    "## Session Sources",
+    "## Sessions",
     `- ZETTELCLAW-SETUP — ${timeStamp}`,
     "",
   ].join("\n")
