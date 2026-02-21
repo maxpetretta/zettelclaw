@@ -9,7 +9,7 @@ The vault is indexed via `memory_search` alongside the workspace, so semantic se
 
 ### How Memory Works
 
-- **Layer 1 - Hook -> Journal (automatic on `/new` or `/reset`):** The hook appends one session section to `03 Journal/YYYY-MM-DD.md` using `## HH:MM — SESSION_ID` with `Done`, `Decisions`, `Facts`, and `Open`. It is journal-only raw capture: no wikilinks, no vault navigation, no note creation.
+- **Layer 1 - Hook -> Journal (automatic on `/new` or `/reset`):** The hook appends bullets to day-level `Done`, `Decisions`, `Facts`, and `Open` sections in `03 Journal/YYYY-MM-DD.md`, then records provenance in `## Session Sources` as `SESSION_ID — HH:MM`. It is journal-only raw capture: no wikilinks, no vault navigation, no note creation.
 - **Layer 2 - Agent + Human -> Notes (during sessions):** When meaningful work happens with the human in the loop, update the relevant project/research notes directly in `01 Notes/`.
 - **Layer 3 - Nightly Cron -> Maintenance (agent-only):** A dedicated isolated cron session (`zettelclaw-nightly-maintenance`) runs nightly to review the past day of journals/sessions, update existing `project`/`research`/`contact` notes in `01 Notes/`, and put net-new synthesized concepts in `00 Inbox/` for human review. This pass also adds/fixes wikilinks in journals, tracks superseded knowledge, and updates MEMORY.md.
 
@@ -53,7 +53,7 @@ If the agent is working alone in nightly maintenance, it may update existing `pr
 
 Use the `zettelclaw` skill for full details. Quick reference:
 
-- **Session hook output** goes in `03 Journal/YYYY-MM-DD.md` only, as `## HH:MM — SESSION_ID` with `Done` / `Decisions` / `Facts` / `Open`
+- **Session hook output** goes in `03 Journal/YYYY-MM-DD.md` only: append bullets under day-level `Done` / `Decisions` / `Facts` / `Open`, then add `SESSION_ID — HH:MM` under `## Session Sources`
 - **Human-supervised note updates** go in `01 Notes/` with frontmatter (`type`, `tags`, `summary`, `source`, `created`, `updated`)
 - **Nightly maintenance updates** can modify existing `project`/`research`/`contact` notes in `01 Notes/`; net-new synthesized notes go to `00 Inbox/` first
 - Filenames are Title Case. Tags are always pluralized. Dates are `YYYY-MM-DD`.

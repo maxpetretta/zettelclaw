@@ -9,6 +9,9 @@ updated: <% tp.date.now("YYYY-MM-DD") %>
 
 ## Decisions
 
+## Facts
+
 ## Open
 
-## Notes
+---
+## Session Sources
