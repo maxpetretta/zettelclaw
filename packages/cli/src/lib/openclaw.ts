@@ -10,12 +10,10 @@ import { pathExists } from "./vault"
 const HOOK_SOURCE_DIR = resolveSkillPath("hooks", "zettelclaw")
 const TEMPLATE_SOURCE_DIR = resolveSkillPath("templates")
 const SWEEP_CRON_JOB_NAME = "zettelclaw-reset"
-const LEGACY_SWEEP_CRON_JOB_NAMES = ["zettelclaw-sweep"]
 const SWEEP_CRON_EXPRESSION = "0 2 * * *"
 const SWEEP_CRON_SESSION = "isolated"
 const SWEEP_CRON_MESSAGE = "/reset"
 const NIGHTLY_MAINTENANCE_CRON_JOB_NAME = "zettelclaw-nightly"
-const LEGACY_NIGHTLY_MAINTENANCE_CRON_JOB_NAMES = ["zettelclaw-nightly-maintenance"]
 const NIGHTLY_MAINTENANCE_CRON_EXPRESSION = "0 3 * * *"
 const NIGHTLY_MAINTENANCE_CRON_SESSION = "isolated"
 const NIGHTLY_MAINTENANCE_CRON_TIMEOUT_SECONDS = "900"
@@ -274,7 +272,6 @@ function ensureCronJob(
   jobName: string,
   matchesDesiredSchedule: (job: JsonRecord) => boolean,
   createCommandArgs: string[],
-  legacyJobNames: string[] = [],
 ): CronJobResult {
   const listed = runCronCommand(["cron", "list", "--json"])
 
@@ -283,27 +280,6 @@ function ensureCronJob(
   }
 
   const jobs = parseCronJobs(listed.stdout)
-  for (const legacyJobName of legacyJobNames) {
-    const legacyEnabledJobs = jobs.filter((job) => job.name === legacyJobName && isCronJobEnabled(job))
-    for (const legacyEnabledJob of legacyEnabledJobs) {
-      const legacyJobId = getCronJobId(legacyEnabledJob)
-      if (!legacyJobId) {
-        return {
-          status: "failed",
-          message: `Found legacy ${legacyJobName} cron job without an id; disable it manually and rerun init.`,
-        }
-      }
-
-      const disabled = runCronCommand(["cron", "disable", legacyJobId, "--json"])
-      if (!disabled.ok) {
-        return {
-          status: "failed",
-          message: `Could not disable legacy ${legacyJobName}: ${disabled.message ?? "unknown error"}`,
-        }
-      }
-    }
-  }
-
   const namedJobs = jobs.filter((job) => job.name === jobName)
   const enabledJob = namedJobs.find((job) => isCronJobEnabled(job))
 
@@ -361,30 +337,25 @@ function ensureCronJob(
 
 export function ensureZettelclawSweepCronJob(): CronJobResult {
   const timeZone = resolveLocalTimeZone()
-  return ensureCronJob(
+  return ensureCronJob(SWEEP_CRON_JOB_NAME, (job) => sweepCronJobMatchesDesiredSchedule(job, timeZone), [
+    "cron",
+    "add",
+    "--name",
     SWEEP_CRON_JOB_NAME,
-    (job) => sweepCronJobMatchesDesiredSchedule(job, timeZone),
-    [
-      "cron",
-      "add",
-      "--name",
-      SWEEP_CRON_JOB_NAME,
-      "--description",
-      "Daily Zettelclaw transcript sweep trigger",
-      "--cron",
-      SWEEP_CRON_EXPRESSION,
-      "--tz",
-      timeZone,
-      "--exact",
-      "--session",
-      SWEEP_CRON_SESSION,
-      "--message",
-      SWEEP_CRON_MESSAGE,
-      "--no-deliver",
-      "--json",
-    ],
-    LEGACY_SWEEP_CRON_JOB_NAMES,
-  )
+    "--description",
+    "Daily Zettelclaw transcript sweep trigger",
+    "--cron",
+    SWEEP_CRON_EXPRESSION,
+    "--tz",
+    timeZone,
+    "--exact",
+    "--session",
+    SWEEP_CRON_SESSION,
+    "--message",
+    SWEEP_CRON_MESSAGE,
+    "--no-deliver",
+    "--json",
+  ])
 }
 
 export async function ensureZettelclawNightlyMaintenanceCronJob(vaultPath: string): Promise<CronJobResult> {
@@ -432,13 +403,12 @@ export async function ensureZettelclawNightlyMaintenanceCronJob(vaultPath: strin
       "--no-deliver",
       "--json",
     ],
-    LEGACY_NIGHTLY_MAINTENANCE_CRON_JOB_NAMES,
   )
 }
 
 /**
  * Fire a system event to tell the running OpenClaw agent to update
- * AGENTS.md and HEARTBEAT.md with Zettelclaw-aware content.
+ * AGENTS.md with Zettelclaw-aware memory content.
  *
  * Uses `openclaw system event` CLI. Returns true if the event was sent.
  */

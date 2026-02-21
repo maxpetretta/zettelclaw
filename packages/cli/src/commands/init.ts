@@ -399,7 +399,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ? true
       : unwrapPrompt(
           await confirm({
-            message: "Notify your OpenClaw agent to update AGENTS.md and HEARTBEAT.md?",
+            message: "Notify your OpenClaw agent to update AGENTS.md memory guidance?",
             initialValue: true,
           }),
         )
@@ -409,7 +409,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
       const eventResult = await firePostInitEvent(vaultPath)
       if (eventResult.sent) {
-        log.success("Agent notified — it will update AGENTS.md and HEARTBEAT.md")
+        log.success("Agent notified — it will update AGENTS.md memory guidance")
       } else {
         const templatesDir = resolveSkillPath("templates")
         const reason = eventResult.message ?? "Could not reach the agent. Is the OpenClaw gateway running?"
@@ -419,8 +419,8 @@ export async function runInit(options: InitOptions): Promise<void> {
       const templatesDir = resolveSkillPath("templates")
       log.message(
         [
-          "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.",
-          `Template files are in: ${join(templatesDir, "agents-memory.md")}, ${join(templatesDir, "agents-heartbeat.md")}, ${join(templatesDir, "heartbeat.md")}`,
+          "Skipped. You can manually update AGENTS.md memory guidance later.",
+          `Template file is: ${join(templatesDir, "agents-memory.md")}`,
         ].join("\n"),
       )
     }
