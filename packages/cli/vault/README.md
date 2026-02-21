@@ -15,6 +15,21 @@ If OpenClaw integration is disabled, `02 Agent/` is omitted and numbering is com
 
 Create your first note in `01 Notes/` using one of the templates. The journal template is `04 Templates/journal.md`, and each note type has its own frontmatter.
 
+## Workflow
+
+- `/new` and `/reset` append structured session capture to `03 Journal/` (journal-only raw layer).
+- During supervised sessions, update meaningful `01 Notes/` content directly.
+- A dedicated nightly isolated maintenance run updates existing `project`/`research`/`contact` notes and synthesizes net-new ideas into `00 Inbox/`.
+- Nightly maintenance linking should be two-way between journals and typed notes.
+
+## Starter Content (Init)
+
+On first setup, Zettelclaw seeds:
+- `01 Notes/Zettelclaw Is Collaborative Memory For Your Agent.md`
+- `00 Inbox/Use Reclaw To Import Old Conversation History.md`
+- Today's journal file with a `Done` entry: "Zettelclaw setup and installed."
+- `05 Attachments/OpenClaw Logo.png` (or `04 Attachments/` when Agent folder is disabled)
+
 ## Web Clipper
 
 This vault includes an Obsidian Web Clipper template at `04 Templates/clipper-inbox.json` that clips pages into `00 Inbox/`.

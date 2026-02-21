@@ -4,6 +4,7 @@ import { basename, dirname, join } from "node:path"
 import { confirm, intro, log, select, spinner, text } from "@clack/prompts"
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import {
+  ensureZettelclawNightlyMaintenanceCronJob,
   ensureZettelclawSweepCronJob,
   firePostInitEvent,
   installOpenClawHook,
@@ -24,6 +25,7 @@ import {
   isDirectory,
   pathExists,
   type SyncMethod,
+  seedVaultStarterContent,
 } from "../lib/vault"
 
 export interface InitOptions {
@@ -241,6 +243,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   await configureAgentFolder(vaultPath, includeAgentFolder)
   await copyVaultSeed(vaultPath, { overwrite: false, includeAgent: includeAgentFolder })
+  await seedVaultStarterContent(vaultPath, includeAgentFolder)
   await configureCoreSync(vaultPath, syncMethod)
   await configureCommunityPlugins(vaultPath, {
     enabled: true,
@@ -261,6 +264,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   let configPatchMessage: string | undefined
   let sweepCronStatus: "installed" | "skipped" | "failed" | null = null
   let sweepCronMessage: string | undefined
+  let nightlyMaintenanceCronStatus: "installed" | "skipped" | "failed" | null = null
+  let nightlyMaintenanceCronMessage: string | undefined
   let gatewayRestarted = false
   let symlinkResult: CopyResult = { added: [], skipped: [], failed: [] }
   const integrationFailures: string[] = []
@@ -315,6 +320,18 @@ export async function runInit(options: InitOptions): Promise<void> {
       }
     }
 
+    if (openclawRequested && integrationFailures.length === 0) {
+      const nightlyMaintenanceCronResult = await ensureZettelclawNightlyMaintenanceCronJob(vaultPath)
+      nightlyMaintenanceCronStatus = nightlyMaintenanceCronResult.status
+      nightlyMaintenanceCronMessage = nightlyMaintenanceCronResult.message
+
+      if (nightlyMaintenanceCronStatus === "failed") {
+        integrationFailures.push(
+          nightlyMaintenanceCronMessage ?? "Could not configure zettelclaw-nightly-maintenance cron trigger.",
+        )
+      }
+    }
+
     if (integrationFailures.length > 0) {
       throw new Error(`OpenClaw integration failed:\n${integrationFailures.map((line) => `- ${line}`).join("\n")}`)
     }
@@ -353,7 +370,11 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   if (sweepCronStatus === "installed" || sweepCronStatus === "skipped") {
-    summaryLines.push("Cron:        zettelclaw-sweep (every 30m, isolated /reset)")
+    summaryLines.push("Cron:        zettelclaw-sweep (daily 02:00 local, isolated /reset)")
+  }
+
+  if (nightlyMaintenanceCronStatus === "installed" || nightlyMaintenanceCronStatus === "skipped") {
+    summaryLines.push("Cron:        zettelclaw-nightly-maintenance (daily 03:00 local, isolated vault maintenance)")
   }
 
   log.message(summaryLines.join("\n"))

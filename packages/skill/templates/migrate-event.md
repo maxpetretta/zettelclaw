@@ -32,32 +32,40 @@ ls "{{vaultPath}}/{{notesFolder}}/"
 - Read the memory file at `{{workspacePath}}/memory/<filename>`
 - Create a journal entry at `{{vaultPath}}/{{journalFolder}}/<filename>` with proper frontmatter (type: journal, tags: [journals], created/updated dates)
 - The journal should have sections: Done, Decisions, Facts, Open and summarize the raw content into these sections concisely
-- Extract any evergreen, reusable ideas into separate notes in `{{vaultPath}}/{{notesFolder}}/` with proper frontmatter (`01 Notes/` for supervised runs, `00 Inbox/` for agent-only runs)
-- Use `[[wikilinks]]` to link to notes in the provided wikilink index
-- Report back: a list of all note titles created (for the wikilink index)
+- For project/research/contact information: prefer updating existing typed notes in `{{vaultPath}}/{{notesFolder}}/` (append-only, preserve structure, update `updated` date). Create a new typed note only when no suitable existing note exists.
+- For net-new evergreen ideas: create new evergreen notes in `{{vaultPath}}/{{notesFolder}}/` with proper frontmatter.
+- Enforce two-way `[[wikilinks]]` when journal content references typed notes:
+  - Journal side: add `[[Note Title]]` links to relevant typed notes.
+  - Typed note side: add a reciprocal link back to the source journal day (for example `[[YYYY-MM-DD]]`, derived from `<filename>`).
+- Report back: lists of note titles created and updated (for wikilink index updates)
 - When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
 
 **For non-daily files**, instruct each sub-agent:
 - Read the memory file at `{{workspacePath}}/memory/<filename>`
-- Determine the appropriate note type (evergreen, project, research) based on content
-- Create a properly typed note in `{{vaultPath}}/{{notesFolder}}/` with correct frontmatter and a good Title Case filename (`01 Notes/` for supervised runs, `00 Inbox/` for agent-only runs)
+- Determine the appropriate note type (evergreen, project, research, contact, writing) based on content
+- For `project`/`research`/`contact`: prefer updating an existing matching note in `{{vaultPath}}/{{notesFolder}}/` (append-only, update `updated`) instead of creating duplicates
+- Create a properly typed note in `{{vaultPath}}/{{notesFolder}}/` with correct frontmatter and a good Title Case filename when no suitable existing note exists
 - If the file contains multiple distinct topics, split into multiple evergreen notes
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
-- Report back: a list of all note titles created
+- When a non-daily note clearly maps to a migrated journal day, add reciprocal links between the note and that journal entry.
+- Report back: lists of note titles created and updated
 - When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
 
 ### Step 2: Wait for each batch to complete
 
-After spawning a batch of up to 5 sub-agents, wait for all to complete before starting the next batch. Collect the reported note titles and add them to the wikilink index for the next batch.
+After spawning a batch of up to 5 sub-agents, wait for all to complete before starting the next batch. Collect the reported created/updated note titles and add them to the wikilink index for the next batch.
 
 ### Step 3: Final pass
 
 After all files are processed:
 1. List all notes in `{{vaultPath}}/{{notesFolder}}/` to get the complete wikilink index
-2. Scan all notes and journals for unresolved `[[wikilinks]]` that could link to existing notes
-3. Read `{{workspacePath}}/MEMORY.md`
-4. Rewrite MEMORY.md to reference vault notes with `[[wikilinks]]` where relevant
-5. Do NOT delete MEMORY.md — it is a critical OpenClaw file
+2. Validate two-way linking:
+   - For each journal link to a typed note, verify the typed note links back to the journal day/session.
+   - For each typed note link to a migrated journal day/session, verify the journal links to that typed note where relevant.
+3. Scan all notes and journals for unresolved `[[wikilinks]]` that could link to existing notes
+4. Read `{{workspacePath}}/MEMORY.md`
+5. Rewrite MEMORY.md to reference vault notes with `[[wikilinks]]` where relevant
+6. Do NOT delete MEMORY.md — it is a critical OpenClaw file
 
 ### Rules
 - Never create directories — the vault structure already exists
@@ -66,5 +74,8 @@ After all files are processed:
 - All dates must be YYYY-MM-DD
 - Every note must have complete YAML frontmatter
 - One idea per note (evergreen)
+- Migration writes typed notes to `{{vaultPath}}/{{notesFolder}}/` (do not route migrated notes to `00 Inbox/`)
+- For existing `project`/`research`/`contact` notes, append instead of overwrite and update frontmatter `updated`
 - Link aggressively — first mention of any concept gets a `[[wikilink]]`
+- Enforce two-way links between journals and typed notes whenever they reference each other
 - Omit empty journal sections

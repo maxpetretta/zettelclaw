@@ -201,7 +201,7 @@ const edges: Array<[number, number]> = [
         See it in action
       </p>
       <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-10 reveal">
-        Your conversations become your vault
+        Your conversations become structured memory
       </h2>
 
       <div class="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-center reveal">
@@ -236,30 +236,31 @@ const edges: Array<[number, number]> = [
         <div class="rounded-xl border border-border bg-card p-5">
           <div class="flex items-center gap-2 text-xs text-muted-foreground font-mono mb-4">
             <span class="w-2 h-2 rounded-full bg-brand shrink-0"></span>
-            Extracted evergreen notes
+            Journal capture + linked notes
           </div>
           <div class="space-y-3">
             <div class="note-card note-card-brand">
               <p class="font-mono text-xs text-muted-foreground mb-1.5">
-                React Virtual DOM Trades Memory For Speed.md
+                2026-02-19.md (03 Journal)
               </p>
               <p class="text-sm text-foreground/90 leading-relaxed">
-                React's virtual DOM keeps a lightweight copy of the real DOM in memory, then diffs and batches updates to minimize expensive reflows.
+                Session capture adds `Done` / `Decisions` / `Facts` / `Open` bullets and links key concepts to existing typed notes.
               </p>
               <div class="flex flex-wrap gap-2 mt-2">
                 <span class="font-mono text-xs text-violet-400">[[Frontend Frameworks]]</span>
-                <span class="font-mono text-xs text-violet-400">[[DOM Reconciliation]]</span>
+                <span class="font-mono text-xs text-violet-400">[[React Virtual DOM Trades Memory For Speed]]</span>
               </div>
             </div>
             <div class="note-card note-card-violet">
               <p class="font-mono text-xs text-muted-foreground mb-1.5">
-                DOM Reconciliation Minimizes Reflows.md
+                Frontend Frameworks.md (01 Notes)
               </p>
               <p class="text-sm text-foreground/90 leading-relaxed">
-                Reconciliation algorithms compare virtual trees to compute the minimal set of mutations needed on the real DOM.
+                Nightly maintenance updates existing notes and adds reciprocal links back to journal sessions for provenance.
               </p>
               <div class="flex flex-wrap gap-2 mt-2">
-                <span class="font-mono text-xs text-violet-400">[[React Virtual DOM Trades Memory For Speed]]</span>
+                <span class="font-mono text-xs text-violet-400">[[2026-02-19]]</span>
+                <span class="font-mono text-xs text-violet-400">[[DOM Reconciliation]]</span>
               </div>
             </div>
           </div>
@@ -281,9 +282,9 @@ const edges: Array<[number, number]> = [
       <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-12 reveal">
         <span>conversation</span>
         <span class="text-brand font-bold">&rarr;</span>
-        <span>automatic extraction</span>
+        <span>journal capture</span>
         <span class="text-brand font-bold">&rarr;</span>
-        <span>evergreen notes in vault</span>
+        <span>nightly maintenance into linked notes</span>
       </div>
 
       <div class="grid md:grid-cols-3 gap-8">
@@ -316,7 +317,7 @@ const edges: Array<[number, number]> = [
           </div>
           <h3 class="font-bold text-foreground mb-1.5">Extract</h3>
           <p class="text-sm text-muted-foreground leading-relaxed">
-            Knowledge flows automatically &mdash; via the <code class="font-mono text-xs bg-violet-500/15 text-violet-400 px-1.5 py-0.5 rounded">/new</code> command, automatic hooks, and heartbeat cycles that turn conversations into evergreen notes, links, and journal insights.
+            On <code class="font-mono text-xs bg-violet-500/15 text-violet-400 px-1.5 py-0.5 rounded">/new</code> or <code class="font-mono text-xs bg-violet-500/15 text-violet-400 px-1.5 py-0.5 rounded">/reset</code>, hooks append structured session capture to daily journals. A dedicated nightly isolated maintenance run then updates existing project/research/contact notes and adds two-way links across journals and typed notes.
           </p>
           <span class="font-mono text-xs text-violet-400 mt-3 inline-block">[[Evergreen Note]]</span>
         </article>

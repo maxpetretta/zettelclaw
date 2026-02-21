@@ -1,19 +1,16 @@
-### 🔄 Vault Maintenance (During Heartbeats)
+### 🔄 Memory Maintenance (During Heartbeats)
 
-Periodically (every few days), run a heartbeat as an **agent-only, unsupervised synthesis pass**.
+Heartbeats run frequently (often every ~30 minutes). Keep heartbeat passes lightweight.
 
 - The hook already appends `Done` / `Decisions` / `Facts` / `Open` bullets to daily journals.
 - During sessions (human present), meaningful project/research work should be written directly to `01 Notes/`.
-- During heartbeats (agent alone), new synthesized notes must go to `00 Inbox/` for human review and promotion.
+- Full vault maintenance is handled by the dedicated nightly cron job `zettelclaw-nightly-maintenance` in an isolated session.
 
-1. **Review recent sessions** — Read recent journal sections and identify durable facts/concepts
-2. **Synthesize to Inbox** — Create/append evergreen notes in `00 Inbox/` (one idea per note). Do not create heartbeat notes directly in `01 Notes/`
-3. **Retro-link journals** — Add `[[wikilinks]]` to journal entries after the fact (the hook deliberately avoids links)
-4. **Capture project/research drift** — If journals imply updates to existing project/research notes, write a structured handoff note in `00 Inbox/` for human review
-5. **Track superseded knowledge** — If newer facts invalidate older notes, record `supersedes` relationships in inbox synthesis notes
-6. **Surface orphans** — Find notes with no incoming links (`obsidian orphans`) and capture important relinking actions
-7. **Fix unresolved links** — Check `obsidian unresolved` and capture/create important missing targets in `00 Inbox/`
-8. **Update MEMORY.md** — Review recent vault content and update your hot cache with what matters
-9. **Prepare human review** — Keep `00 Inbox/` organized so a human can promote accepted notes into `01 Notes/`
-
-The vault is your memory. Keep it healthy.
+Nightly cron maintenance responsibilities:
+1. Review the past 24h of journals.
+2. Update existing `project` / `research` / `contact` notes in `01 Notes/` (append-only, update frontmatter `updated` date).
+3. Enforce two-way `[[wikilinks]]` whenever journal content maps to typed notes:
+   - Journal -> typed note
+   - Typed note -> source journal day/session
+4. Synthesize net-new durable ideas into `00 Inbox/` for human promotion.
+5. Check unresolved/orphan links and update MEMORY.md with important durable context.

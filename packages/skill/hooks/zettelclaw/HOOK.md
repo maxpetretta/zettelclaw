@@ -12,7 +12,7 @@ metadata:
 
 # Zettelclaw Hook
 
-Dispatches an agent task on `/new` or `/reset` so the agent can navigate the vault and update/create notes directly. Also performs idempotent transcript sweeps to backfill missed sessions.
+Dispatches a journal-capture task on `/new` or `/reset`. The hook appends structured session sections to today's journal only (no typed note creation), ensures today's journal exists from the vault template at `04 Templates/journal.md` (fallback: `Templates/journal.md`), and performs idempotent transcript sweeps to backfill missed sessions.
 
 ## Config
 
@@ -24,7 +24,7 @@ Dispatches an agent task on `/new` or `/reset` so the agent can navigate the vau
 - `model` (string): preferred model hint for spawned subagents
 - `expectFinal` (boolean): wait for the system event to finish before returning (default: `false`)
 - `sweepEnabled` (boolean): enable/disable transcript sweeps (default: `true`)
-- `sweepEveryMinutes` (number): minimum minutes between sweeps (default: `30`)
+- `sweepEveryMinutes` (number): minimum minutes between sweeps (default: `1440`)
 - `sweepMessages` (number): max turns per swept transcript extraction (default: `120`)
 - `sweepMaxFiles` (number): max transcripts to inspect per sweep run (default: `40`)
-- `sweepStaleMinutes` (number): minimum age for active `.jsonl` transcripts (default: `180`)
+- `sweepStaleMinutes` (number): minimum age for active `.jsonl` transcripts (default: `30`)

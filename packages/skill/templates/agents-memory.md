@@ -11,7 +11,7 @@ The vault is indexed via `memory_search` alongside the workspace, so semantic se
 
 - **Layer 1 - Hook -> Journal (automatic on `/new` or `/reset`):** The hook appends one session section to `03 Journal/YYYY-MM-DD.md` using `## HH:MM — SESSION_ID` with `Done`, `Decisions`, `Facts`, and `Open`. It is journal-only raw capture: no wikilinks, no vault navigation, no note creation.
 - **Layer 2 - Agent + Human -> Notes (during sessions):** When meaningful work happens with the human in the loop, update the relevant project/research notes directly in `01 Notes/`.
-- **Layer 3 - Heartbeat -> Inbox (agent-only):** During heartbeats, review recent journals/sessions and synthesize durable atomic concepts into evergreen notes in `00 Inbox/` for human review. Heartbeats also add/fix wikilinks in journals, track superseded knowledge, and update MEMORY.md.
+- **Layer 3 - Nightly Cron -> Maintenance (agent-only):** A dedicated isolated cron session (`zettelclaw-nightly-maintenance`) runs nightly to review the past day of journals/sessions, update existing `project`/`research`/`contact` notes in `01 Notes/`, and put net-new synthesized concepts in `00 Inbox/` for human review. This pass also adds/fixes wikilinks in journals, tracks superseded knowledge, and updates MEMORY.md.
 
 ### When to Update the Vault Directly
 
@@ -27,9 +27,9 @@ Let the journal capture stand on its own when:
 
 - Casual conversation with no actionable work
 - Small decisions that don't affect project direction
-- General facts the agent learns (heartbeats can synthesize these into `00 Inbox/` notes)
+- General facts the agent learns (nightly maintenance can synthesize these into `00 Inbox/` notes)
 
-If the agent is working alone (heartbeat/maintenance), create new synthesis notes in `00 Inbox/`, not `01 Notes/`. Human review promotes them into `01 Notes/` by moving the file.
+If the agent is working alone in nightly maintenance, it may update existing `project`/`research`/`contact` notes in `01 Notes/` based on journal evidence. New synthesized notes still go to `00 Inbox/` for human promotion.
 
 ### 🧠 MEMORY.md - Your Hot Cache
 
@@ -55,9 +55,9 @@ Use the `zettelclaw` skill for full details. Quick reference:
 
 - **Session hook output** goes in `03 Journal/YYYY-MM-DD.md` only, as `## HH:MM — SESSION_ID` with `Done` / `Decisions` / `Facts` / `Open`
 - **Human-supervised note updates** go in `01 Notes/` with frontmatter (`type`, `tags`, `summary`, `source`, `created`, `updated`)
-- **Heartbeat-created notes** go to `00 Inbox/` first; human promotion moves them to `01 Notes/`
+- **Nightly maintenance updates** can modify existing `project`/`research`/`contact` notes in `01 Notes/`; net-new synthesized notes go to `00 Inbox/` first
 - Filenames are Title Case. Tags are always pluralized. Dates are `YYYY-MM-DD`.
-- Add `[[wikilinks]]` during supervised note writing and heartbeat maintenance (not in hook output).
+- Add `[[wikilinks]]` during supervised note writing and nightly maintenance (not in hook output).
 - Use `obsidian` CLI when available (preferred), fall back to file tools.
 - Do NOT create new directories or subfolders — EVER — unless the user explicitly asks. The vault structure is fixed.
 - Do NOT add `status` to notes/journals/contacts/writings.

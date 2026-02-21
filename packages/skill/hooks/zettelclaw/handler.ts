@@ -70,12 +70,19 @@ interface TranscriptCandidate {
 }
 
 const HOOK_STATE_VERSION = 1
-const DEFAULT_SWEEP_INTERVAL_MINUTES = 30
+const DEFAULT_SWEEP_INTERVAL_MINUTES = 1_440
 const DEFAULT_SWEEP_MESSAGES = 120
 const DEFAULT_SWEEP_MAX_FILES = 40
-const DEFAULT_SWEEP_STALE_MINUTES = 180
+const DEFAULT_SWEEP_STALE_MINUTES = 30
 const MAX_SWEEP_STATE_ENTRIES = 4_000
 const DEFAULT_EXPECT_FINAL = false
+const DEFAULT_JOURNAL_TEMPLATE = `---
+type: journal
+tags: [journals]
+created: {{DATE}}
+updated: {{DATE}}
+---
+`
 
 interface JournalSnapshot {
   journalPath: string
@@ -197,6 +204,70 @@ function parseExpectFinal(configValue: unknown): boolean {
   return parseBoolean(configValue, DEFAULT_EXPECT_FINAL)
 }
 
+function getErrorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || !error) {
+    return undefined
+  }
+
+  const maybeCode = (error as { code?: unknown }).code
+  return typeof maybeCode === "string" ? maybeCode : undefined
+}
+
+function renderJournalTemplate(template: string, dateStamp: string): string {
+  const rendered = template
+    .replaceAll("{{DATE}}", dateStamp)
+    .replaceAll("{{CREATED_DATE}}", dateStamp)
+    .replaceAll("{{UPDATED_DATE}}", dateStamp)
+    .replaceAll('<% tp.date.now("YYYY-MM-DD") %>', dateStamp)
+
+  return rendered.endsWith("\n") ? rendered : `${rendered}\n`
+}
+
+function resolveJournalTemplatePaths(vaultPath: string): string[] {
+  return [join(vaultPath, "04 Templates", "journal.md"), join(vaultPath, "Templates", "journal.md")]
+}
+
+async function loadJournalTemplate(vaultPath: string, dateStamp: string): Promise<string> {
+  for (const templatePath of resolveJournalTemplatePaths(vaultPath)) {
+    try {
+      const template = await readFile(templatePath, "utf8")
+      if (template.trim().length === 0) {
+        continue
+      }
+
+      return renderJournalTemplate(template, dateStamp)
+    } catch {
+      // Try the next template candidate path.
+    }
+  }
+
+  return renderJournalTemplate(DEFAULT_JOURNAL_TEMPLATE, dateStamp)
+}
+
+async function ensureJournalExists(vaultPath: string, journalPath: string, dateStamp: string): Promise<string> {
+  try {
+    return await readFile(journalPath, "utf8")
+  } catch (error) {
+    if (getErrorCode(error) !== "ENOENT") {
+      throw error
+    }
+  }
+
+  const template = await loadJournalTemplate(vaultPath, dateStamp)
+  await mkdir(dirname(journalPath), { recursive: true })
+
+  try {
+    await writeFile(journalPath, template, { encoding: "utf8", flag: "wx" })
+    return template
+  } catch (error) {
+    if (getErrorCode(error) !== "EEXIST") {
+      throw error
+    }
+  }
+
+  return await readFile(journalPath, "utf8")
+}
+
 async function readJournalSnapshot(vaultPath: string, timestamp: Date): Promise<JournalSnapshot> {
   const journalDir = await resolveJournalDirectory(vaultPath)
   const dateStamp = formatDate(timestamp)
@@ -205,11 +276,9 @@ async function readJournalSnapshot(vaultPath: string, timestamp: Date): Promise<
 
   let content = ""
   try {
-    if (await pathExists(journalPath)) {
-      content = await readFile(journalPath, "utf8")
-    }
+    content = await ensureJournalExists(vaultPath, journalPath, dateStamp)
   } catch {
-    // If journal read fails, continue with an empty journal snapshot.
+    // If journal read/create fails, continue with an empty journal snapshot.
   }
 
   return {

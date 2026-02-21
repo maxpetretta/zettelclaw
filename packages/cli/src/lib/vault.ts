@@ -42,6 +42,87 @@ interface CorePlugins {
 const TEMPLATE_ROOT = resolve(import.meta.dirname, "..", "..", "vault")
 const AGENT_FILES = ["AGENTS.md", "SOUL.md", "IDENTITY.md", "USER.md", "TOOLS.md", "MEMORY.md"] as const
 const TEMPLATE_PATH_PREFIX = /^(?:\d{2} )?Templates\//
+const STARTER_NOTE_FILENAME = "Zettelclaw Is Collaborative Memory For Your Agent.md"
+const STARTER_RECLAW_FILENAME = "Use Reclaw To Import Old Conversation History.md"
+
+function formatLocalDate(date: Date): string {
+  const year = String(date.getFullYear())
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function formatLocalTime(date: Date): string {
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  return `${hours}:${minutes}`
+}
+
+function buildStarterEvergreenNote(dateStamp: string): string {
+  return [
+    "---",
+    "type: evergreen",
+    "tags: [agents, systems]",
+    'summary: "Zettelclaw is collaborative memory for your agent and human partner."',
+    'source: "https://zettelclaw.com"',
+    `created: ${dateStamp}`,
+    `updated: ${dateStamp}`,
+    "---",
+    "",
+    "Zettelclaw is collaborative memory for your agent.",
+    "",
+    "It captures session context in journals and keeps durable knowledge in linked typed notes.",
+    "",
+  ].join("\n")
+}
+
+function buildStarterReclawInboxNote(dateStamp: string): string {
+  return [
+    "---",
+    "type: evergreen",
+    "tags: [imports, archives]",
+    'summary: "Use Reclaw to import old conversation history into your Zettelclaw vault."',
+    'source: "https://reclaw.sh"',
+    `created: ${dateStamp}`,
+    `updated: ${dateStamp}`,
+    "---",
+    "",
+    "[Reclaw](https://reclaw.sh) imports old conversation history so you can bootstrap your vault with prior context.",
+    "",
+  ].join("\n")
+}
+
+function buildStarterJournalEntry(dateStamp: string, timeStamp: string): string {
+  return [
+    "---",
+    "type: journal",
+    "tags: [journals]",
+    `created: ${dateStamp}`,
+    `updated: ${dateStamp}`,
+    "---",
+    "",
+    `## ${timeStamp} — ZETTELCLAW-SETUP`,
+    "",
+    "### Done",
+    "- Zettelclaw setup and installed.",
+    "",
+    "### Decisions",
+    "- Replaced the default OpenClaw memory workflow with Zettelclaw collaborative vault memory.",
+    "",
+    "### Open",
+    "- Use [[Use Reclaw To Import Old Conversation History]] to import old conversation history.",
+    "",
+  ].join("\n")
+}
+
+async function writeFileIfMissing(pathToFile: string, content: string): Promise<void> {
+  if (await pathExists(pathToFile)) {
+    return
+  }
+
+  await mkdir(dirname(pathToFile), { recursive: true })
+  await writeFile(pathToFile, content, "utf8")
+}
 
 export async function pathExists(path: string): Promise<boolean> {
   try {
@@ -151,6 +232,21 @@ export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions
   }
 
   return result
+}
+
+export async function seedVaultStarterContent(vaultPath: string, includeAgent: boolean): Promise<void> {
+  const folders = getVaultFolders(includeAgent)
+  const now = new Date()
+  const dateStamp = formatLocalDate(now)
+  const timeStamp = formatLocalTime(now)
+
+  const starterNotePath = join(vaultPath, folders.notes, STARTER_NOTE_FILENAME)
+  const starterReclawPath = join(vaultPath, folders.inbox, STARTER_RECLAW_FILENAME)
+  const starterJournalPath = join(vaultPath, folders.journal, `${dateStamp}.md`)
+
+  await writeFileIfMissing(starterNotePath, buildStarterEvergreenNote(dateStamp))
+  await writeFileIfMissing(starterReclawPath, buildStarterReclawInboxNote(dateStamp))
+  await writeFileIfMissing(starterJournalPath, buildStarterJournalEntry(dateStamp, timeStamp))
 }
 
 export async function removePathIfExists(path: string): Promise<void> {

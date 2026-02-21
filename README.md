@@ -23,9 +23,24 @@ npx zettelclaw init --yes --vault ~/my-vault
 ## What It Does
 
 - Creates a ready-to-use Obsidian vault with 6 note templates (journal via `journal.md`, evergreen via `evergreen.md`, project, research, contact, writing)
+- Seeds starter content on first setup:
+  - `01 Notes/Zettelclaw Is Collaborative Memory For Your Agent.md`
+  - `00 Inbox/Use Reclaw To Import Old Conversation History.md`
+  - Today's journal with a `Done` entry for setup/installation
+  - `05 Attachments/OpenClaw Logo.png`
 - Configures community plugins (Templater, Linter, Obsidian Git)
 - Auto-detects OpenClaw and creates `02 Agent/` symlinks + workspace injection (or compacts numbering when disabled)
+- Installs OpenClaw cron jobs for:
+  - `zettelclaw-sweep` (daily 02:00 local transcript sweep trigger)
+  - `zettelclaw-nightly-maintenance` (daily 03:00 local isolated maintenance pass)
 - Sets up frontmatter-driven note types that both humans and AI agents can read/write
+
+## Memory Flow
+
+- Hook layer (`/new` or `/reset`): appends structured capture to daily journals (`Done`, `Decisions`, `Facts`, `Open`) in `03 Journal/`
+- Supervised layer (human + agent): updates typed notes directly in `01 Notes/` when meaningful work is done
+- Nightly maintenance cron layer (agent-only, isolated): reviews the past day of journals, updates existing `project`/`research`/`contact` notes, and writes net-new synthesis to `00 Inbox/`
+- Linking: nightly maintenance enforces two-way links between journal entries and typed notes (`journal -> note` and `note -> journal/session`)
 
 ## Web Clipper Template
 

@@ -34,19 +34,10 @@ Replace HH:MM with the session time (from the timestamp provided) and SESSION_ID
 ## Rules
 - **Journal ONLY** — do NOT read, create, or modify any other file in the vault.
 - **Append, don't overwrite** — add your section after any existing content in the journal.
-- **No wikilinks** — do not add [[links]]. Those are added during heartbeat processing when vault context is available.
+- **No wikilinks** — do not add [[links]]. Those are added during nightly maintenance processing when vault context is available.
 - **Bullet points only** — no prose paragraphs. Each bullet is a standalone fact.
 - **Skip empty sections** — if there were no decisions, omit the Decisions heading entirely. Same for Done, Facts, and Open.
 - **Idempotency** — if the journal already contains a section with this session ID, do NOT add a duplicate. Return a message saying the session was already captured.
-- **Create if missing** — if the journal file doesn't exist, create it with this frontmatter before appending:
-
-```yaml
----
-type: journal
-tags: [journals]
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
----
-```
+- **Journal bootstrap is hook-managed** — the hook creates missing daily journal files from the vault template before this step. Your job is append-only.
 
 After appending, return a short summary: which journal file was updated, how many done/decisions/facts/open items were captured.

@@ -35,7 +35,7 @@ Use **file tools** (Read/Write/Edit) for all vault operations. Use `memory_searc
 Apply the three-layer memory rule at all times:
 - **Hook (`/new` or `/reset`) -> `03 Journal/` only:** append raw session capture, no wikilinks, no note creation
 - **Agent + human (supervised) -> `01 Notes/`:** write meaningful project/research updates directly
-- **Heartbeat (agent-only) -> `00 Inbox/`:** create synthesis notes for later human promotion into `01 Notes/`
+- **Nightly maintenance cron (agent-only) -> maintenance + inbox:** update existing `project`/`research`/`contact` notes from the past day of journals; put net-new synthesis notes in `00 Inbox/`
 
 ## Searching the Vault
 
@@ -65,7 +65,7 @@ find "<vault>/01 Notes/" -name "*.md" -mtime -7 | sort
 Curated durable notes live in `01 Notes/` — flat, no subfolders.
 
 - If the human is present, create/update notes directly in `01 Notes/` with proper frontmatter.
-- If the agent is alone (heartbeat), create synthesis notes in `00 Inbox/` first; human review promotes them into `01 Notes/` by moving files.
+- If the agent is alone in nightly maintenance, it may update existing `project`/`research`/`contact` notes in `01 Notes/` when journals provide clear evidence. Net-new synthesis notes still go to `00 Inbox/` for human promotion.
 
 ### Frontmatter Rules
 - Every note MUST have YAML frontmatter with at least `type`, `created`, `updated`
@@ -74,90 +74,15 @@ Curated durable notes live in `01 Notes/` — flat, no subfolders.
 - Filenames are Title Case (`React Virtual DOM Trades Memory For Speed.md`)
 - One idea per note (evergreen) — the title captures the idea
 
-### evergreen — Evergreen ideas and knowledge
-```yaml
----
-type: evergreen
-tags: []
-summary: "One-line description of this idea"
-source: ""
-created: 2026-02-19
-updated: 2026-02-19
----
-
-[The idea, explained. Link profusely with [[wikilinks]].]
-```
-
-### project — Tracked work with a lifecycle
-```yaml
----
-type: project
-status: active
-tags: []
-aliases: []
-summary: "What this project is"
-created: 2026-02-19
-updated: 2026-02-19
----
-
-## Goal
-
-## Log
-```
-Status values: `active` / `paused` / `archived`. Append dated entries to `## Log`.
-
-### research — Questions being investigated
-```yaml
----
-type: research
-status: active
-tags: []
-summary: "What we're investigating"
-source: ""
-created: 2026-02-19
-updated: 2026-02-19
----
-
-## Question
-
-## Findings
-
-## Conclusion
-
-## Sources
-```
-Status values: `active` / `archived`.
-
-### contact — People
-```yaml
----
-type: contact
-tags: [contacts]
-aliases: []
-summary: "Who this person is"
-created: 2026-02-19
-updated: 2026-02-19
----
-
-## Context
-
-## Notes
-```
-Always include `contacts` in tags. Use `aliases` for nicknames.
-
-### writing — Blog posts, essays, published work
-```yaml
----
-type: writing
-tags: []
-summary: "What this piece is about"
-source: ""
-published: ""
-created: 2026-02-19
-updated: 2026-02-19
----
-```
-`published` holds the URL once posted. Empty = draft.
+### Use Vault Templates (Canonical)
+- Before creating notes, read the matching template in `<vault>/04 Templates/` (fallback `<vault>/Templates/`):
+  - `evergreen.md`, `project.md`, `research.md`, `contact.md`, `writing.md`
+- Follow template frontmatter/sections exactly when the template exists.
+- If a template is missing, use a minimal fallback frontmatter with `type`, `created`, and `updated`, then add note-type fields only when required by rules below.
+- `project` status values: `active` / `paused` / `archived` (append dated entries to `## Log`).
+- `research` status values: `active` / `archived`.
+- `contact` must include `contacts` in tags; use `aliases` for nicknames.
+- `writing` uses `published` for URL when posted (empty = draft).
 
 ### Which type to use?
 - Standalone reusable idea → `evergreen`
@@ -173,7 +98,7 @@ ONLY `project` and `research` have `status`. Never add status to notes, journals
 ## Updating Existing Notes
 
 - In supervised sessions (human present), update `01 Notes/` directly
-- In heartbeats (agent-only), write proposed note updates as handoff notes in `00 Inbox/` instead of editing `01 Notes/`
+- In nightly maintenance (agent-only), update existing `project`/`research`/`contact` notes directly when journal evidence is clear; for missing targets, write handoff notes in `00 Inbox/`
 - Update the `updated` field to today's date
 - Append, don't overwrite — add to the relevant section
 - Add new `[[wikilinks]]` for any concepts mentioned
@@ -189,29 +114,8 @@ Example — appending to a project log:
 ## Journal Entries
 
 Journals live in `03 Journal/` as `YYYY-MM-DD.md`:
-
-```yaml
----
-type: journal
-tags: [journals]
-created: 2026-02-19
-updated: 2026-02-19
----
-
-## HH:MM — SESSION_ID
-
-### Done
-- What was accomplished
-
-### Decisions
-- Key decisions and reasoning
-
-### Facts
-- Atomic facts worth remembering
-
-### Open
-- Unresolved questions, next steps
-```
+- For manual journal creation, read `<vault>/04 Templates/journal.md` (fallback `<vault>/Templates/journal.md`).
+- Hook-generated sections use `## HH:MM — SESSION_ID` with `Done` / `Decisions` / `Facts` / `Open`.
 
 The Zettelclaw hook automatically appends session sections on `/new` and `/reset`. Hook capture is journal-only:
 
@@ -223,19 +127,19 @@ The Zettelclaw hook automatically appends session sections on `/new` and `/reset
 - Omit empty sections
 - Avoid duplicate `SESSION_ID` sections
 
-Treat journals as the **raw capture layer**. Typed notes are the **curated layer**. When meaningful work happens during a session, update typed notes directly instead of waiting for heartbeat synthesis:
+Treat journals as the **raw capture layer**. Typed notes are the **curated layer**. When meaningful work happens during a session, update typed notes directly instead of waiting for nightly synthesis:
 
 - Completed project task or significant project decision → update the project note now (append a dated log entry)
 - Finished research investigation → update findings/conclusion in the research note now
 - Learned something that changes an existing note → update that note now
 
-During heartbeats (agent-only), synthesize reusable concepts from journals into `00 Inbox/` notes for human review.
+During the nightly maintenance cron run (agent-only), first update existing `project`/`research`/`contact` notes from the past day of journals, then synthesize net-new reusable concepts into `00 Inbox/` notes for human review. When linking journal items to typed notes, enforce two-way links (journal -> note and note -> journal/session).
 
 ## Linking
 
 Link aggressively. Always `[[wikilink]]` the first mention of any concept, person, project, or idea — even if the target note doesn't exist yet. Unresolved links are breadcrumbs for future connections.
 
-Exception: hook-generated journal capture stays link-free. Add links later during heartbeat processing.
+Exception: hook-generated journal capture stays link-free. Add links later during nightly maintenance processing, and make them two-way between journal sections and related typed notes.
 
 ```markdown
 Discussed [[SafeShell]] architecture with [[Max Petretta]]. The approach mirrors
@@ -246,24 +150,25 @@ Discussed [[SafeShell]] architecture with [[Max Petretta]]. The approach mirrors
 
 ## Inbox Triage
 
-`00 Inbox/` collects quick captures (Web Clipper, manual drops) and heartbeat-created synthesis notes.
+`00 Inbox/` collects quick captures (Web Clipper, manual drops) and nightly maintenance synthesis notes.
 
 1. Read each inbox item
 2. Decide: promote to `01 Notes/`, keep for more review, or discard
-3. In heartbeats (agent-only): do not promote directly to `01 Notes/`; leave structured drafts in `00 Inbox/`
+3. In nightly maintenance (agent-only): do not promote directly to `01 Notes/`; leave structured drafts in `00 Inbox/`
 4. In supervised sessions (human present): move approved notes into `01 Notes/`, then remove obsolete inbox drafts
 
 ## Vault Maintenance
 
-For periodic maintenance (heartbeat, agent-only):
+For periodic maintenance (nightly cron, agent-only):
 
-1. Review recent journal session sections
-2. Synthesize durable concepts into evergreen notes in `00 Inbox/`
-3. Retro-link journals with `[[wikilinks]]`
-4. Capture superseded knowledge in synthesis notes
-5. Run orphan/unresolved checks
-6. Update MEMORY.md
-7. Leave `00 Inbox/` ready for human promotion decisions
+1. Review the past 24 hours of journal session sections
+2. Update existing `project`/`research`/`contact` notes in `01 Notes/` (append-only, update frontmatter `updated`, and add reciprocal links back to journal day/session)
+3. Synthesize net-new durable concepts into evergreen notes in `00 Inbox/`
+4. Retro-link journals with `[[wikilinks]]` and verify two-way relationships with typed notes
+5. Capture superseded knowledge in synthesis notes
+6. Run orphan/unresolved checks
+7. Update MEMORY.md
+8. Leave `00 Inbox/` ready for human promotion decisions
 
 Use Obsidian CLI graph queries (requires Obsidian to be running):
 
@@ -296,7 +201,7 @@ done
 - Do NOT add `status` to evergreen notes, journals, contacts, or writings
 - Do NOT use singular tags (`project` → use `projects`)
 - Do NOT create notes without frontmatter
-- Do NOT create heartbeat synthesis notes directly in `01 Notes/` (use `00 Inbox/`)
+- Do NOT create net-new nightly synthesis notes directly in `01 Notes/` (use `00 Inbox/`)
 - Do NOT edit files in `04 Templates/` (those are Templater source templates)
 - Do NOT modify `02 Agent/` files directly — they're symlinks to the workspace
 
@@ -310,5 +215,5 @@ Key concepts:
 - **Evergreen notes** — one idea per note, the title IS the idea
 - **Frontmatter as API** — YAML properties make notes machine-queryable
 - **Dual authorship** — both human and agent maintain the vault
-- **Three-layer flow** — hook -> journal, supervised sessions -> notes, heartbeats -> inbox
+- **Three-layer flow** — hook -> journal, supervised sessions -> notes, nightly cron -> existing-note maintenance + inbox synthesis
 - **Links over hierarchy** — flat structure, relationships via `[[wikilinks]]`

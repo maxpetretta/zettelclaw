@@ -10,9 +10,14 @@ import { pathExists } from "./vault"
 const HOOK_SOURCE_DIR = resolveSkillPath("hooks", "zettelclaw")
 const TEMPLATE_SOURCE_DIR = resolveSkillPath("templates")
 const SWEEP_CRON_JOB_NAME = "zettelclaw-sweep"
-const SWEEP_CRON_INTERVAL = "30m"
+const SWEEP_CRON_EXPRESSION = "0 2 * * *"
 const SWEEP_CRON_SESSION = "isolated"
 const SWEEP_CRON_MESSAGE = "/reset"
+const NIGHTLY_MAINTENANCE_CRON_JOB_NAME = "zettelclaw-nightly-maintenance"
+const NIGHTLY_MAINTENANCE_CRON_EXPRESSION = "0 3 * * *"
+const NIGHTLY_MAINTENANCE_CRON_SESSION = "isolated"
+const NIGHTLY_MAINTENANCE_CRON_TIMEOUT_SECONDS = "900"
+const NIGHTLY_MAINTENANCE_TEMPLATE = "nightly-maintenance-event.md"
 
 function coerceHookEntry(value: unknown): JsonRecord {
   if (typeof value === "boolean") {
@@ -125,6 +130,107 @@ function parseCronJobs(raw: string): JsonRecord[] {
   }
 }
 
+function readCronJobText(job: JsonRecord, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = job[key]
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim()
+    }
+  }
+
+  return undefined
+}
+
+function isCronJobEnabled(job: JsonRecord): boolean {
+  return job.enabled === true || job.enabled === "true"
+}
+
+function readCronJobExpression(job: JsonRecord): string | undefined {
+  const direct = readCronJobText(job, ["cron", "schedule"])
+  if (direct) {
+    return direct
+  }
+
+  const schedule = asRecord(job.schedule)
+  return readCronJobText(schedule, ["expr", "cron"])
+}
+
+function readCronJobTimeZone(job: JsonRecord): string | undefined {
+  const direct = readCronJobText(job, ["tz", "timezone"])
+  if (direct) {
+    return direct
+  }
+
+  const schedule = asRecord(job.schedule)
+  return readCronJobText(schedule, ["tz", "timezone"])
+}
+
+function readCronJobSession(job: JsonRecord): string | undefined {
+  const direct = readCronJobText(job, ["session", "sessionKey", "sessionTarget"])
+  if (direct) {
+    return direct
+  }
+
+  const payload = asRecord(job.payload)
+  return readCronJobText(payload, ["session", "sessionKey", "sessionTarget"])
+}
+
+function readCronJobMessage(job: JsonRecord): string | undefined {
+  const direct = readCronJobText(job, ["message"])
+  if (direct) {
+    return direct
+  }
+
+  const payload = asRecord(job.payload)
+  return readCronJobText(payload, ["message"])
+}
+
+function sweepCronJobMatchesDesiredSchedule(job: JsonRecord, expectedTimeZone: string): boolean {
+  const expression = readCronJobExpression(job)
+  const timeZone = readCronJobTimeZone(job)
+  const session = readCronJobSession(job)
+  const message = readCronJobMessage(job)
+
+  return (
+    expression === SWEEP_CRON_EXPRESSION &&
+    timeZone === expectedTimeZone &&
+    session === SWEEP_CRON_SESSION &&
+    message === SWEEP_CRON_MESSAGE
+  )
+}
+
+function nightlyMaintenanceCronJobMatchesDesiredSchedule(
+  job: JsonRecord,
+  expectedTimeZone: string,
+  expectedMessage: string,
+): boolean {
+  const expression = readCronJobExpression(job)
+  const timeZone = readCronJobTimeZone(job)
+  const session = readCronJobSession(job)
+  const message = readCronJobMessage(job)
+
+  return (
+    expression === NIGHTLY_MAINTENANCE_CRON_EXPRESSION &&
+    timeZone === expectedTimeZone &&
+    session === NIGHTLY_MAINTENANCE_CRON_SESSION &&
+    message === expectedMessage
+  )
+}
+
+function resolveLocalTimeZone(): string {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  if (typeof timeZone === "string" && timeZone.trim().length > 0) {
+    return timeZone.trim()
+  }
+
+  return "UTC"
+}
+
+function getCronJobId(job: JsonRecord): string | undefined {
+  const id = job.id
+  return typeof id === "string" && id.trim().length > 0 ? id.trim() : undefined
+}
+
 function runCronCommand(args: string[]): { ok: boolean; stdout: string; stderr: string; message?: string } {
   const result = spawnSync("openclaw", args, {
     encoding: "utf8",
@@ -157,12 +263,16 @@ function runCronCommand(args: string[]): { ok: boolean; stdout: string; stderr: 
   }
 }
 
-export interface SweepCronResult {
+export interface CronJobResult {
   status: "installed" | "skipped" | "failed"
   message?: string
 }
 
-export function ensureZettelclawSweepCronJob(): SweepCronResult {
+function ensureCronJob(
+  jobName: string,
+  matchesDesiredSchedule: (job: JsonRecord) => boolean,
+  createCommandArgs: string[],
+): CronJobResult {
   const listed = runCronCommand(["cron", "list", "--json"])
 
   if (!listed.ok) {
@@ -170,38 +280,75 @@ export function ensureZettelclawSweepCronJob(): SweepCronResult {
   }
 
   const jobs = parseCronJobs(listed.stdout)
-  const namedJobs = jobs.filter((job) => job.name === SWEEP_CRON_JOB_NAME)
-  const enabledJob = namedJobs.find((job) => job.enabled === true)
+  const namedJobs = jobs.filter((job) => job.name === jobName)
+  const enabledJob = namedJobs.find((job) => isCronJobEnabled(job))
 
   if (enabledJob) {
-    return { status: "skipped" }
+    if (matchesDesiredSchedule(enabledJob)) {
+      return { status: "skipped" }
+    }
+
+    const enabledJobId = getCronJobId(enabledJob)
+    if (!enabledJobId) {
+      return {
+        status: "failed",
+        message: `Found legacy ${jobName} cron job without an id; disable it manually and rerun init.`,
+      }
+    }
+
+    const disabled = runCronCommand(["cron", "disable", enabledJobId, "--json"])
+    if (!disabled.ok) {
+      return {
+        status: "failed",
+        message: `Could not disable legacy ${jobName}: ${disabled.message ?? "unknown error"}`,
+      }
+    }
   }
 
-  const disabledJobWithId = namedJobs.find((job) => typeof job.id === "string" && (job.id as string).length > 0)
+  const matchingDisabledJobWithId = namedJobs.find(
+    (job) => !isCronJobEnabled(job) && matchesDesiredSchedule(job) && getCronJobId(job),
+  )
 
-  if (disabledJobWithId) {
-    const jobId = disabledJobWithId.id as string
+  if (matchingDisabledJobWithId) {
+    const jobId = getCronJobId(matchingDisabledJobWithId) as string
     const enabled = runCronCommand(["cron", "enable", jobId, "--json"])
 
     if (!enabled.ok) {
       return {
         status: "failed",
-        message: `Could not enable ${SWEEP_CRON_JOB_NAME}: ${enabled.message ?? "unknown error"}`,
+        message: `Could not enable ${jobName}: ${enabled.message ?? "unknown error"}`,
       }
     }
 
     return { status: "installed" }
   }
 
-  const created = runCronCommand([
+  const created = runCronCommand(createCommandArgs)
+
+  if (!created.ok) {
+    return {
+      status: "failed",
+      message: `Could not create ${jobName}: ${created.message ?? "unknown error"}`,
+    }
+  }
+
+  return { status: "installed" }
+}
+
+export function ensureZettelclawSweepCronJob(): CronJobResult {
+  const timeZone = resolveLocalTimeZone()
+  return ensureCronJob(SWEEP_CRON_JOB_NAME, (job) => sweepCronJobMatchesDesiredSchedule(job, timeZone), [
     "cron",
     "add",
     "--name",
     SWEEP_CRON_JOB_NAME,
     "--description",
-    "Periodic Zettelclaw transcript sweep trigger",
-    "--every",
-    SWEEP_CRON_INTERVAL,
+    "Daily Zettelclaw transcript sweep trigger",
+    "--cron",
+    SWEEP_CRON_EXPRESSION,
+    "--tz",
+    timeZone,
+    "--exact",
     "--session",
     SWEEP_CRON_SESSION,
     "--message",
@@ -209,15 +356,54 @@ export function ensureZettelclawSweepCronJob(): SweepCronResult {
     "--no-deliver",
     "--json",
   ])
+}
 
-  if (!created.ok) {
-    return {
-      status: "failed",
-      message: `Could not create ${SWEEP_CRON_JOB_NAME}: ${created.message ?? "unknown error"}`,
-    }
+export async function ensureZettelclawNightlyMaintenanceCronJob(vaultPath: string): Promise<CronJobResult> {
+  const templatePath = join(TEMPLATE_SOURCE_DIR, NIGHTLY_MAINTENANCE_TEMPLATE)
+  let template: string
+
+  try {
+    template = await readFile(templatePath, "utf8")
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { status: "failed", message: `Could not read template ${templatePath}: ${message}` }
   }
 
-  return { status: "installed" }
+  const maintenanceMessage = substituteTemplate(template, {
+    VAULT_PATH: vaultPath,
+    SKILL_PACKAGE_PATH: resolveSkillPackageDir(),
+  }).trim()
+
+  if (maintenanceMessage.length === 0) {
+    return { status: "failed", message: `Template ${templatePath} rendered an empty maintenance message.` }
+  }
+
+  const timeZone = resolveLocalTimeZone()
+  return ensureCronJob(
+    NIGHTLY_MAINTENANCE_CRON_JOB_NAME,
+    (job) => nightlyMaintenanceCronJobMatchesDesiredSchedule(job, timeZone, maintenanceMessage),
+    [
+      "cron",
+      "add",
+      "--name",
+      NIGHTLY_MAINTENANCE_CRON_JOB_NAME,
+      "--description",
+      "Nightly Zettelclaw vault maintenance pass",
+      "--cron",
+      NIGHTLY_MAINTENANCE_CRON_EXPRESSION,
+      "--tz",
+      timeZone,
+      "--exact",
+      "--session",
+      NIGHTLY_MAINTENANCE_CRON_SESSION,
+      "--message",
+      maintenanceMessage,
+      "--timeout-seconds",
+      NIGHTLY_MAINTENANCE_CRON_TIMEOUT_SECONDS,
+      "--no-deliver",
+      "--json",
+    ],
+  )
 }
 
 /**
