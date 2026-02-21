@@ -138,7 +138,13 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   const syncMethod = options.yes ? "git" : await promptSyncMethod("git")
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
+  const explicitWorkspaceConfigured = typeof options.workspacePath === "string" && options.workspacePath.length > 0
   const workspaceDetected = await isDirectory(workspacePath)
+
+  if (explicitWorkspaceConfigured && !workspaceDetected) {
+    throw new Error(`OpenClaw workspace not found at ${toTildePath(workspacePath)}`)
+  }
+
   const openclawRequested = workspaceDetected
   const includeAgentFolder = openclawRequested
   const shouldCreateSymlinks = openclawRequested
@@ -169,34 +175,61 @@ export async function runInit(options: InitOptions): Promise<void> {
   let hookInstallMessage: string | undefined
   let configPatchMessage: string | undefined
   let symlinkResult: CopyResult = { added: [], skipped: [], failed: [] }
+  const integrationFailures: string[] = []
+  let setupSucceeded = false
 
-  if (shouldCreateSymlinks) {
-    symlinkResult = await createAgentSymlinks(vaultPath, workspacePath)
-  }
-
-  if (openclawRequested) {
-    const hookInstallResult = await installOpenClawHook(openclawDir)
-    hookInstallStatus = hookInstallResult.status
-    hookInstallMessage = hookInstallResult.message
-
-    const configPatchResult = await patchOpenClawConfig(vaultPath, openclawDir)
-    configPatched = configPatchResult.changed
-    configPatchMessage = configPatchResult.message
-  }
-
-  await configureApp(vaultPath, includeAgentFolder)
-
-  let gitInitError: string | null = null
-
-  if (shouldInitGit) {
-    const gitDir = join(vaultPath, ".git")
-
-    if (!(await pathExists(gitDir))) {
-      gitInitError = initGitRepository(vaultPath)
+  try {
+    if (shouldCreateSymlinks) {
+      symlinkResult = await createAgentSymlinks(vaultPath, workspacePath)
+      if (symlinkResult.failed.length > 0) {
+        integrationFailures.push(
+          `Could not create agent symlinks:\n${symlinkResult.failed.map((line) => `- ${line}`).join("\n")}`,
+        )
+      }
     }
-  }
 
-  s.stop("Setup complete")
+    if (openclawRequested) {
+      const hookInstallResult = await installOpenClawHook(openclawDir)
+      hookInstallStatus = hookInstallResult.status
+      hookInstallMessage = hookInstallResult.message
+
+      if (hookInstallStatus === "failed") {
+        integrationFailures.push(hookInstallMessage ?? "Could not install OpenClaw hook.")
+      }
+
+      const configPatchResult = await patchOpenClawConfig(vaultPath, openclawDir)
+      configPatched = configPatchResult.changed
+      configPatchMessage = configPatchResult.message
+
+      if (configPatchMessage) {
+        integrationFailures.push(configPatchMessage)
+      }
+    }
+
+    if (integrationFailures.length > 0) {
+      throw new Error(`OpenClaw integration failed:\n${integrationFailures.map((line) => `- ${line}`).join("\n")}`)
+    }
+
+    await configureApp(vaultPath, includeAgentFolder)
+
+    let gitInitError: string | null = null
+
+    if (shouldInitGit) {
+      const gitDir = join(vaultPath, ".git")
+
+      if (!(await pathExists(gitDir))) {
+        gitInitError = initGitRepository(vaultPath)
+      }
+    }
+
+    if (gitInitError) {
+      log.warn(`Could not initialize Git repository: ${gitInitError}`)
+    }
+
+    setupSucceeded = true
+  } finally {
+    s.stop(setupSucceeded ? "Setup complete" : "Setup failed")
+  }
 
   const summaryLines = [`Vault path:  ${toTildePath(vaultPath)}`]
 
@@ -216,28 +249,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     log.warn(`Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
   }
 
-  if (symlinkResult.failed.length > 0) {
-    log.warn(
-      `Could not create some agent symlinks (likely permissions):\n${symlinkResult.failed.map((line) => `- ${line}`).join("\n")}`,
-    )
-  }
-
-  if (gitInitError) {
-    log.warn(`Could not initialize Git repository: ${gitInitError}`)
-  }
-
   if (!workspaceDetected) {
     log.warn(
       `OpenClaw workspace not found at ${toTildePath(workspacePath)}. Skipped hook install, config patch, and agent symlinks.`,
     )
-  }
-
-  if (hookInstallStatus === "failed") {
-    log.warn(hookInstallMessage ?? "Could not install OpenClaw hook.")
-  }
-
-  if (configPatchMessage) {
-    log.warn(configPatchMessage)
   }
 
   if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {
@@ -266,11 +281,11 @@ export async function runInit(options: InitOptions): Promise<void> {
         log.success("Agent notified — it will update AGENTS.md and HEARTBEAT.md")
       } else {
         const reason = eventResult.message ?? "Could not reach the agent. Is the OpenClaw gateway running?"
-        log.warn(`${reason}\nYou can manually update using the templates in: packages/skill/templates/`)
+        log.warn(`${reason}\nYou can manually update using the templates in: skill/templates/`)
       }
     } else {
       log.message(
-        "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.\nTemplate files are in: packages/skill/templates/agents-memory.md, agents-heartbeat.md, heartbeat.md",
+        "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.\nTemplate files are in: skill/templates/agents-memory.md, agents-heartbeat.md, heartbeat.md",
       )
     }
   }

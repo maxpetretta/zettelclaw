@@ -4,13 +4,17 @@
   "description": "CLI and vault template for the Zettelclaw human+agent knowledge system",
   "type": "module",
   "bin": {
-    "zettelclaw": "./src/index.ts"
+    "zettelclaw": "./bin/zettelclaw.js"
   },
   "files": [
-    "src",
-    "vault"
+    "bin",
+    "dist",
+    "vault",
+    "skill"
   ],
   "scripts": {
+    "build": "rm -rf dist && bun build src/index.ts --target node --format esm --outdir dist",
+    "prepack": "bun run build",
     "start": "bun run src/index.ts",
     "init": "bun run src/index.ts init",
     "migrate": "bun run src/index.ts migrate",

@@ -88,6 +88,14 @@ function pathIsInsideFolder(relativePath: string, folder: string): boolean {
 function remapSeedPath(relativePath: string, options: CopyVaultOptions): string | null {
   let mapped = relativePath
 
+  if (mapped === "gitignore") {
+    mapped = ".gitignore"
+  }
+
+  if (mapped === ".obsidian/workspace.template.json") {
+    mapped = ".obsidian/workspace.json"
+  }
+
   if (!options.includeAgent) {
     if (pathIsInsideFolder(mapped, FOLDERS_WITH_AGENT.agent)) {
       return null

@@ -11,7 +11,7 @@ import { substituteTemplate } from "../lib/template"
 import { isDirectory, pathExists } from "../lib/vault"
 
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
-const SKILL_TEMPLATE_DIR = join(import.meta.dirname, "..", "..", "..", "skill", "templates")
+const SKILL_TEMPLATE_DIR = join(import.meta.dirname, "..", "..", "skill", "templates")
 
 export interface MigrateOptions {
   yes: boolean
@@ -243,9 +243,7 @@ async function chooseMemoryMdBackupPath(sourcePath: string): Promise<{ backupPat
     }
   }
 
-  throw new Error(
-    `Could not find an available backup path for MEMORY.md after ${maxAttempts} attempts`,
-  )
+  throw new Error(`Could not find an available backup path for MEMORY.md after ${maxAttempts} attempts`)
 }
 
 async function chooseBackupPath(workspacePath: string): Promise<{ source: string; backup: string; label: string }> {
@@ -335,10 +333,12 @@ async function chooseModel(models: ModelInfo[], options: MigrateOptions): Promis
   return selected
 }
 
-const MIGRATE_SESSION = "zettelclaw-migrate"
+const MIGRATE_SESSION_TARGET = "isolated"
+const MIGRATE_JOB_NAME = "zettelclaw-migrate"
 
 interface MigrateEventResult {
   sent: boolean
+  jobId?: string
   message?: string
 }
 
@@ -360,17 +360,18 @@ async function fireMigrateEvent(values: Record<string, string>): Promise<Migrate
       "cron",
       "add",
       "--at",
-      "+0s",
+      "1s",
       "--session",
-      MIGRATE_SESSION,
+      MIGRATE_SESSION_TARGET,
       "--name",
-      MIGRATE_SESSION,
+      MIGRATE_JOB_NAME,
       "--message",
       eventText,
       "--announce",
       "--delete-after-run",
       "--timeout-seconds",
       "1800",
+      "--json",
     ],
     {
       encoding: "utf8",
@@ -387,7 +388,13 @@ async function fireMigrateEvent(values: Record<string, string>): Promise<Migrate
     return { sent: false, message: stderr.length ? stderr : `openclaw cron add exited with code ${result.status}` }
   }
 
-  return { sent: true }
+  try {
+    const parsed = asRecord(JSON.parse(result.stdout))
+    const jobId = typeof parsed.id === "string" && parsed.id.length > 0 ? parsed.id : undefined
+    return jobId ? { sent: true, jobId } : { sent: true }
+  } catch {
+    return { sent: true }
+  }
 }
 
 export async function runMigrate(options: MigrateOptions): Promise<void> {
@@ -395,8 +402,7 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
 
   const vaultPath = await detectVaultPath(options)
   if (!(vaultPath && (await isDirectory(vaultPath)))) {
-    log.error("Could not find a Zettelclaw vault. Run `zettelclaw init` first.")
-    return
+    throw new Error("Could not find a Zettelclaw vault. Run `zettelclaw init` first.")
   }
 
   const layout = await detectVaultLayout(vaultPath)
@@ -404,8 +410,7 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   const memoryPath = join(workspacePath, "memory")
 
   if (!(await isDirectory(memoryPath))) {
-    log.error(`No memory directory found at ${toTildePath(memoryPath)}. Nothing to migrate.`)
-    return
+    throw new Error(`No memory directory found at ${toTildePath(memoryPath)}. Nothing to migrate.`)
   }
 
   const summary = await readMemorySummary(memoryPath)
@@ -466,10 +471,21 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   })
 
   if (!eventResult.sent) {
-    log.warn(eventResult.message ?? "Could not fire migration event. Is the OpenClaw gateway running?")
-    return
+    throw new Error(eventResult.message ?? "Could not fire migration event. Is the OpenClaw gateway running?")
   }
 
   log.success(`Migration started! Your agent will process ${summary.files.length} files.`)
-  log.message(`Watch progress with:\n  openclaw tui --session ${MIGRATE_SESSION}`)
+
+  if (eventResult.jobId) {
+    log.message(
+      [
+        "Watch progress with:",
+        `  openclaw cron runs --id ${eventResult.jobId}`,
+        `  openclaw tui --session ${MIGRATE_SESSION_TARGET}`,
+      ].join("\n"),
+    )
+    return
+  }
+
+  log.message(`Watch progress with:\n  openclaw tui --session ${MIGRATE_SESSION_TARGET}`)
 }

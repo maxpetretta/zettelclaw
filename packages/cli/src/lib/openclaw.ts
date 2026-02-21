@@ -6,7 +6,7 @@ import { asRecord, type JsonRecord } from "./json"
 import { substituteTemplate } from "./template"
 import { pathExists } from "./vault"
 
-const SKILL_PACKAGE_DIR = resolve(import.meta.dirname, "..", "..", "..", "skill")
+const SKILL_PACKAGE_DIR = resolve(import.meta.dirname, "..", "..", "skill")
 const HOOK_SOURCE_DIR = join(SKILL_PACKAGE_DIR, "hooks", "zettelclaw")
 const TEMPLATE_SOURCE_DIR = join(SKILL_PACKAGE_DIR, "templates")
 

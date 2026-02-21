@@ -1,0 +1,7 @@
+.DS_Store
+05 Attachments/*
+!05 Attachments/.gitkeep
+02 Agent/*
+!02 Agent/.gitkeep
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
