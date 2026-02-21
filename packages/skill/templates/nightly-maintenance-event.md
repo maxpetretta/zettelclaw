@@ -12,7 +12,7 @@ Required actions:
 3. Synthesize net-new durable concepts into `00 Inbox/` (do not create net-new synthesis notes directly in `01 Notes/`).
 4. If a needed typed note does not exist yet, create an inbox handoff note in `00 Inbox/`.
 5. Check for unresolved/orphan notes (`obsidian unresolved`, `obsidian orphans` when available; otherwise use file-tool fallbacks).
-6. Update `MEMORY.md` with anything that should remain in hot working memory.
+6. Update `MEMORY.md` with anything critical that should remain in hot working memory.
 7. Journal health check: if no journal entries exist in the most recent 72 hours, clearly flag this as a possible hook/cron failure for the user.
 
 Rules:

@@ -37,9 +37,9 @@ npx zettelclaw init --yes --vault ~/my-vault
 
 ## Memory Flow
 
-- Hook layer (`/new` or `/reset`): appends structured capture to daily journals (`Done`, `Decisions`, `Facts`, `Open`) in `03 Journal/`
+- Hook layer (`/new` or `/reset`): appends link-free capture to daily journals under `Done`, `Decisions`, `Facts`, and `Open`, then records `SESSION_ID — HH:MM` under `## Sessions` in `03 Journal/`
 - Supervised layer (human + agent): updates typed notes directly in `01 Notes/` when meaningful work is done
-- Nightly maintenance cron layer (agent-only, isolated): reviews the past day of journals, updates existing `project`/`research`/`contact` notes, and writes net-new synthesis to `00 Inbox/`
+- Nightly maintenance cron layer (agent-only, isolated): reviews the past day of journals, updates existing `project`/`research`/`contact` notes, writes net-new synthesis to `00 Inbox/`, and flags possible hook/cron drift when journal coverage is missing for 72+ hours
 - Linking: nightly maintenance enforces two-way links between journal entries and typed notes (`journal -> note` and `note -> journal/session`)
 
 ## Web Clipper Template
