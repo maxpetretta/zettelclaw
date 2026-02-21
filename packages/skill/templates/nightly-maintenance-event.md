@@ -13,6 +13,7 @@ Required actions:
 4. If a needed typed note does not exist yet, create an inbox handoff note in `00 Inbox/`.
 5. Check for unresolved/orphan notes (`obsidian unresolved`, `obsidian orphans` when available; otherwise use file-tool fallbacks).
 6. Update `MEMORY.md` with anything that should remain in hot working memory.
+7. Journal health check: if no journal entries exist in the most recent 72 hours, clearly flag this as a possible hook/cron failure for the user.
 
 Rules:
 - Do not create or rename folders.

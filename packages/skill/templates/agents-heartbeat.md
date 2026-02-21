@@ -4,7 +4,7 @@ Heartbeats run frequently (often every ~30 minutes). Keep heartbeat passes light
 
 - The hook already appends `Done` / `Decisions` / `Facts` / `Open` bullets to daily journals.
 - During sessions (human present), meaningful project/research work should be written directly to `01 Notes/`.
-- Full vault maintenance is handled by the dedicated nightly cron job `zettelclaw-nightly-maintenance` in an isolated session.
+- Full vault maintenance is handled by the dedicated nightly cron job `zettelclaw-nightly` in an isolated session.
 
 Nightly cron maintenance responsibilities:
 1. Review the past 24h of journals.
@@ -14,3 +14,4 @@ Nightly cron maintenance responsibilities:
    - Typed note -> source journal day/session
 4. Synthesize net-new durable ideas into `00 Inbox/` for human promotion.
 5. Check unresolved/orphan links and update MEMORY.md with important durable context.
+6. If journal coverage is missing for more than 72 hours, flag it clearly as possible hook/cron failure.

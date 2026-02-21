@@ -31,8 +31,8 @@ npx zettelclaw init --yes --vault ~/my-vault
 - Configures community plugins (Templater, Linter, Obsidian Git)
 - Auto-detects OpenClaw and creates `02 Agent/` symlinks + workspace injection (or compacts numbering when disabled)
 - Installs OpenClaw cron jobs for:
-  - `zettelclaw-sweep` (daily 02:00 local transcript sweep trigger)
-  - `zettelclaw-nightly-maintenance` (daily 03:00 local isolated maintenance pass)
+  - `zettelclaw-reset` (daily 02:00 local transcript sweep trigger)
+  - `zettelclaw-nightly` (daily 03:00 local isolated maintenance pass)
 - Sets up frontmatter-driven note types that both humans and AI agents can read/write
 
 ## Memory Flow

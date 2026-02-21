@@ -316,7 +316,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       sweepCronMessage = sweepCronResult.message
 
       if (sweepCronStatus === "failed") {
-        integrationFailures.push(sweepCronMessage ?? "Could not configure zettelclaw-sweep cron trigger.")
+        integrationFailures.push(sweepCronMessage ?? "Could not configure zettelclaw-reset cron trigger.")
       }
     }
 
@@ -327,7 +327,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
       if (nightlyMaintenanceCronStatus === "failed") {
         integrationFailures.push(
-          nightlyMaintenanceCronMessage ?? "Could not configure zettelclaw-nightly-maintenance cron trigger.",
+          nightlyMaintenanceCronMessage ?? "Could not configure zettelclaw-nightly cron trigger.",
         )
       }
     }
@@ -370,11 +370,11 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   if (sweepCronStatus === "installed" || sweepCronStatus === "skipped") {
-    summaryLines.push("Cron:        zettelclaw-sweep (daily 02:00 local, isolated /reset)")
+    summaryLines.push("Cron:        zettelclaw-reset (daily 02:00 local, isolated /reset)")
   }
 
   if (nightlyMaintenanceCronStatus === "installed" || nightlyMaintenanceCronStatus === "skipped") {
-    summaryLines.push("Cron:        zettelclaw-nightly-maintenance (daily 03:00 local, isolated vault maintenance)")
+    summaryLines.push("Cron:        zettelclaw-nightly (daily 03:00 local, isolated vault maintenance)")
   }
 
   log.message(summaryLines.join("\n"))

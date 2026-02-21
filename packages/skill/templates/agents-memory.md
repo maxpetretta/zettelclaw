@@ -11,7 +11,7 @@ The vault is indexed via `memory_search` alongside the workspace, so semantic se
 
 - **Layer 1 - Hook -> Journal (automatic on `/new` or `/reset`):** The hook appends bullets to day-level `Done`, `Decisions`, `Facts`, and `Open` sections in `03 Journal/YYYY-MM-DD.md`, then records provenance in `## Sessions` as `SESSION_ID — HH:MM`. It is journal-only raw capture: no wikilinks, no vault navigation, no note creation.
 - **Layer 2 - Agent + Human -> Notes (during sessions):** When meaningful work happens with the human in the loop, update the relevant project/research notes directly in `01 Notes/`.
-- **Layer 3 - Nightly Cron -> Maintenance (agent-only):** A dedicated isolated cron session (`zettelclaw-nightly-maintenance`) runs nightly to review the past day of journals/sessions, update existing `project`/`research`/`contact` notes in `01 Notes/`, and put net-new synthesized concepts in `00 Inbox/` for human review. This pass also adds/fixes wikilinks in journals, tracks superseded knowledge, and updates MEMORY.md.
+- **Layer 3 - Nightly Cron -> Maintenance (agent-only):** A dedicated isolated cron session (`zettelclaw-nightly`) runs nightly to review the past day of journals/sessions, update existing `project`/`research`/`contact` notes in `01 Notes/`, and put net-new synthesized concepts in `00 Inbox/` for human review. This pass also adds/fixes wikilinks in journals, tracks superseded knowledge, and updates MEMORY.md.
 
 ### When to Update the Vault Directly
 
