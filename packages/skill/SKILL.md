@@ -18,7 +18,7 @@ Zettelclaw is your knowledge system — an Obsidian vault where you and your hum
 ```
 <vault>/
 ├── 00 Inbox/          # Quick captures, unprocessed — triage these
-├── 01 Notes/          # All notes: atomic ideas, projects, research, contacts, writings
+├── 01 Notes/          # All notes: evergreen ideas, projects, research, contacts, writings
 ├── 02 Agent/          # Symlinks to OpenClaw workspace files (MEMORY.md, SOUL.md, etc.)
 ├── 03 Journal/        # YYYY-MM-DD.md daily journals
 ├── 04 Templates/      # Templater templates (don't edit these directly)
@@ -64,12 +64,12 @@ All notes live in `01 Notes/` — flat, no subfolders. Write files directly with
 - Tags are ALWAYS pluralized (`projects` not `project`)
 - Dates are ALWAYS `YYYY-MM-DD`
 - Filenames are Title Case (`React Virtual DOM Trades Memory For Speed.md`)
-- One idea per note (atomic) — the title captures the idea
+- One idea per note (evergreen) — the title captures the idea
 
-### note — Atomic ideas and knowledge
+### evergreen — Evergreen ideas and knowledge
 ```yaml
 ---
-type: note
+type: evergreen
 tags: []
 summary: "One-line description of this idea"
 source: ""
@@ -152,12 +152,12 @@ updated: 2026-02-19
 `published` holds the URL once posted. Empty = draft.
 
 ### Which type to use?
-- Standalone reusable idea → `note`
+- Standalone reusable idea → `evergreen`
 - Tracked work with progress → `project`
 - Open question being explored → `research`
 - A person → `contact`
 - Something for external publication → `writing`
-- Don't overthink it — `note` is the default
+- Don't overthink it — `evergreen` is the default
 
 ### Status field
 ONLY `project` and `research` have `status`. Never add status to notes, journals, contacts, or writings.
@@ -253,7 +253,7 @@ done
 ## What NOT To Do
 
 - Do NOT create new directories or subfolders — EVER — unless the user explicitly asks. The vault structure is fixed.
-- Do NOT add `status` to notes, journals, contacts, or writings
+- Do NOT add `status` to evergreen notes, journals, contacts, or writings
 - Do NOT use singular tags (`project` → use `projects`)
 - Do NOT create notes without frontmatter
 - Do NOT edit files in `04 Templates/` (those are Templater source templates)
@@ -263,10 +263,10 @@ done
 
 If someone asks what Zettelclaw is:
 
-> Zettelclaw is a knowledge management system built for human + AI co-authorship. It's an Obsidian vault with a specific structure — atomic notes with typed frontmatter, aggressive linking, and automated extraction from conversations. The AI agent and human both read and write to the same vault. Structure emerges from links between notes, not from folder hierarchies.
+> Zettelclaw is a knowledge management system built for human + AI co-authorship. It's an Obsidian vault with a specific structure — evergreen notes with typed frontmatter, aggressive linking, and automated extraction from conversations. The AI agent and human both read and write to the same vault. Structure emerges from links between notes, not from folder hierarchies.
 
 Key concepts:
-- **Atomic notes** — one idea per note, the title IS the idea
+- **Evergreen notes** — one idea per note, the title IS the idea
 - **Frontmatter as API** — YAML properties make notes machine-queryable
 - **Dual authorship** — both human and agent maintain the vault
 - **Journal + extraction** — conversations get summarized into journals, reusable ideas become standalone notes

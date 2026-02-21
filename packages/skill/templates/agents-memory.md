@@ -10,7 +10,7 @@ The vault is indexed via `memory_search` alongside the workspace, so semantic se
 ### How Memory Works
 
 - **During sessions:** Use `memory_search` to recall information. Write running notes to the vault journal (`03 Journal/YYYY-MM-DD.md`) if something noteworthy happens.
-- **On session reset (`/new`):** The Zettelclaw hook automatically extracts a structured journal entry and (when warranted) atomic notes from the conversation into the vault.
+- **On session reset (`/new` or `/reset`):** The Zettelclaw hook triggers a vault-maintenance pass using the latest transcript, so the agent can update or create journals and typed notes directly.
 - **During heartbeats:** Triage `00 Inbox/`, maintain vault links, surface orphans, update MEMORY.md.
 
 ### 🧠 MEMORY.md - Your Hot Cache

@@ -6,7 +6,7 @@
   "path": "00 Inbox",
   "context": "{{selectorHtml:article,main,.post-content,.entry-content,#content|markdown|slice:0,8000|trim}}",
   "properties": [
-    {"name": "type", "value": "note", "type": "text"},
+    {"name": "type", "value": "evergreen", "type": "text"},
     {"name": "source", "value": "{{url}}", "type": "text"},
     {"name": "tags", "value": "clippings", "type": "text"},
     {"name": "created", "value": "{{date:YYYY-MM-DD}}", "type": "text"},

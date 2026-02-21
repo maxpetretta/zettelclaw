@@ -3,9 +3,15 @@ import { cp } from "node:fs/promises"
 import { basename, dirname, join } from "node:path"
 import { confirm, intro, log, select, spinner, text } from "@clack/prompts"
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
-import { firePostInitEvent, installOpenClawHook, patchOpenClawConfig } from "../lib/openclaw"
+import {
+  ensureZettelclawSweepCronJob,
+  firePostInitEvent,
+  installOpenClawHook,
+  patchOpenClawConfig,
+} from "../lib/openclaw"
 import { resolveUserPath } from "../lib/paths"
 import { downloadPlugins } from "../lib/plugins"
+import { resolveSkillPath } from "../lib/skill"
 import {
   type CopyResult,
   configureAgentFolder,
@@ -47,6 +53,85 @@ function initGitRepository(vaultPath: string): string | null {
   }
 
   return null
+}
+
+interface CommandOutcome {
+  ok: boolean
+  stdout: string
+  stderr: string
+  message?: string
+}
+
+function runOpenClawCommand(args: string[], timeoutMs: number): CommandOutcome {
+  const result = spawnSync("openclaw", args, {
+    encoding: "utf8",
+    timeout: timeoutMs,
+  })
+
+  if (result.error) {
+    return {
+      ok: false,
+      stdout: result.stdout ?? "",
+      stderr: result.stderr ?? "",
+      message: result.error.message,
+    }
+  }
+
+  if (result.status !== 0) {
+    const stderr = result.stderr.trim()
+    return {
+      ok: false,
+      stdout: result.stdout ?? "",
+      stderr,
+      message: stderr.length > 0 ? stderr : `openclaw ${args.join(" ")} exited with code ${result.status}`,
+    }
+  }
+
+  return {
+    ok: true,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  }
+}
+
+async function waitForGatewayHealthy(maxWaitMs = 60_000, pollIntervalMs = 2_000): Promise<string | null> {
+  const deadline = Date.now() + maxWaitMs
+  let lastError = "Gateway did not report a healthy state."
+
+  while (Date.now() < deadline) {
+    const health = runOpenClawCommand(["gateway", "health", "--json", "--timeout", "5000"], 10_000)
+
+    if (health.ok) {
+      try {
+        const parsed = JSON.parse(health.stdout) as Record<string, unknown>
+        if (parsed.ok === true) {
+          return null
+        }
+
+        const reason = typeof parsed.message === "string" ? parsed.message : ""
+        lastError = reason.length > 0 ? reason : "Gateway health check returned ok=false."
+      } catch {
+        const trimmed = health.stdout.trim()
+        lastError =
+          trimmed.length > 0 ? `Could not parse gateway health JSON: ${trimmed}` : "Malformed gateway health JSON."
+      }
+    } else {
+      lastError = health.message ?? "Gateway health check failed."
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+  }
+
+  return `Gateway restart timed out after ${Math.round(maxWaitMs / 1000)}s. Last check: ${lastError}`
+}
+
+async function restartGatewayAndWait(): Promise<string | null> {
+  const restart = runOpenClawCommand(["gateway", "restart", "--json"], 20_000)
+  if (!restart.ok) {
+    return `Could not restart OpenClaw gateway: ${restart.message ?? "unknown error"}`
+  }
+
+  return await waitForGatewayHealthy()
 }
 
 async function chooseFileBackupPath(sourcePath: string): Promise<{ backupPath: string; label: string }> {
@@ -174,6 +259,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   let hookInstallStatus: "installed" | "skipped" | "failed" | null = null
   let hookInstallMessage: string | undefined
   let configPatchMessage: string | undefined
+  let sweepCronStatus: "installed" | "skipped" | "failed" | null = null
+  let sweepCronMessage: string | undefined
+  let gatewayRestarted = false
   let symlinkResult: CopyResult = { added: [], skipped: [], failed: [] }
   const integrationFailures: string[] = []
   let setupSucceeded = false
@@ -203,6 +291,27 @@ export async function runInit(options: InitOptions): Promise<void> {
 
       if (configPatchMessage) {
         integrationFailures.push(configPatchMessage)
+      }
+    }
+
+    const restartRequired = openclawRequested && (hookInstallStatus === "installed" || configPatched)
+    if (restartRequired && integrationFailures.length === 0) {
+      s.message("Restarting OpenClaw gateway")
+      const restartError = await restartGatewayAndWait()
+      if (restartError) {
+        integrationFailures.push(restartError)
+      } else {
+        gatewayRestarted = true
+      }
+    }
+
+    if (openclawRequested && integrationFailures.length === 0) {
+      const sweepCronResult = ensureZettelclawSweepCronJob()
+      sweepCronStatus = sweepCronResult.status
+      sweepCronMessage = sweepCronResult.message
+
+      if (sweepCronStatus === "failed") {
+        integrationFailures.push(sweepCronMessage ?? "Could not configure zettelclaw-sweep cron trigger.")
       }
     }
 
@@ -240,7 +349,11 @@ export async function runInit(options: InitOptions): Promise<void> {
   summaryLines.push("Skill:       /zettelclaw")
 
   if (hookInstallStatus === "installed" || hookInstallStatus === "skipped") {
-    summaryLines.push("Hooks:       zettelclaw (command:new) replaces session-memory")
+    summaryLines.push("Hooks:       zettelclaw (command:new/reset) replaces session-memory")
+  }
+
+  if (sweepCronStatus === "installed" || sweepCronStatus === "skipped") {
+    summaryLines.push("Cron:        zettelclaw-sweep (every 30m, isolated /reset)")
   }
 
   log.message(summaryLines.join("\n"))
@@ -255,8 +368,8 @@ export async function runInit(options: InitOptions): Promise<void> {
     )
   }
 
-  if (openclawRequested && (hookInstallStatus === "installed" || configPatched)) {
-    log.warn("Restart OpenClaw gateway for hook and config changes to take effect.")
+  if (gatewayRestarted) {
+    log.success("OpenClaw gateway restarted and healthy.")
   }
 
   // Prompt to notify the agent to update workspace files
@@ -271,21 +384,23 @@ export async function runInit(options: InitOptions): Promise<void> {
         )
 
     if (shouldNotify) {
-      const backupLogs = await backupWorkspaceRewriteFiles(workspacePath)
-      for (const backupLog of backupLogs) {
-        log.success(backupLog)
-      }
+      await backupWorkspaceRewriteFiles(workspacePath)
 
       const eventResult = await firePostInitEvent(vaultPath)
       if (eventResult.sent) {
         log.success("Agent notified — it will update AGENTS.md and HEARTBEAT.md")
       } else {
+        const templatesDir = resolveSkillPath("templates")
         const reason = eventResult.message ?? "Could not reach the agent. Is the OpenClaw gateway running?"
-        log.warn(`${reason}\nYou can manually update using the templates in: skill/templates/`)
+        log.warn(`${reason}\nYou can manually update using the templates in: ${templatesDir}`)
       }
     } else {
+      const templatesDir = resolveSkillPath("templates")
       log.message(
-        "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.\nTemplate files are in: skill/templates/agents-memory.md, agents-heartbeat.md, heartbeat.md",
+        [
+          "Skipped. You can manually update AGENTS.md and HEARTBEAT.md later.",
+          `Template files are in: ${join(templatesDir, "agents-memory.md")}, ${join(templatesDir, "agents-heartbeat.md")}, ${join(templatesDir, "heartbeat.md")}`,
+        ].join("\n"),
       )
     }
   }

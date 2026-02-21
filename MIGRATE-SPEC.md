@@ -135,16 +135,16 @@ ls "{{vaultPath}}/01 Notes/"
 - Read the memory file at `{{workspacePath}}/memory/<filename>`
 - Create a journal entry at `{{vaultPath}}/03 Journal/<filename>` with proper frontmatter (type: journal, tags: [journals], created/updated dates)
 - The journal should have sections: Done, Decisions, Open, Notes — summarize the raw content into these sections concisely
-- Extract any atomic, reusable ideas into separate notes in `{{vaultPath}}/01 Notes/` with proper frontmatter
+- Extract any evergreen, reusable ideas into separate notes in `{{vaultPath}}/01 Notes/` with proper frontmatter
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
 - Report back: a list of all note titles created (for the wikilink index)
 - When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
 
 **For non-daily files**, instruct each sub-agent:
 - Read the memory file at `{{workspacePath}}/memory/<filename>`
-- Determine the appropriate note type (note, project, research) based on content
+- Determine the appropriate note type (evergreen, project, research) based on content
 - Create a properly typed note in `{{vaultPath}}/01 Notes/` with correct frontmatter and a good Title Case filename
-- If the file contains multiple distinct topics, split into multiple atomic notes
+- If the file contains multiple distinct topics, split into multiple evergreen notes
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
 - Report back: a list of all note titles created
 - When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
@@ -168,7 +168,7 @@ After all files are processed:
 - All filenames must be Title Case
 - All dates must be YYYY-MM-DD
 - Every note must have complete YAML frontmatter
-- One idea per note (atomic)
+- One idea per note (evergreen)
 - Link aggressively — first mention of any concept gets a `[[wikilink]]`
 - Omit empty journal sections
 ```

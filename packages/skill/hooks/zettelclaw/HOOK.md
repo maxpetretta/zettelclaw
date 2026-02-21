@@ -1,18 +1,18 @@
 ---
 name: zettelclaw
-description: "Extract atomic vault notes from session conversations on /new"
+description: "Dispatch vault-maintenance tasks from session resets"
 homepage: https://zettelclaw.com
 metadata:
   openclaw:
     emoji: "🦞"
-    events: ["command:new"]
+    events: ["command:new", "command:reset"]
     requires:
       config: ["workspace.dir"]
 ---
 
 # Zettelclaw Hook
 
-Extracts atomic, reusable notes from recent session conversation context when `/new` is run.
+Dispatches an agent task on `/new` or `/reset` so the agent can navigate the vault and update/create notes directly. Also performs idempotent transcript sweeps to backfill missed sessions.
 
 ## Config
 
@@ -21,4 +21,10 @@ Extracts atomic, reusable notes from recent session conversation context when `/
 - `enabled` (boolean): enable/disable the hook
 - `messages` (number): recent user/assistant messages to consider (default: `20`)
 - `vaultPath` (string): explicit vault path override
-- `model` (string): model override for extraction
+- `model` (string): preferred model hint for spawned subagents
+- `expectFinal` (boolean): wait for the system event to finish before returning (default: `false`)
+- `sweepEnabled` (boolean): enable/disable transcript sweeps (default: `true`)
+- `sweepEveryMinutes` (number): minimum minutes between sweeps (default: `30`)
+- `sweepMessages` (number): max turns per swept transcript extraction (default: `120`)
+- `sweepMaxFiles` (number): max transcripts to inspect per sweep run (default: `40`)
+- `sweepStaleMinutes` (number): minimum age for active `.jsonl` transcripts (default: `180`)

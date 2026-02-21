@@ -87,7 +87,7 @@ async function readTail(pathToFile: string, maxBytes: number): Promise<string> {
   }
 }
 
-async function readSessionTurns(pathToSession: string): Promise<ConversationTurn[]> {
+export async function readSessionTurnsFromFile(pathToSession: string): Promise<ConversationTurn[]> {
   try {
     const raw = await readTail(pathToSession, MAX_SESSION_READ_BYTES)
     const lines = raw
@@ -115,7 +115,7 @@ async function readSessionTurns(pathToSession: string): Promise<ConversationTurn
   }
 }
 
-function resolveSessionFile(event: SessionEventLike): string | null {
+export function resolveSessionFilePath(event: SessionEventLike): string | null {
   const sessionFile = event.context?.sessionFile
   if (typeof sessionFile === "string" && sessionFile.trim().length > 0) {
     return resolve(sessionFile)
@@ -160,24 +160,51 @@ export async function readRecentSessionMessages(
   event: SessionEventLike,
   maxMessages: number,
 ): Promise<ConversationTurn[]> {
-  const sessionFile = resolveSessionFile(event)
+  const result = await readRecentSessionMessagesWithSource(event, maxMessages)
+  return result.turns
+}
+
+export interface SessionMessageReadResult {
+  turns: ConversationTurn[]
+  sessionFile: string | null
+  sourceFile: string | null
+  sourceTurns: number
+}
+
+export async function readRecentSessionMessagesWithSource(
+  event: SessionEventLike,
+  maxMessages: number,
+): Promise<SessionMessageReadResult> {
+  const sessionFile = resolveSessionFilePath(event)
   if (!sessionFile) {
-    return []
+    return { turns: [], sessionFile: null, sourceFile: null, sourceTurns: 0 }
   }
 
   const candidates = [sessionFile, ...(await findResetFiles(sessionFile))]
   let fallback: ConversationTurn[] = []
+  let fallbackSource: string | null = null
 
   for (const candidate of candidates) {
-    const turns = await readSessionTurns(candidate)
+    const turns = await readSessionTurnsFromFile(candidate)
     if (turns.length >= 2) {
-      return turns.slice(-maxMessages)
+      return {
+        turns: turns.slice(-maxMessages),
+        sessionFile,
+        sourceFile: candidate,
+        sourceTurns: turns.length,
+      }
     }
 
     if (turns.length > fallback.length) {
       fallback = turns
+      fallbackSource = candidate
     }
   }
 
-  return fallback.slice(-maxMessages)
+  return {
+    turns: fallback.slice(-maxMessages),
+    sessionFile,
+    sourceFile: fallbackSource,
+    sourceTurns: fallback.length,
+  }
 }

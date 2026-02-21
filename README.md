@@ -2,7 +2,7 @@
 
 A human+agent knowledge system built on Obsidian and OpenClaw.
 
-Zettelclaw sets up an Obsidian vault designed for dual human+agent authorship — atomic notes, rich linking, frontmatter as API, and automated extraction from conversations to durable knowledge.
+Zettelclaw sets up an Obsidian vault designed for dual human+agent authorship — evergreen notes, rich linking, frontmatter as API, and automated extraction from conversations to durable knowledge.
 
 ## Quick Start
 
@@ -22,7 +22,7 @@ npx zettelclaw init --yes --vault ~/my-vault
 
 ## What It Does
 
-- Creates a ready-to-use Obsidian vault with 6 note templates (journal via `journal.md`, note, project, research, contact, writing)
+- Creates a ready-to-use Obsidian vault with 6 note templates (journal via `journal.md`, evergreen via `evergreen.md`, project, research, contact, writing)
 - Configures community plugins (Templater, Linter, Obsidian Git)
 - Auto-detects OpenClaw and creates `02 Agent/` symlinks + workspace injection (or compacts numbering when disabled)
 - Sets up frontmatter-driven note types that both humans and AI agents can read/write

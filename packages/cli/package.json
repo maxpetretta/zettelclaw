@@ -9,8 +9,7 @@
   "files": [
     "bin",
     "dist",
-    "vault",
-    "skill"
+    "vault"
   ],
   "scripts": {
     "build": "rm -rf dist && bun build src/index.ts --target node --format esm --outdir dist",
@@ -24,7 +23,8 @@
     "fix": "biome check --write ."
   },
   "dependencies": {
-    "@clack/prompts": "1.0.1"
+    "@clack/prompts": "1.0.1",
+    "@zettelclaw/skill": "0.1.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.3",

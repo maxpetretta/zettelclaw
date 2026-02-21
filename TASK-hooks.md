@@ -2,7 +2,7 @@
 
 ## Context
 
-Zettelclaw replaces OpenClaw's default memory system. Instead of raw transcript dumps to `memory/YYYY-MM-DD-slug.md`, session resets extract atomic vault notes with proper frontmatter. The vault becomes the single source of truth.
+Zettelclaw replaces OpenClaw's default memory system. Instead of raw transcript dumps to `memory/YYYY-MM-DD-slug.md`, session resets extract evergreen vault notes with proper frontmatter. The vault becomes the single source of truth.
 
 Read the existing codebase first — `src/` has the CLI, `vault/` has the template. This task adds a new **OpenClaw hook** that ships with the package.
 
@@ -23,7 +23,7 @@ hooks/zettelclaw/
 ```yaml
 ---
 name: zettelclaw
-description: "Extract atomic vault notes from session conversations on /new"
+description: "Extract evergreen vault notes from session conversations on /new"
 homepage: https://zettelclaw.com
 metadata:
   openclaw:
@@ -47,10 +47,10 @@ The handler fires on `command:new` and does the following:
 4. **Call LLM for extraction** — Send the conversation content to the configured LLM with this system prompt:
 
 ```
-You are a knowledge extraction agent. Given a conversation transcript, extract atomic ideas worth preserving as permanent notes.
+You are a knowledge extraction agent. Given a conversation transcript, extract evergreen ideas worth preserving as permanent notes.
 
 Rules:
-- Each note captures ONE idea (atomic). The title IS the idea.
+- Each note captures ONE idea (evergreen). The title IS the idea.
 - Title format: Title Case, opinionated/descriptive (e.g., "React Virtual DOM Trades Memory For Speed")
 - Skip mundane chatter, greetings, troubleshooting steps that aren't reusable insights
 - Skip anything that's just "we did X" without a reusable takeaway
@@ -62,7 +62,7 @@ Respond with JSON only — an array of objects:
 [
   {
     "title": "Note Title In Title Case",
-    "type": "note",
+    "type": "evergreen",
     "tags": ["tag1", "tag2"],
     "summary": "One-line summary of the idea",
     "body": "The full note content with [[wikilinks]] to related concepts.\n\nCan be multiple paragraphs.",
@@ -79,7 +79,7 @@ If nothing worth extracting, respond with: []
    - Write with full YAML frontmatter:
      ```yaml
      ---
-     type: note
+     type: evergreen
      tags: [extracted-tags]
      summary: "extracted summary"
      source: "[[YYYY-MM-DD]]"
@@ -92,10 +92,10 @@ If nothing worth extracting, respond with: []
 6. **Write/append to journal** — Append a brief extraction log to `Journal/YYYY-MM-DD.md` or `03 Journal/YYYY-MM-DD.md` (whichever exists). Create it if it doesn't exist (use the journal template frontmatter). Log format:
    ```markdown
    ## Session Reset (HH:MM)
-   Extracted N notes: [[Note Title 1]], [[Note Title 2]]
+   Extracted N evergreen notes: [[Note Title 1]], [[Note Title 2]]
    ```
 
-7. **Send confirmation** — Push a message to `event.messages`: `"🦞 Extracted N notes to vault: Note Title 1, Note Title 2"` (or `"🦞 No extractable insights from this session"` if empty).
+7. **Send confirmation** — Push a message to `event.messages`: `"🦞 Extracted N evergreen notes to vault: Note Title 1, Note Title 2"` (or `"🦞 No extractable insights from this session"` if empty).
 
 **Hook config options** (via `hooks.internal.entries.zettelclaw`):
 - `messages` (number, default 20): How many recent messages to read

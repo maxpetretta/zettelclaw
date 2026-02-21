@@ -7,11 +7,11 @@ import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwra
 import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES } from "../lib/folders"
 import { asRecord, asStringArray } from "../lib/json"
 import { resolveUserPath } from "../lib/paths"
+import { resolveSkillPath } from "../lib/skill"
 import { substituteTemplate } from "../lib/template"
 import { isDirectory, pathExists } from "../lib/vault"
 
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
-const SKILL_TEMPLATE_DIR = join(import.meta.dirname, "..", "..", "skill", "templates")
 
 export interface MigrateOptions {
   yes: boolean
@@ -343,7 +343,7 @@ interface MigrateEventResult {
 }
 
 async function fireMigrateEvent(values: Record<string, string>): Promise<MigrateEventResult> {
-  const templatePath = join(SKILL_TEMPLATE_DIR, "migrate-event.md")
+  const templatePath = resolveSkillPath("templates", "migrate-event.md")
 
   let template = ""
   try {

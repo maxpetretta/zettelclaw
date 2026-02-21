@@ -1,14 +1,18 @@
 import { spawnSync } from "node:child_process"
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises"
-import { dirname, join, resolve } from "node:path"
+import { dirname, join } from "node:path"
 
 import { asRecord, type JsonRecord } from "./json"
+import { resolveSkillPackageDir, resolveSkillPath } from "./skill"
 import { substituteTemplate } from "./template"
 import { pathExists } from "./vault"
 
-const SKILL_PACKAGE_DIR = resolve(import.meta.dirname, "..", "..", "skill")
-const HOOK_SOURCE_DIR = join(SKILL_PACKAGE_DIR, "hooks", "zettelclaw")
-const TEMPLATE_SOURCE_DIR = join(SKILL_PACKAGE_DIR, "templates")
+const HOOK_SOURCE_DIR = resolveSkillPath("hooks", "zettelclaw")
+const TEMPLATE_SOURCE_DIR = resolveSkillPath("templates")
+const SWEEP_CRON_JOB_NAME = "zettelclaw-sweep"
+const SWEEP_CRON_INTERVAL = "30m"
+const SWEEP_CRON_SESSION = "isolated"
+const SWEEP_CRON_MESSAGE = "/reset"
 
 function coerceHookEntry(value: unknown): JsonRecord {
   if (typeof value === "boolean") {
@@ -111,6 +115,111 @@ export async function patchOpenClawConfig(vaultPath: string, openclawDir: string
   }
 }
 
+function parseCronJobs(raw: string): JsonRecord[] {
+  try {
+    const parsed = asRecord(JSON.parse(raw))
+    const jobs = Array.isArray(parsed.jobs) ? parsed.jobs : []
+    return jobs.map((entry) => asRecord(entry))
+  } catch {
+    return []
+  }
+}
+
+function runCronCommand(args: string[]): { ok: boolean; stdout: string; stderr: string; message?: string } {
+  const result = spawnSync("openclaw", args, {
+    encoding: "utf8",
+    timeout: 15_000,
+  })
+
+  if (result.error) {
+    return {
+      ok: false,
+      stdout: result.stdout ?? "",
+      stderr: result.stderr ?? "",
+      message: result.error.message,
+    }
+  }
+
+  if (result.status !== 0) {
+    const stderr = result.stderr.trim()
+    return {
+      ok: false,
+      stdout: result.stdout ?? "",
+      stderr,
+      message: stderr.length > 0 ? stderr : `openclaw ${args.join(" ")} exited with code ${result.status}`,
+    }
+  }
+
+  return {
+    ok: true,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  }
+}
+
+export interface SweepCronResult {
+  status: "installed" | "skipped" | "failed"
+  message?: string
+}
+
+export function ensureZettelclawSweepCronJob(): SweepCronResult {
+  const listed = runCronCommand(["cron", "list", "--json"])
+
+  if (!listed.ok) {
+    return { status: "failed", message: `Could not list cron jobs: ${listed.message ?? "unknown error"}` }
+  }
+
+  const jobs = parseCronJobs(listed.stdout)
+  const namedJobs = jobs.filter((job) => job.name === SWEEP_CRON_JOB_NAME)
+  const enabledJob = namedJobs.find((job) => job.enabled === true)
+
+  if (enabledJob) {
+    return { status: "skipped" }
+  }
+
+  const disabledJobWithId = namedJobs.find((job) => typeof job.id === "string" && (job.id as string).length > 0)
+
+  if (disabledJobWithId) {
+    const jobId = disabledJobWithId.id as string
+    const enabled = runCronCommand(["cron", "enable", jobId, "--json"])
+
+    if (!enabled.ok) {
+      return {
+        status: "failed",
+        message: `Could not enable ${SWEEP_CRON_JOB_NAME}: ${enabled.message ?? "unknown error"}`,
+      }
+    }
+
+    return { status: "installed" }
+  }
+
+  const created = runCronCommand([
+    "cron",
+    "add",
+    "--name",
+    SWEEP_CRON_JOB_NAME,
+    "--description",
+    "Periodic Zettelclaw transcript sweep trigger",
+    "--every",
+    SWEEP_CRON_INTERVAL,
+    "--session",
+    SWEEP_CRON_SESSION,
+    "--message",
+    SWEEP_CRON_MESSAGE,
+    "--no-deliver",
+    "--json",
+  ])
+
+  if (!created.ok) {
+    return {
+      status: "failed",
+      message: `Could not create ${SWEEP_CRON_JOB_NAME}: ${created.message ?? "unknown error"}`,
+    }
+  }
+
+  return { status: "installed" }
+}
+
 /**
  * Fire a system event to tell the running OpenClaw agent to update
  * AGENTS.md and HEARTBEAT.md with Zettelclaw-aware content.
@@ -136,7 +245,7 @@ export async function firePostInitEvent(vaultPath: string): Promise<EventFireRes
   // Substitute variables
   const eventText = substituteTemplate(template, {
     VAULT_PATH: vaultPath,
-    SKILL_PACKAGE_PATH: SKILL_PACKAGE_DIR,
+    SKILL_PACKAGE_PATH: resolveSkillPackageDir(),
   })
 
   // Fire the system event via OpenClaw CLI
