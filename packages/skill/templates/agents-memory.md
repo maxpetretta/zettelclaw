@@ -9,25 +9,27 @@ The vault is indexed via `memory_search` alongside the workspace, so semantic se
 
 ### How Memory Works
 
-- **During sessions:** Use `memory_search` to recall information. Keep running context in the journal as needed, and **update project/research notes directly** when meaningful work is completed.
-- **On session reset (`/new` or `/reset`):** The Zettelclaw hook appends bullet-point summaries to `03 Journal/YYYY-MM-DD.md` (`Done`, `Decisions`, `Open`, `Notes`). It does **not** update or create typed vault notes.
-- **During heartbeats:** Synthesize journal facts into durable notes, add/fix vault links, triage `00 Inbox/`, surface orphans, and update MEMORY.md.
+- **Layer 1 - Hook -> Journal (automatic on `/new` or `/reset`):** The hook appends one session section to `03 Journal/YYYY-MM-DD.md` using `## HH:MM — SESSION_ID` with `Done`, `Decisions`, `Facts`, and `Open`. It is journal-only raw capture: no wikilinks, no vault navigation, no note creation.
+- **Layer 2 - Agent + Human -> Notes (during sessions):** When meaningful work happens with the human in the loop, update the relevant project/research notes directly in `01 Notes/`.
+- **Layer 3 - Heartbeat -> Inbox (agent-only):** During heartbeats, review recent journals/sessions and synthesize durable atomic concepts into evergreen notes in `00 Inbox/` for human review. Heartbeats also add/fix wikilinks in journals, track superseded knowledge, and update MEMORY.md.
 
 ### When to Update the Vault Directly
 
-Update typed notes during the session when the work is meaningful:
+If the human is present, update typed notes in `01 Notes/` during the session when work is meaningful:
 
 - Completed a task on an active project → append a dated log entry to the project note
 - Made a significant decision about a project → update the project note immediately
 - Finished a research investigation → update findings/conclusion in the research note
 - Learned something that changes an existing note → update that note now
-- The journal captures everything; vault notes capture what is worth preserving in structured form
+- The journal captures raw events; typed notes capture structured knowledge
 
 Let the journal capture stand on its own when:
 
 - Casual conversation with no actionable work
 - Small decisions that don't affect project direction
-- General facts the agent learns (these can be promoted during heartbeats)
+- General facts the agent learns (heartbeats can synthesize these into `00 Inbox/` notes)
+
+If the agent is working alone (heartbeat/maintenance), create new synthesis notes in `00 Inbox/`, not `01 Notes/`. Human review promotes them into `01 Notes/` by moving the file.
 
 ### 🧠 MEMORY.md - Your Hot Cache
 
@@ -51,10 +53,11 @@ Let the journal capture stand on its own when:
 
 Use the `zettelclaw` skill for full details. Quick reference:
 
-- **Notes** go in `01 Notes/` with frontmatter (`type`, `tags`, `summary`, `source`, `created`, `updated`)
-- **Journals** go in `03 Journal/YYYY-MM-DD.md` (Done / Decisions / Open / Notes sections)
+- **Session hook output** goes in `03 Journal/YYYY-MM-DD.md` only, as `## HH:MM — SESSION_ID` with `Done` / `Decisions` / `Facts` / `Open`
+- **Human-supervised note updates** go in `01 Notes/` with frontmatter (`type`, `tags`, `summary`, `source`, `created`, `updated`)
+- **Heartbeat-created notes** go to `00 Inbox/` first; human promotion moves them to `01 Notes/`
 - Filenames are Title Case. Tags are always pluralized. Dates are `YYYY-MM-DD`.
-- Link aggressively with `[[wikilinks]]` — even to notes that don't exist yet.
+- Add `[[wikilinks]]` during supervised note writing and heartbeat maintenance (not in hook output).
 - Use `obsidian` CLI when available (preferred), fall back to file tools.
 - Do NOT create new directories or subfolders — EVER — unless the user explicitly asks. The vault structure is fixed.
 - Do NOT add `status` to notes/journals/contacts/writings.

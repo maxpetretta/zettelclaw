@@ -32,6 +32,11 @@ Zettelclaw is your knowledge system — an Obsidian vault where you and your hum
 
 Use **file tools** (Read/Write/Edit) for all vault operations. Use `memory_search` for semantic recall. Use Obsidian CLI only for graph queries (see Vault Maintenance).
 
+Apply the three-layer memory rule at all times:
+- **Hook (`/new` or `/reset`) -> `03 Journal/` only:** append raw session capture, no wikilinks, no note creation
+- **Agent + human (supervised) -> `01 Notes/`:** write meaningful project/research updates directly
+- **Heartbeat (agent-only) -> `00 Inbox/`:** create synthesis notes for later human promotion into `01 Notes/`
+
 ## Searching the Vault
 
 ### Semantic recall
@@ -57,7 +62,10 @@ find "<vault>/01 Notes/" -name "*.md" -mtime -7 | sort
 
 ## Creating Notes
 
-All notes live in `01 Notes/` — flat, no subfolders. Write files directly with proper frontmatter.
+Curated durable notes live in `01 Notes/` — flat, no subfolders.
+
+- If the human is present, create/update notes directly in `01 Notes/` with proper frontmatter.
+- If the agent is alone (heartbeat), create synthesis notes in `00 Inbox/` first; human review promotes them into `01 Notes/` by moving files.
 
 ### Frontmatter Rules
 - Every note MUST have YAML frontmatter with at least `type`, `created`, `updated`
@@ -164,6 +172,8 @@ ONLY `project` and `research` have `status`. Never add status to notes, journals
 
 ## Updating Existing Notes
 
+- In supervised sessions (human present), update `01 Notes/` directly
+- In heartbeats (agent-only), write proposed note updates as handoff notes in `00 Inbox/` instead of editing `01 Notes/`
 - Update the `updated` field to today's date
 - Append, don't overwrite — add to the relevant section
 - Add new `[[wikilinks]]` for any concepts mentioned
@@ -188,20 +198,30 @@ created: 2026-02-19
 updated: 2026-02-19
 ---
 
-## Done
+## HH:MM — SESSION_ID
+
+### Done
 - What was accomplished
 
-## Decisions
+### Decisions
 - Key decisions and reasoning
 
-## Open
-- Unresolved questions, next steps
+### Facts
+- Atomic facts worth remembering
 
-## Notes
-- Observations, ideas, things to remember
+### Open
+- Unresolved questions, next steps
 ```
 
-Journals are automatically written by the Zettelclaw hook on session reset as bullet-point capture (`Done`, `Decisions`, `Open`, `Notes`/facts). You can also append during a session if something noteworthy happens. Omit empty sections.
+The Zettelclaw hook automatically appends session sections on `/new` and `/reset`. Hook capture is journal-only:
+
+- Append-only to today's journal
+- Uses `## HH:MM — SESSION_ID` with `Done` / `Decisions` / `Facts` / `Open`
+- No wikilinks
+- No vault navigation
+- No note creation
+- Omit empty sections
+- Avoid duplicate `SESSION_ID` sections
 
 Treat journals as the **raw capture layer**. Typed notes are the **curated layer**. When meaningful work happens during a session, update typed notes directly instead of waiting for heartbeat synthesis:
 
@@ -209,9 +229,13 @@ Treat journals as the **raw capture layer**. Typed notes are the **curated layer
 - Finished research investigation → update findings/conclusion in the research note now
 - Learned something that changes an existing note → update that note now
 
+During heartbeats (agent-only), synthesize reusable concepts from journals into `00 Inbox/` notes for human review.
+
 ## Linking
 
 Link aggressively. Always `[[wikilink]]` the first mention of any concept, person, project, or idea — even if the target note doesn't exist yet. Unresolved links are breadcrumbs for future connections.
+
+Exception: hook-generated journal capture stays link-free. Add links later during heartbeat processing.
 
 ```markdown
 Discussed [[SafeShell]] architecture with [[Max Petretta]]. The approach mirrors
@@ -222,16 +246,26 @@ Discussed [[SafeShell]] architecture with [[Max Petretta]]. The approach mirrors
 
 ## Inbox Triage
 
-`00 Inbox/` collects quick captures (Web Clipper, manual drops). During maintenance:
+`00 Inbox/` collects quick captures (Web Clipper, manual drops) and heartbeat-created synthesis notes.
 
 1. Read each inbox item
-2. Decide: extract into a proper note in `01 Notes/`, or discard
-3. If extracting: create a properly typed note, link to relevant existing notes
-4. Delete the inbox item after processing
+2. Decide: promote to `01 Notes/`, keep for more review, or discard
+3. In heartbeats (agent-only): do not promote directly to `01 Notes/`; leave structured drafts in `00 Inbox/`
+4. In supervised sessions (human present): move approved notes into `01 Notes/`, then remove obsolete inbox drafts
 
 ## Vault Maintenance
 
-For periodic maintenance, use Obsidian CLI graph queries (requires Obsidian to be running):
+For periodic maintenance (heartbeat, agent-only):
+
+1. Review recent journal session sections
+2. Synthesize durable concepts into evergreen notes in `00 Inbox/`
+3. Retro-link journals with `[[wikilinks]]`
+4. Capture superseded knowledge in synthesis notes
+5. Run orphan/unresolved checks
+6. Update MEMORY.md
+7. Leave `00 Inbox/` ready for human promotion decisions
+
+Use Obsidian CLI graph queries (requires Obsidian to be running):
 
 ```bash
 # Find unresolved links (referenced but not yet created)
@@ -250,7 +284,7 @@ obsidian search query="hook architecture" format=json matches
 If Obsidian CLI is unavailable, use `rg`:
 ```bash
 # Find potential unresolved links (crude but works)
-rg -o '\[\[[^]]*\]\]' "<vault>/01 Notes/" | sort -u | while read link; do
+rg -o '\[\[[^]]*\]\]' "<vault>/01 Notes/" "<vault>/03 Journal/" | sort -u | while read link; do
   name=$(echo "$link" | sed 's/\[\[//;s/\]\]//')
   [ ! -f "<vault>/01 Notes/${name}.md" ] && echo "Unresolved: $link"
 done
@@ -262,6 +296,7 @@ done
 - Do NOT add `status` to evergreen notes, journals, contacts, or writings
 - Do NOT use singular tags (`project` → use `projects`)
 - Do NOT create notes without frontmatter
+- Do NOT create heartbeat synthesis notes directly in `01 Notes/` (use `00 Inbox/`)
 - Do NOT edit files in `04 Templates/` (those are Templater source templates)
 - Do NOT modify `02 Agent/` files directly — they're symlinks to the workspace
 
@@ -275,5 +310,5 @@ Key concepts:
 - **Evergreen notes** — one idea per note, the title IS the idea
 - **Frontmatter as API** — YAML properties make notes machine-queryable
 - **Dual authorship** — both human and agent maintain the vault
-- **Journal + extraction** — conversations get summarized into journals, reusable ideas become standalone notes
+- **Three-layer flow** — hook -> journal, supervised sessions -> notes, heartbeats -> inbox
 - **Links over hierarchy** — flat structure, relationships via `[[wikilinks]]`

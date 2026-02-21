@@ -1,6 +1,6 @@
 [Zettelclaw Setup Complete] Your memory system has been upgraded.
 
-A Zettelclaw vault has been initialized at `{{VAULT_PATH}}`. The vault is now your primary knowledge store — it replaces workspace daily notes as your memory system. A hook has been installed that triggers vault-maintenance updates from conversations on `/new` and `/reset`, with periodic transcript sweeps for backfill.
+A Zettelclaw vault has been initialized at `{{VAULT_PATH}}`. The vault is now your primary knowledge store — it replaces workspace daily notes as your memory system. A hook has been installed that appends raw session capture to `03 Journal/` on `/new` and `/reset`. Heartbeats handle synthesis/linking and place agent-created drafts in `00 Inbox/` for human promotion into `01 Notes/`.
 
 You need to update two workspace files to reflect this change. Pre-written content is provided — use it as-is, replacing the equivalent sections.
 

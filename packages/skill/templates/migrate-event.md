@@ -31,8 +31,8 @@ ls "{{vaultPath}}/{{notesFolder}}/"
 **For daily files** (YYYY-MM-DD.md pattern), instruct each sub-agent:
 - Read the memory file at `{{workspacePath}}/memory/<filename>`
 - Create a journal entry at `{{vaultPath}}/{{journalFolder}}/<filename>` with proper frontmatter (type: journal, tags: [journals], created/updated dates)
-- The journal should have sections: Done, Decisions, Open, Notes and summarize the raw content into these sections concisely
-- Extract any evergreen, reusable ideas into separate notes in `{{vaultPath}}/{{notesFolder}}/` with proper frontmatter
+- The journal should have sections: Done, Decisions, Facts, Open and summarize the raw content into these sections concisely
+- Extract any evergreen, reusable ideas into separate notes in `{{vaultPath}}/{{notesFolder}}/` with proper frontmatter (`01 Notes/` for supervised runs, `00 Inbox/` for agent-only runs)
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
 - Report back: a list of all note titles created (for the wikilink index)
 - When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
@@ -40,7 +40,7 @@ ls "{{vaultPath}}/{{notesFolder}}/"
 **For non-daily files**, instruct each sub-agent:
 - Read the memory file at `{{workspacePath}}/memory/<filename>`
 - Determine the appropriate note type (evergreen, project, research) based on content
-- Create a properly typed note in `{{vaultPath}}/{{notesFolder}}/` with correct frontmatter and a good Title Case filename
+- Create a properly typed note in `{{vaultPath}}/{{notesFolder}}/` with correct frontmatter and a good Title Case filename (`01 Notes/` for supervised runs, `00 Inbox/` for agent-only runs)
 - If the file contains multiple distinct topics, split into multiple evergreen notes
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
 - Report back: a list of all note titles created
