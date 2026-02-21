@@ -16,6 +16,7 @@ export interface VaultUpdateTaskRequest {
   conversation: string
   conversationSource: "command-reset" | "sweep"
   timestampIso: string
+  sessionId?: string
   transcriptPath?: string
   vaultPath: string
   notesDirectory: string
@@ -94,6 +95,7 @@ function buildEventText(prompt: string, request: VaultUpdateTaskRequest, model: 
     "- Trigger: zettelclaw hook",
     `- Source: ${request.conversationSource}`,
     `- Session timestamp: ${request.timestampIso}`,
+    `- Session ID: ${request.sessionId ?? "unknown"}`,
     `- Vault path: ${request.vaultPath}`,
     `- Notes directory: ${request.notesDirectory}`,
     modelLine,

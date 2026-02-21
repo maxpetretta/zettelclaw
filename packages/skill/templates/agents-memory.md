@@ -9,9 +9,25 @@ The vault is indexed via `memory_search` alongside the workspace, so semantic se
 
 ### How Memory Works
 
-- **During sessions:** Use `memory_search` to recall information. Write running notes to the vault journal (`03 Journal/YYYY-MM-DD.md`) if something noteworthy happens.
-- **On session reset (`/new` or `/reset`):** The Zettelclaw hook triggers a vault-maintenance pass using the latest transcript, so the agent can update or create journals and typed notes directly.
-- **During heartbeats:** Triage `00 Inbox/`, maintain vault links, surface orphans, update MEMORY.md.
+- **During sessions:** Use `memory_search` to recall information. Keep running context in the journal as needed, and **update project/research notes directly** when meaningful work is completed.
+- **On session reset (`/new` or `/reset`):** The Zettelclaw hook appends bullet-point summaries to `03 Journal/YYYY-MM-DD.md` (`Done`, `Decisions`, `Open`, `Notes`). It does **not** update or create typed vault notes.
+- **During heartbeats:** Synthesize journal facts into durable notes, add/fix vault links, triage `00 Inbox/`, surface orphans, and update MEMORY.md.
+
+### When to Update the Vault Directly
+
+Update typed notes during the session when the work is meaningful:
+
+- Completed a task on an active project → append a dated log entry to the project note
+- Made a significant decision about a project → update the project note immediately
+- Finished a research investigation → update findings/conclusion in the research note
+- Learned something that changes an existing note → update that note now
+- The journal captures everything; vault notes capture what is worth preserving in structured form
+
+Let the journal capture stand on its own when:
+
+- Casual conversation with no actionable work
+- Small decisions that don't affect project direction
+- General facts the agent learns (these can be promoted during heartbeats)
 
 ### 🧠 MEMORY.md - Your Hot Cache
 

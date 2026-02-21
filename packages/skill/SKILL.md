@@ -201,7 +201,13 @@ updated: 2026-02-19
 - Observations, ideas, things to remember
 ```
 
-Journals are automatically written by the Zettelclaw hook on session reset. You can also append during a session if something noteworthy happens. Omit empty sections.
+Journals are automatically written by the Zettelclaw hook on session reset as bullet-point capture (`Done`, `Decisions`, `Open`, `Notes`/facts). You can also append during a session if something noteworthy happens. Omit empty sections.
+
+Treat journals as the **raw capture layer**. Typed notes are the **curated layer**. When meaningful work happens during a session, update typed notes directly instead of waiting for heartbeat synthesis:
+
+- Completed project task or significant project decision → update the project note now (append a dated log entry)
+- Finished research investigation → update findings/conclusion in the research note now
+- Learned something that changes an existing note → update that note now
 
 ## Linking
 

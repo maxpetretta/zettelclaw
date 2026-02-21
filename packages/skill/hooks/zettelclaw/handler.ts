@@ -530,6 +530,7 @@ async function dispatchVaultUpdateFromTurns(
   vaultPath: string,
   notesDirectory: string,
   conversationSource: "command-reset" | "sweep",
+  sessionId: string | undefined,
   transcriptPath: string | undefined,
   expectFinal: boolean,
 ): Promise<ExtractResult> {
@@ -552,6 +553,7 @@ async function dispatchVaultUpdateFromTurns(
     journalFilename: journal.journalFilename,
     journalPath: journal.journalPath,
     journalContent: journal.content,
+    ...(typeof sessionId === "string" && sessionId.length > 0 ? { sessionId } : {}),
     ...(typeof transcriptPath === "string" && transcriptPath.length > 0 ? { transcriptPath } : {}),
   }
 
@@ -599,6 +601,7 @@ async function processResetEventSession(
     vaultPath,
     notesDirectory,
     "command-reset",
+    event.context?.sessionId,
     session.sourceFile ?? undefined,
     expectFinal,
   )
@@ -724,6 +727,7 @@ async function runTranscriptSweep(
       vaultPath,
       notesDirectory,
       "sweep",
+      undefined,
       candidate.path,
       false,
     )
