@@ -15,9 +15,9 @@ Path: {{vaultPath}}
 
 ### Step 1: Build file lists and process in batches of 5
 
-List markdown files in `{{workspacePath}}/memory/` and split them into two lists:
-- Daily files matching `YYYY-MM-DD.md`
-- Non-daily files
+Recursively list markdown files under `{{workspacePath}}/memory/` (including subdirectories) and split them into two lists using **relative paths from `memory/`**:
+- Daily files whose **basename** matches `YYYY-MM-DD.md`
+- Non-daily files (everything else)
 
 Then process each list in batches of 5.
 
@@ -28,22 +28,22 @@ Maintain an accumulated **wikilink index** — a list of all note titles that ex
 ls "{{vaultPath}}/{{notesFolder}}/"
 ```
 
-**For daily files** (YYYY-MM-DD.md pattern), instruct each sub-agent:
-- Read the memory file at `{{workspacePath}}/memory/<filename>`
-- Create a journal entry at `{{vaultPath}}/{{journalFolder}}/<filename>` with proper frontmatter (type: journal, tags: [journals], created/updated dates)
+**For daily files** (basename matches `YYYY-MM-DD.md`), instruct each sub-agent:
+- Read the memory file at `{{workspacePath}}/memory/<relative-path>`
+- Use the basename as `<day-filename>` and write/update the journal entry at `{{vaultPath}}/{{journalFolder}}/<day-filename>` with proper frontmatter (type: journal, tags: [journals], created/updated dates)
 - The journal should have sections: Done, Decisions, Facts, Open and summarize the raw content into these sections concisely
 - For project/research/contact information: prefer updating existing typed notes in `{{vaultPath}}/{{notesFolder}}/` (append-only, preserve structure, update `updated` date). Create a new typed note only when no suitable existing note exists.
 - For net-new evergreen ideas: create new evergreen notes in `{{vaultPath}}/{{notesFolder}}/` with proper frontmatter.
 - Enforce two-way `[[wikilinks]]` when journal content references typed notes:
   - Journal side: add `[[Note Title]]` links to relevant typed notes.
-  - Typed note side: add a reciprocal link back to the source journal day (for example `[[YYYY-MM-DD]]`, derived from `<filename>`).
+  - Typed note side: add a reciprocal link back to the source journal day (for example `[[YYYY-MM-DD]]`, derived from `<day-filename>`).
 - Report back with exactly two sections:
   - `Summary:` a concise summary of what this sub-agent wrote/updated.
   - `Created Wikilinks:` a deduplicated list of `[[wikilinks]]` newly added by this sub-agent.
-- When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
+- When complete, delete the original file: `{{workspacePath}}/memory/<relative-path>`
 
 **For non-daily files**, instruct each sub-agent:
-- Read the memory file at `{{workspacePath}}/memory/<filename>`
+- Read the memory file at `{{workspacePath}}/memory/<relative-path>`
 - Determine the appropriate note type (evergreen, project, research, contact, writing) based on content
 - For `project`/`research`/`contact`: prefer updating an existing matching note in `{{vaultPath}}/{{notesFolder}}/` (append-only, update `updated`) instead of creating duplicates
 - Create a properly typed note in `{{vaultPath}}/{{notesFolder}}/` with correct frontmatter and a good Title Case filename when no suitable existing note exists
@@ -53,7 +53,7 @@ ls "{{vaultPath}}/{{notesFolder}}/"
 - Report back with exactly two sections:
   - `Summary:` a concise summary of what this sub-agent wrote/updated.
   - `Created Wikilinks:` a deduplicated list of `[[wikilinks]]` newly added by this sub-agent.
-- When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
+- When complete, delete the original file: `{{workspacePath}}/memory/<relative-path>`
 
 ### Step 2: Wait for each batch to complete
 
@@ -68,11 +68,19 @@ After all files are processed:
    - For each typed note link to a migrated journal day/session, verify the journal links to that typed note where relevant.
 3. Scan all notes and journals for unresolved `[[wikilinks]]` that could link to existing notes
 4. Read `{{workspacePath}}/MEMORY.md`
-5. Rewrite MEMORY.md to reference vault notes with `[[wikilinks]]` where relevant
-6. Do NOT delete MEMORY.md — it is a critical OpenClaw file
+5. Rewrite MEMORY.md to reference vault notes with `[[wikilinks]]` where relevant.
+   - MEMORY.md must stay a **hot working cache**.
+   - Do NOT duplicate stable profile/identity data already captured in `{{workspacePath}}/USER.md` or `{{workspacePath}}/IDENTITY.md`.
+   - If needed, keep brief pointers to USER.md / IDENTITY.md instead of repeating that content.
+6. Do NOT delete MEMORY.md — it is a critical OpenClaw file.
+7. Fully clear `{{workspacePath}}/memory/` after migration:
+   - Delete any leftover files recursively.
+   - Remove now-empty nested folders.
+   - Verify `{{workspacePath}}/memory/` has no remaining files.
 
 ### Rules
 - Never create directories — the vault structure already exists
+- Process `{{workspacePath}}/memory/` recursively (include nested `.md` files)
 - All tags must be pluralized
 - All filenames must be Title Case
 - All dates must be YYYY-MM-DD
@@ -84,3 +92,5 @@ After all files are processed:
 - Link aggressively — first mention of any concept gets a `[[wikilink]]`
 - Enforce two-way links between journals and typed notes whenever they reference each other
 - Omit empty journal sections
+- At migration end, `{{workspacePath}}/memory/` must be empty
+- MEMORY.md must not overlap with USER.md or IDENTITY.md content

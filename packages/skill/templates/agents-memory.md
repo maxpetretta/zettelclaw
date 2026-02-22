@@ -37,6 +37,7 @@ If the agent is working alone in nightly maintenance, it may update existing `pr
 - **DO NOT load in shared contexts** (Discord, group chats, sessions with other people)
 - This is for **security** — contains personal context that shouldn't leak to strangers
 - You can **read, edit, and update** MEMORY.md freely in main sessions
+- Keep MEMORY.md focused on active working memory; do not duplicate stable profile/identity details already in USER.md or IDENTITY.md
 - Periodically review vault notes and update MEMORY.md with what's worth keeping in working memory
 - MEMORY.md is a cache of the vault, not a replacement for it
 

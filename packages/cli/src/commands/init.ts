@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { cp } from "node:fs/promises"
+import { cp, readdir } from "node:fs/promises"
 import { basename, dirname, join } from "node:path"
 import { confirm, intro, log, select, spinner, text } from "@clack/prompts"
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
@@ -162,7 +162,7 @@ async function chooseFileBackupPath(sourcePath: string): Promise<{ backupPath: s
 }
 
 async function backupWorkspaceRewriteFiles(workspacePath: string): Promise<string[]> {
-  const filesToBackup = ["AGENTS.md", "HEARTBEAT.md"] as const
+  const filesToBackup = ["AGENTS.md"] as const
   const backupLogs: string[] = []
 
   for (const fileName of filesToBackup) {
@@ -184,6 +184,38 @@ async function backupWorkspaceRewriteFiles(workspacePath: string): Promise<strin
   }
 
   return backupLogs
+}
+
+async function countFilesRecursive(path: string): Promise<number> {
+  if (!(await isDirectory(path))) {
+    return 0
+  }
+
+  const entries = await readdir(path, { withFileTypes: true })
+  let count = 0
+
+  for (const entry of entries) {
+    const nextPath = join(path, entry.name)
+
+    if (entry.isDirectory()) {
+      count += await countFilesRecursive(nextPath)
+      continue
+    }
+
+    if (entry.isFile()) {
+      count += 1
+    }
+  }
+
+  return count
+}
+
+function quoteShellArg(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`
+}
+
+function buildMigrateCommand(vaultPath: string, workspacePath: string): string {
+  return `zettelclaw migrate --vault ${quoteShellArg(vaultPath)} --workspace ${quoteShellArg(workspacePath)}`
 }
 
 async function promptVaultPath(defaultPath: string): Promise<string> {
@@ -457,4 +489,20 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   log.success("Done! Open it in Obsidian to get started.")
+
+  if (openclawRequested) {
+    const memoryPath = join(workspacePath, "memory")
+    const existingMemoryFileCount = await countFilesRecursive(memoryPath)
+
+    if (existingMemoryFileCount > 0) {
+      const fileLabel = existingMemoryFileCount === 1 ? "file" : "files"
+      log.warn(
+        [
+          `Detected ${existingMemoryFileCount} existing ${fileLabel} in ${toTildePath(memoryPath)}.`,
+          "Run migrate to import legacy workspace memory:",
+          `  ${buildMigrateCommand(vaultPath, workspacePath)}`,
+        ].join("\n"),
+      )
+    }
+  }
 }

@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { cp, readdir, readFile } from "node:fs/promises"
-import { dirname, join } from "node:path"
+import { basename, dirname, join } from "node:path"
 import { intro, log, select, spinner, text } from "@clack/prompts"
 
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
@@ -230,16 +230,33 @@ async function detectVaultLayout(vaultPath: string): Promise<VaultLayout> {
   return { notesFolder, journalFolder }
 }
 
-async function readMemorySummary(memoryPath: string): Promise<MemorySummary> {
-  const entries = await readdir(memoryPath, { withFileTypes: true })
-  const files = entries
-    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"))
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b))
+async function readMarkdownFilesRecursive(memoryPath: string, relativeDir = ""): Promise<string[]> {
+  const currentPath = relativeDir.length > 0 ? join(memoryPath, relativeDir) : memoryPath
+  const entries = await readdir(currentPath, { withFileTypes: true })
+  const files: string[] = []
 
-  const dailyFiles = files.filter((filename) => isDailyFile(filename))
-  const otherFiles = files.filter((filename) => !isDailyFile(filename))
-  const sortedDates = dailyFiles.map((filename) => filename.slice(0, 10)).sort((a, b) => a.localeCompare(b))
+  for (const entry of entries) {
+    const nextRelative = relativeDir.length > 0 ? `${relativeDir}/${entry.name}` : entry.name
+
+    if (entry.isDirectory()) {
+      files.push(...(await readMarkdownFilesRecursive(memoryPath, nextRelative)))
+      continue
+    }
+
+    if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+      files.push(nextRelative)
+    }
+  }
+
+  return files
+}
+
+async function readMemorySummary(memoryPath: string): Promise<MemorySummary> {
+  const files = (await readMarkdownFilesRecursive(memoryPath)).sort((a, b) => a.localeCompare(b))
+
+  const dailyFiles = files.filter((filename) => isDailyFile(basename(filename)))
+  const otherFiles = files.filter((filename) => !isDailyFile(basename(filename)))
+  const sortedDates = dailyFiles.map((filename) => basename(filename).slice(0, 10)).sort((a, b) => a.localeCompare(b))
   const dateRange = sortedDates.length > 0 ? `${sortedDates[0]} → ${sortedDates[sortedDates.length - 1]}` : "n/a"
 
   return {
