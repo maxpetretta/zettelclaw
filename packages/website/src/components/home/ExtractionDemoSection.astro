@@ -1,0 +1,101 @@
+<section class="py-20" id="demo">
+  <p class="font-mono text-xs tracking-[0.2em] uppercase text-brand mb-4 reveal">See it in action</p>
+  <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-10 reveal">
+    Your conversations become structured memory
+  </h2>
+
+  <div class="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-center reveal">
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="flex items-center gap-2 text-xs text-muted-foreground font-mono mb-4">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+        Conversation
+      </div>
+      <div class="space-y-3">
+        <div class="rounded-lg bg-muted px-4 py-3 text-sm text-foreground/90 leading-relaxed">
+          I've been reading about how React's virtual DOM works. Can you help me connect this to the performance notes in my vault?
+        </div>
+        <div class="rounded-lg bg-brand-soft border border-brand/20 px-4 py-3 text-sm text-foreground/90 leading-relaxed">
+          Based on your notes in
+          <span class="font-mono text-xs text-violet-400">[[Frontend Frameworks]]</span>,
+          React's virtual DOM trades memory for speed &mdash; it keeps a lightweight copy of the real DOM to batch and minimize expensive updates&hellip;
+        </div>
+      </div>
+    </div>
+
+    <div class="hidden md:flex items-center self-center">
+      <span class="demo-arrow text-brand text-2xl font-bold select-none" aria-hidden="true">&rarr;</span>
+    </div>
+    <div class="flex md:hidden justify-center -my-2">
+      <span class="demo-arrow text-brand text-2xl font-bold select-none" aria-hidden="true">&darr;</span>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="flex items-center gap-2 text-xs text-muted-foreground font-mono mb-4">
+        <span class="w-2 h-2 rounded-full bg-brand shrink-0"></span>
+        Journal capture + nightly maintenance
+      </div>
+      <div class="space-y-3">
+        <div class="note-card note-card-brand">
+          <p class="font-mono text-xs text-muted-foreground mb-1.5">2026-02-19.md (03 Journal)</p>
+          <p class="text-sm text-foreground/90 leading-relaxed">
+            Session capture appends `Done` / `Decisions` / `Facts` / `Open` bullets and logs provenance in `## Sessions`.
+          </p>
+          <div class="flex flex-wrap gap-2 mt-2">
+            <span class="font-mono text-xs text-violet-400">SESSION-71f3a9 — 09:14</span>
+            <span class="font-mono text-xs text-violet-400">SESSION-c2d8e1 — 14:42</span>
+          </div>
+        </div>
+        <div class="note-card note-card-violet">
+          <p class="font-mono text-xs text-muted-foreground mb-1.5">Frontend Frameworks.md (01 Notes)</p>
+          <p class="text-sm text-foreground/90 leading-relaxed">
+            Nightly maintenance updates existing notes and adds reciprocal links back to journal sessions for provenance.
+          </p>
+          <div class="flex flex-wrap gap-2 mt-2">
+            <span class="font-mono text-xs text-violet-400">[[2026-02-19]]</span>
+            <span class="font-mono text-xs text-violet-400">[[DOM Reconciliation]]</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .note-card {
+    border-radius: 0.5rem;
+    background: rgba(27, 34, 48, 0.5);
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-left-width: 2px;
+  }
+
+  .note-card-brand {
+    border-left-color: var(--brand);
+  }
+
+  .note-card-violet {
+    border-left-color: #8b5cf6;
+  }
+
+  .demo-arrow {
+    animation: arrow-pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes arrow-pulse {
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .demo-arrow {
+      animation: none !important;
+      opacity: 0.7;
+    }
+  }
+</style>
