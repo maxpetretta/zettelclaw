@@ -14,6 +14,8 @@ interface ParsedArgs {
     minimal: boolean
     workspacePath?: string | undefined
     model?: string | undefined
+    statePath?: string | undefined
+    parallelJobs?: number | undefined
   }
 }
 
@@ -36,6 +38,8 @@ function usage(): string {
     "  --vault <path>      Vault path (auto-detected if not provided)",
     "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --model <name>      Model alias/key for migration sub-agents",
+    "  --state-path <path> Resume state file path (default: <workspace>/.zettelclaw/migrate-state.json)",
+    "  --parallel-jobs <n> Number of concurrent sub-agent jobs (default: 5)",
     "  --yes               Accept defaults non-interactively",
     "",
     "Verify options:",
@@ -70,6 +74,21 @@ function validateArgs(parsed: ParsedArgs): void {
 
   if (parsed.command !== "migrate" && parsed.flags.model) {
     throw new Error("--model is only supported with `zettelclaw migrate`")
+  }
+
+  if (parsed.command !== "migrate" && parsed.flags.statePath) {
+    throw new Error("--state-path is only supported with `zettelclaw migrate`")
+  }
+
+  if (parsed.command !== "migrate" && typeof parsed.flags.parallelJobs === "number") {
+    throw new Error("--parallel-jobs is only supported with `zettelclaw migrate`")
+  }
+
+  if (
+    typeof parsed.flags.parallelJobs === "number" &&
+    (!Number.isFinite(parsed.flags.parallelJobs) || parsed.flags.parallelJobs < 1)
+  ) {
+    throw new Error("--parallel-jobs must be a positive integer")
   }
 
   if (parsed.command !== "init" && parsed.flags.minimal) {
@@ -147,6 +166,38 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue
     }
 
+    if (arg.startsWith("--state-path=")) {
+      parsed.flags.statePath = parseInlineValue(arg, "--state-path=", "--state-path")
+      continue
+    }
+
+    if (arg === "--state-path") {
+      parsed.flags.statePath = takeValue(rest, index, "--state-path")
+      index += 1
+      continue
+    }
+
+    if (arg.startsWith("--parallel-jobs=")) {
+      const raw = parseInlineValue(arg, "--parallel-jobs=", "--parallel-jobs")
+      const parsedValue = Number.parseInt(raw, 10)
+      if (Number.isNaN(parsedValue)) {
+        throw new Error(`Invalid value for --parallel-jobs: ${raw}`)
+      }
+      parsed.flags.parallelJobs = parsedValue
+      continue
+    }
+
+    if (arg === "--parallel-jobs") {
+      const raw = takeValue(rest, index, "--parallel-jobs")
+      const parsedValue = Number.parseInt(raw, 10)
+      if (Number.isNaN(parsedValue)) {
+        throw new Error(`Invalid value for --parallel-jobs: ${raw}`)
+      }
+      parsed.flags.parallelJobs = parsedValue
+      index += 1
+      continue
+    }
+
     throw new Error(`Unknown argument: ${arg}`)
   }
 
@@ -178,6 +229,8 @@ async function main(): Promise<void> {
       vaultPath: parsed.flags.vaultPath,
       workspacePath: parsed.flags.workspacePath,
       model: parsed.flags.model,
+      statePath: parsed.flags.statePath,
+      parallelJobs: parsed.flags.parallelJobs,
     })
     return
   }

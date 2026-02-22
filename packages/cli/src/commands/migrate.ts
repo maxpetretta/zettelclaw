@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process"
-import { cp, readdir, readFile } from "node:fs/promises"
+import { createHash } from "node:crypto"
+import { cp, readdir, readFile, stat } from "node:fs/promises"
 import { basename, dirname, join } from "node:path"
 import { intro, log, select, spinner, text } from "@clack/prompts"
 
@@ -7,22 +8,53 @@ import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwra
 import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES } from "../lib/folders"
 import { asRecord, asStringArray } from "../lib/json"
 import { resolveUserPath } from "../lib/paths"
-import { resolveSkillPath } from "../lib/skill"
-import { substituteTemplate } from "../lib/template"
 import { isDirectory, pathExists } from "../lib/vault"
+import type { MigrateTask } from "../migrate/contracts"
+import { runMigratePipeline } from "../migrate/pipeline"
 
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
+const DEFAULT_MIGRATE_STATE_PATH = ".zettelclaw/migrate-state.json"
+const DEFAULT_PARALLEL_JOBS = 5
 
 export interface MigrateOptions {
   yes: boolean
   vaultPath?: string | undefined
   workspacePath?: string | undefined
   model?: string | undefined
+  statePath?: string | undefined
+  parallelJobs?: number | undefined
 }
 
 interface OpenClawWorkspaceEnv {
   stateDir: string
   configPath: string
+}
+
+interface ModelInfo {
+  key: string
+  name: string
+  alias?: string
+  isDefault: boolean
+}
+
+interface MemoryFileRecord {
+  relativePath: string
+  basename: string
+  sourcePath: string
+  sizeBytes: number
+  mtimeMs: number
+}
+
+interface MemorySummary {
+  files: MemoryFileRecord[]
+  dailyFiles: MemoryFileRecord[]
+  otherFiles: MemoryFileRecord[]
+  dateRange: string
+}
+
+interface VaultLayout {
+  notesFolder: string
+  journalFolder: string
 }
 
 function resolveOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
@@ -38,25 +70,6 @@ function configureOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorksp
   process.env.OPENCLAW_STATE_DIR = env.stateDir
   process.env.OPENCLAW_CONFIG_PATH = env.configPath
   return env
-}
-
-interface ModelInfo {
-  key: string
-  name: string
-  alias?: string
-  isDefault: boolean
-}
-
-interface MemorySummary {
-  files: string[]
-  dailyFiles: string[]
-  otherFiles: string[]
-  dateRange: string
-}
-
-interface VaultLayout {
-  notesFolder: string
-  journalFolder: string
 }
 
 function isDailyFile(filename: string): boolean {
@@ -252,11 +265,24 @@ async function readMarkdownFilesRecursive(memoryPath: string, relativeDir = ""):
 }
 
 async function readMemorySummary(memoryPath: string): Promise<MemorySummary> {
-  const files = (await readMarkdownFilesRecursive(memoryPath)).sort((a, b) => a.localeCompare(b))
+  const relativePaths = (await readMarkdownFilesRecursive(memoryPath)).sort((a, b) => a.localeCompare(b))
+  const files: MemoryFileRecord[] = []
 
-  const dailyFiles = files.filter((filename) => isDailyFile(basename(filename)))
-  const otherFiles = files.filter((filename) => !isDailyFile(basename(filename)))
-  const sortedDates = dailyFiles.map((filename) => basename(filename).slice(0, 10)).sort((a, b) => a.localeCompare(b))
+  for (const relativePath of relativePaths) {
+    const sourcePath = join(memoryPath, relativePath)
+    const metadata = await stat(sourcePath)
+    files.push({
+      relativePath,
+      basename: basename(relativePath),
+      sourcePath,
+      sizeBytes: metadata.size,
+      mtimeMs: metadata.mtimeMs,
+    })
+  }
+
+  const dailyFiles = files.filter((file) => isDailyFile(file.basename))
+  const otherFiles = files.filter((file) => !isDailyFile(file.basename))
+  const sortedDates = dailyFiles.map((file) => file.basename.slice(0, 10)).sort((a, b) => a.localeCompare(b))
   const dateRange = sortedDates.length > 0 ? `${sortedDates[0]} → ${sortedDates[sortedDates.length - 1]}` : "n/a"
 
   return {
@@ -267,12 +293,31 @@ async function readMemorySummary(memoryPath: string): Promise<MemorySummary> {
   }
 }
 
-async function chooseMemoryMdBackupPath(sourcePath: string): Promise<{ backupPath: string; label: string }> {
+function buildMigrateTaskId(file: MemoryFileRecord): string {
+  const hash = createHash("sha1")
+  hash.update(file.relativePath)
+  hash.update(String(file.sizeBytes))
+  hash.update(String(Math.floor(file.mtimeMs)))
+  return hash.digest("hex")
+}
+
+function buildMigrateTasks(files: MemoryFileRecord[]): MigrateTask[] {
+  return files.map((file) => ({
+    id: buildMigrateTaskId(file),
+    relativePath: file.relativePath,
+    basename: file.basename,
+    sourcePath: file.sourcePath,
+    kind: isDailyFile(file.basename) ? "daily" : "other",
+  }))
+}
+
+async function chooseFileBackupPath(sourcePath: string): Promise<{ backupPath: string; label: string }> {
   const dir = dirname(sourcePath)
+  const sourceBase = basename(sourcePath)
   const maxAttempts = 10_000
 
   for (let index = 0; index < maxAttempts; index += 1) {
-    const label = index === 0 ? "MEMORY.md.bak" : `MEMORY.md.bak.${index}`
+    const label = index === 0 ? `${sourceBase}.bak` : `${sourceBase}.bak.${index}`
     const backupPath = join(dir, label)
 
     if (!(await pathExists(backupPath))) {
@@ -280,7 +325,7 @@ async function chooseMemoryMdBackupPath(sourcePath: string): Promise<{ backupPat
     }
   }
 
-  throw new Error(`Could not find an available backup path for MEMORY.md after ${maxAttempts} attempts`)
+  throw new Error(`Could not find an available backup path for ${sourceBase} after ${maxAttempts} attempts`)
 }
 
 async function chooseBackupPath(workspacePath: string): Promise<{ source: string; backup: string; label: string }> {
@@ -348,9 +393,10 @@ async function chooseModel(models: ModelInfo[], options: MigrateOptions): Promis
   if (!defaultModel) {
     throw new Error("OpenClaw returned no models")
   }
+
   const selectedKey = unwrapPrompt(
     await select({
-      message: "Which model should sub-agents use for migration?",
+      message: "Which model should migration agents use?",
       initialValue: defaultModel.key,
       options: models.map((model) => {
         const baseLabel = model.alias ? `${model.name} (${model.alias})` : `${model.name} (${model.key})`
@@ -370,129 +416,25 @@ async function chooseModel(models: ModelInfo[], options: MigrateOptions): Promis
   return selected
 }
 
-const MIGRATE_SESSION_TARGET = "isolated"
-const MIGRATE_JOB_NAME = "zettelclaw-migrate"
-const MIGRATE_SESSION_LOOKUP_TIMEOUT_MS = 15_000
+function resolveMigrateStatePath(options: MigrateOptions, workspacePath: string): string {
+  if (options.statePath) {
+    return resolveUserPath(options.statePath)
+  }
 
-interface MigrateEventResult {
-  sent: boolean
-  jobId?: string
-  message?: string
+  return join(workspacePath, DEFAULT_MIGRATE_STATE_PATH)
 }
 
-function parseRunSessionKeyFromSessions(raw: string, jobId: string): string | undefined {
-  let parsedValue: unknown
-
-  try {
-    parsedValue = JSON.parse(raw)
-  } catch {
-    return undefined
+function resolveParallelJobs(options: MigrateOptions): number {
+  if (typeof options.parallelJobs !== "number" || !Number.isFinite(options.parallelJobs)) {
+    return DEFAULT_PARALLEL_JOBS
   }
 
-  const parsed = asRecord(parsedValue)
-  const rawSessions = Array.isArray(parsed.sessions) ? parsed.sessions : []
-  const keyPrefix = `agent:main:cron:${jobId}:run:`
-  let bestMatch: { key: string; updatedAt: number } | undefined
-
-  for (const rawSession of rawSessions) {
-    const session = asRecord(rawSession)
-    const key = typeof session.key === "string" ? session.key : ""
-    if (!key.startsWith(keyPrefix)) {
-      continue
-    }
-
-    const updatedAt = typeof session.updatedAt === "number" ? session.updatedAt : 0
-    if (!bestMatch || updatedAt >= bestMatch.updatedAt) {
-      bestMatch = { key, updatedAt }
-    }
+  const normalized = Math.floor(options.parallelJobs)
+  if (normalized < 1) {
+    return 1
   }
 
-  return bestMatch?.key
-}
-
-async function waitForRunSessionKey(
-  jobId: string,
-  options: { maxWaitMs?: number; pollIntervalMs?: number } = {},
-): Promise<string | undefined> {
-  const maxWaitMs = options.maxWaitMs ?? 10_000
-  const pollIntervalMs = options.pollIntervalMs ?? 500
-  const deadline = Date.now() + maxWaitMs
-
-  while (Date.now() <= deadline) {
-    const sessionsResult = spawnSync("openclaw", ["sessions", "--active", "240", "--json"], {
-      encoding: "utf8",
-      timeout: 10_000,
-    })
-
-    if (!sessionsResult.error && sessionsResult.status === 0 && sessionsResult.stdout) {
-      const sessionKey = parseRunSessionKeyFromSessions(sessionsResult.stdout, jobId)
-      if (sessionKey) {
-        return sessionKey
-      }
-    }
-
-    if (Date.now() + pollIntervalMs > deadline) {
-      break
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
-  }
-
-  return undefined
-}
-
-async function fireMigrateEvent(values: Record<string, string>): Promise<MigrateEventResult> {
-  const templatePath = resolveSkillPath("templates", "migrate-event.md")
-
-  let template = ""
-  try {
-    template = await readFile(templatePath, "utf8")
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return { sent: false, message: `Could not read migrate template ${templatePath}: ${message}` }
-  }
-
-  const eventText = substituteTemplate(template, values)
-  const result = spawnSync(
-    "openclaw",
-    [
-      "cron",
-      "add",
-      "--at",
-      "1s",
-      "--session",
-      MIGRATE_SESSION_TARGET,
-      "--name",
-      MIGRATE_JOB_NAME,
-      "--message",
-      eventText,
-      "--announce",
-      "--timeout-seconds",
-      "1800",
-      "--json",
-    ],
-    {
-      encoding: "utf8",
-      timeout: 15_000,
-    },
-  )
-
-  if (result.error) {
-    return { sent: false, message: `Failed to schedule migration event: ${result.error.message}` }
-  }
-
-  if (result.status !== 0) {
-    const stderr = result.stderr?.trim()
-    return { sent: false, message: stderr.length ? stderr : `openclaw cron add exited with code ${result.status}` }
-  }
-
-  try {
-    const parsed = asRecord(JSON.parse(result.stdout))
-    const jobId = typeof parsed.id === "string" && parsed.id.length > 0 ? parsed.id : undefined
-    return jobId ? { sent: true, jobId } : { sent: true }
-  } catch {
-    return { sent: true }
-  }
+  return normalized
 }
 
 export async function runMigrate(options: MigrateOptions): Promise<void> {
@@ -507,6 +449,7 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
   configureOpenClawEnvForWorkspace(workspacePath)
   const memoryPath = join(workspacePath, "memory")
+  const statePath = resolveMigrateStatePath(options, workspacePath)
 
   if (!(await isDirectory(memoryPath))) {
     throw new Error(`No memory directory found at ${toTildePath(memoryPath)}. Nothing to migrate.`)
@@ -536,17 +479,28 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   }
   log.success(`Backed up memory/ → ${backup.label}/`)
 
-  // Back up MEMORY.md (migrate updates it)
   const memoryMdPath = join(workspacePath, "MEMORY.md")
   if (await pathExists(memoryMdPath)) {
-    const memoryMdBak = await chooseMemoryMdBackupPath(memoryMdPath)
+    const memoryBackup = await chooseFileBackupPath(memoryMdPath)
     try {
-      await cp(memoryMdPath, memoryMdBak.backupPath)
+      await cp(memoryMdPath, memoryBackup.backupPath)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(`Could not back up MEMORY.md: ${message}`)
     }
-    log.success(`Backed up MEMORY.md → ${memoryMdBak.label}`)
+    log.success(`Backed up MEMORY.md → ${memoryBackup.label}`)
+  }
+
+  const userMdPath = join(workspacePath, "USER.md")
+  if (await pathExists(userMdPath)) {
+    const userBackup = await chooseFileBackupPath(userMdPath)
+    try {
+      await cp(userMdPath, userBackup.backupPath)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Could not back up USER.md: ${message}`)
+    }
+    log.success(`Backed up USER.md → ${userBackup.label}`)
   }
 
   const s = spinner()
@@ -558,37 +512,60 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   const modelLabel = selectedModel.alias ? `${selectedModel.name} (${selectedModel.alias})` : selectedModel.name
   log.message(`Using model: ${modelLabel}`)
 
-  const eventResult = await fireMigrateEvent({
-    vaultPath,
-    workspacePath,
-    model: selectedModel.key,
-    notesFolder: layout.notesFolder,
-    journalFolder: layout.journalFolder,
-    fileCount: String(summary.files.length),
-    dailyCount: String(summary.dailyFiles.length),
-    otherCount: String(summary.otherFiles.length),
-  })
+  const tasks = buildMigrateTasks(summary.files)
+  const progressSpinner = spinner()
+  progressSpinner.start("Migration in progress")
+  let lastProgressMessage = ""
 
-  if (!eventResult.sent) {
-    throw new Error(eventResult.message ?? "Could not fire migration event. Is the OpenClaw gateway running?")
-  }
-
-  log.success(`Migration started! Your agent will process ${summary.files.length} files.`)
-
-  if (eventResult.jobId) {
-    const locateSessionSpinner = spinner()
-    locateSessionSpinner.start("Locating migration session")
-    const runSessionKey = await waitForRunSessionKey(eventResult.jobId, {
-      maxWaitMs: MIGRATE_SESSION_LOOKUP_TIMEOUT_MS,
+  let result: Awaited<ReturnType<typeof runMigratePipeline>>
+  try {
+    result = await runMigratePipeline({
+      workspacePath,
+      memoryPath,
+      vaultPath,
+      notesFolder: layout.notesFolder,
+      journalFolder: layout.journalFolder,
+      model: selectedModel.key,
+      statePath,
+      tasks,
+      parallelJobs: resolveParallelJobs(options),
+      onProgress: (message) => {
+        if (message === lastProgressMessage) {
+          return
+        }
+        lastProgressMessage = message
+        progressSpinner.message(message)
+      },
     })
-    const sessionAttachCommand = runSessionKey
-      ? `openclaw tui --session "${runSessionKey}"`
-      : `openclaw tui --session "agent:main:cron:${eventResult.jobId}"`
-    locateSessionSpinner.stop(runSessionKey ? "Migration session ready" : "Migration session pending")
-
-    log.message(`Connect to migration session:\n  ${sessionAttachCommand}`)
-    return
+  } catch (error) {
+    progressSpinner.stop("Migration failed")
+    throw error
   }
 
-  log.message(`Connect to migration session:\n  openclaw tui --session "${MIGRATE_SESSION_TARGET}"`)
+  progressSpinner.stop(
+    `Migration complete (${result.processedTasks + result.skippedTasks}/${result.totalTasks} files processed)`,
+  )
+
+  if (result.failedTasks > 0) {
+    const failurePreview = result.failedTaskErrors
+      .slice(0, 5)
+      .map((entry) => `- ${entry}`)
+      .join("\n")
+    throw new Error(
+      `Migration failed for ${result.failedTasks} files.\n${failurePreview}${
+        result.failedTaskErrors.length > 5 ? "\n- ... additional failures omitted" : ""
+      }`,
+    )
+  }
+
+  if (!result.cleanupCompleted) {
+    throw new Error("Migration finished but workspace memory cleanup did not complete.")
+  }
+
+  if (result.finalSynthesisSummary.trim().length > 0) {
+    log.message(`Final synthesis summary:\n${result.finalSynthesisSummary.trim()}`)
+  }
+
+  log.success("Migration finished. Workspace memory files were migrated and cleared.")
+  log.message(`State file: ${toTildePath(result.statePath)}`)
 }
