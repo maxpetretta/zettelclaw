@@ -58,6 +58,7 @@ Use the `zettelclaw` skill for full details. Quick reference:
 - **Human-supervised note updates** go in `01 Notes/` with frontmatter (`type`, `tags`, `summary`, `source`, `created`, `updated`)
 - **Nightly maintenance updates** can modify existing `project`/`research`/`contact` notes in `01 Notes/`; net-new synthesized notes go to `00 Inbox/` first
 - Filenames are Title Case. Tags are always pluralized. Dates are `YYYY-MM-DD`.
+- New `project` note filenames/titles end with `Project`; new `research` note filenames/titles end with `Research`.
 - Add `[[wikilinks]]` during supervised note writing and nightly maintenance (not in hook output).
 - Use `obsidian` CLI when available (preferred), fall back to file tools.
 - Do NOT create new directories or subfolders — EVER — unless the user explicitly asks. The vault structure is fixed.

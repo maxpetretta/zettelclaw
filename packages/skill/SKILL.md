@@ -72,6 +72,8 @@ Curated durable notes live in `01 Notes/` — flat, no subfolders.
 - Tags are ALWAYS pluralized (`projects` not `project`)
 - Dates are ALWAYS `YYYY-MM-DD`
 - Filenames are Title Case (`React Virtual DOM Trades Memory For Speed.md`)
+- For new `project` notes, the filename/title ends with `Project` (`OpenClaw Gateway Project.md`)
+- For new `research` notes, the filename/title ends with `Research` (`Local First Sync Research.md`)
 - One idea per note (evergreen) — the title captures the idea
 
 ### Use Vault Templates (Canonical)

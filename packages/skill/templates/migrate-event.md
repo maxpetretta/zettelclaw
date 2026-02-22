@@ -34,6 +34,8 @@ ls "{{vaultPath}}/{{notesFolder}}/"
 - The journal should have sections: Done, Decisions, Facts, Open and summarize the raw content into these sections concisely
 - For project/research/contact information: prefer updating existing typed notes in `{{vaultPath}}/{{notesFolder}}/` (append-only, preserve structure, update `updated` date). Create a new typed note only when no suitable existing note exists.
 - For net-new evergreen ideas: create new evergreen notes in `{{vaultPath}}/{{notesFolder}}/` with proper frontmatter.
+- If creating a new `project` note, name it `<Project Name> Project` (Title Case).
+- If creating a new `research` note, name it `<Research Area> Research` (Title Case).
 - Enforce two-way `[[wikilinks]]` when journal content references typed notes:
   - Journal side: add `[[Note Title]]` links to relevant typed notes.
   - Typed note side: add a reciprocal link back to the source journal day (for example `[[YYYY-MM-DD]]`, derived from `<day-filename>`).
@@ -47,6 +49,8 @@ ls "{{vaultPath}}/{{notesFolder}}/"
 - Determine the appropriate note type (evergreen, project, research, contact, writing) based on content
 - For `project`/`research`/`contact`: prefer updating an existing matching note in `{{vaultPath}}/{{notesFolder}}/` (append-only, update `updated`) instead of creating duplicates
 - Create a properly typed note in `{{vaultPath}}/{{notesFolder}}/` with correct frontmatter and a good Title Case filename when no suitable existing note exists
+- If creating a new `project` note, filename/title must end with `Project`.
+- If creating a new `research` note, filename/title must end with `Research`.
 - If the file contains multiple distinct topics, split into multiple evergreen notes
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
 - When a non-daily note clearly maps to a migrated journal day, add reciprocal links between the note and that journal entry.
@@ -83,6 +87,8 @@ After all files are processed:
 - Process `{{workspacePath}}/memory/` recursively (include nested `.md` files)
 - All tags must be pluralized
 - All filenames must be Title Case
+- New `project` note titles/filenames end with `Project`
+- New `research` note titles/filenames end with `Research`
 - All dates must be YYYY-MM-DD
 - Every note must have complete YAML frontmatter
 - Do not insert a blank line between frontmatter and the first content line
