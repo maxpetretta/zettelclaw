@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs"
 import {
   access,
   copyFile,
@@ -39,7 +40,19 @@ interface CorePlugins {
   [pluginId: string]: boolean
 }
 
-const TEMPLATE_ROOT = resolve(import.meta.dirname, "..", "..", "vault")
+const TEMPLATE_ROOT = (() => {
+  const candidates = [
+    resolve(import.meta.dirname, "..", "..", "vault"),
+    resolve(import.meta.dirname, "..", "vault"),
+  ] as const
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  return candidates[0]
+})()
 const AGENT_FILES = ["AGENTS.md", "SOUL.md", "IDENTITY.md", "USER.md", "TOOLS.md", "MEMORY.md"] as const
 const TEMPLATE_PATH_PREFIX = /^(?:\d{2} )?Templates\//
 const STARTER_NOTE_FILENAME = "Zettelclaw Is Collaborative Memory For Your Agent.md"
@@ -68,7 +81,6 @@ function buildStarterEvergreenNote(dateStamp: string): string {
     `created: ${dateStamp}`,
     `updated: ${dateStamp}`,
     "---",
-    "",
     "Zettelclaw is collaborative memory for your agent.",
     "",
     "It captures session context in journals and keeps durable knowledge in linked typed notes.",
@@ -86,7 +98,6 @@ function buildStarterReclawInboxNote(dateStamp: string): string {
     `created: ${dateStamp}`,
     `updated: ${dateStamp}`,
     "---",
-    "",
     "[Reclaw](https://reclaw.sh) imports old conversation history so you can bootstrap your vault with prior context.",
     "",
   ].join("\n")
@@ -100,7 +111,6 @@ function buildStarterJournalEntry(dateStamp: string, timeStamp: string): string 
     `created: ${dateStamp}`,
     `updated: ${dateStamp}`,
     "---",
-    "",
     "## Done",
     "- Zettelclaw setup and installed.",
     "",

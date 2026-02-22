@@ -296,7 +296,7 @@ function ensureCronJob(
       }
     }
 
-    const disabled = runCronCommand(["cron", "disable", enabledJobId, "--json"])
+    const disabled = runCronCommand(["cron", "disable", enabledJobId])
     if (!disabled.ok) {
       return {
         status: "failed",
@@ -311,7 +311,7 @@ function ensureCronJob(
 
   if (matchingDisabledJobWithId) {
     const jobId = getCronJobId(matchingDisabledJobWithId) as string
-    const enabled = runCronCommand(["cron", "enable", jobId, "--json"])
+    const enabled = runCronCommand(["cron", "enable", jobId])
 
     if (!enabled.ok) {
       return {

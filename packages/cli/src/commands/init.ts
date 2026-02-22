@@ -35,6 +35,12 @@ export interface InitOptions {
   workspacePath?: string | undefined
 }
 
+function configureOpenClawEnvForWorkspace(workspacePath: string): void {
+  const openclawStateDir = dirname(workspacePath)
+  process.env.OPENCLAW_STATE_DIR = openclawStateDir
+  process.env.OPENCLAW_CONFIG_PATH = join(openclawStateDir, "openclaw.json")
+}
+
 function initGitRepository(vaultPath: string): string | null {
   const result = spawnSync("git", ["init"], {
     cwd: vaultPath,
@@ -238,8 +244,26 @@ export async function runInit(options: InitOptions): Promise<void> {
   const shouldInitGit = syncMethod === "git"
   const openclawDir = dirname(workspacePath)
 
+  if (openclawRequested) {
+    configureOpenClawEnvForWorkspace(workspacePath)
+  }
+
   const s = spinner()
-  s.start("Configuring vault")
+  let spinnerActive = false
+  const startSpinnerStep = (message: string): void => {
+    s.start(message)
+    spinnerActive = true
+  }
+  const completeSpinnerStep = (message: string): void => {
+    if (!spinnerActive) {
+      return
+    }
+
+    s.stop(message)
+    spinnerActive = false
+  }
+
+  startSpinnerStep("Configuring vault")
 
   await configureAgentFolder(vaultPath, includeAgentFolder)
   await copyVaultSeed(vaultPath, { overwrite: false, includeAgent: includeAgentFolder })
@@ -251,12 +275,14 @@ export async function runInit(options: InitOptions): Promise<void> {
     includeMinimalThemeTools: options.minimal,
   })
   await configureMinimalTheme(vaultPath, options.minimal)
+  completeSpinnerStep("Vault configured")
 
-  s.message("Downloading plugins")
+  startSpinnerStep("Downloading plugins")
   const pluginResult = await downloadPlugins(vaultPath, {
     includeGit: syncMethod === "git",
     includeMinimal: options.minimal,
   })
+  completeSpinnerStep("Plugins downloaded")
 
   let configPatched = false
   let hookInstallStatus: "installed" | "skipped" | "failed" | null = null
@@ -301,11 +327,13 @@ export async function runInit(options: InitOptions): Promise<void> {
 
     const restartRequired = openclawRequested && (hookInstallStatus === "installed" || configPatched)
     if (restartRequired && integrationFailures.length === 0) {
-      s.message("Restarting OpenClaw gateway")
+      startSpinnerStep("OpenClaw gateway restarting")
       const restartError = await restartGatewayAndWait()
       if (restartError) {
+        completeSpinnerStep("OpenClaw gateway restart failed")
         integrationFailures.push(restartError)
       } else {
+        completeSpinnerStep("OpenClaw gateway restarted")
         gatewayRestarted = true
       }
     }
@@ -354,7 +382,9 @@ export async function runInit(options: InitOptions): Promise<void> {
 
     setupSucceeded = true
   } finally {
-    s.stop(setupSucceeded ? "Setup complete" : "Setup failed")
+    if (spinnerActive) {
+      completeSpinnerStep(setupSucceeded ? "Setup complete" : "Setup failed")
+    }
   }
 
   const summaryLines = [`Vault path:  ${toTildePath(vaultPath)}`]

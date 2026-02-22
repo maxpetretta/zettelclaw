@@ -3,7 +3,17 @@
   "private": true,
   "workspaces": ["packages/cli", "packages/skill", "packages/website"],
   "scripts": {
-    "test:safe-init-migrate": "./scripts/run-safe-init-migrate-test.sh",
+    "clone": "./scripts/clone-openclaw-workspace.sh",
+    "cli": "bun run --cwd packages/cli start",
+    "cli:build": "bun run --cwd packages/cli build",
+    "cli:init": "bun run --cwd packages/cli init",
+    "cli:migrate": "bun run --cwd packages/cli migrate",
+    "init": "bun run cli:init",
+    "migrate": "bun run cli:migrate",
+    "web": "bun run --cwd packages/website dev",
+    "web:dev": "bun run --cwd packages/website dev",
+    "web:build": "bun run --cwd packages/website build",
+    "web:preview": "bun run --cwd packages/website preview",
     "lint": "bun run --cwd packages/cli lint && bun run --cwd packages/skill lint && bun run --cwd packages/website lint",
     "fix": "bun run --cwd packages/cli fix && bun run --cwd packages/skill fix && bun run --cwd packages/website fix"
   }

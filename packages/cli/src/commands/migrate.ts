@@ -20,6 +20,26 @@ export interface MigrateOptions {
   model?: string | undefined
 }
 
+interface OpenClawWorkspaceEnv {
+  stateDir: string
+  configPath: string
+}
+
+function resolveOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
+  const openclawStateDir = dirname(workspacePath)
+  return {
+    stateDir: openclawStateDir,
+    configPath: join(openclawStateDir, "openclaw.json"),
+  }
+}
+
+function configureOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
+  const env = resolveOpenClawEnvForWorkspace(workspacePath)
+  process.env.OPENCLAW_STATE_DIR = env.stateDir
+  process.env.OPENCLAW_CONFIG_PATH = env.configPath
+  return env
+}
+
 interface ModelInfo {
   key: string
   name: string
@@ -335,11 +355,73 @@ async function chooseModel(models: ModelInfo[], options: MigrateOptions): Promis
 
 const MIGRATE_SESSION_TARGET = "isolated"
 const MIGRATE_JOB_NAME = "zettelclaw-migrate"
+const MIGRATE_SESSION_LOOKUP_TIMEOUT_MS = 15_000
 
 interface MigrateEventResult {
   sent: boolean
   jobId?: string
   message?: string
+}
+
+function parseRunSessionKeyFromSessions(raw: string, jobId: string): string | undefined {
+  let parsedValue: unknown
+
+  try {
+    parsedValue = JSON.parse(raw)
+  } catch {
+    return undefined
+  }
+
+  const parsed = asRecord(parsedValue)
+  const rawSessions = Array.isArray(parsed.sessions) ? parsed.sessions : []
+  const keyPrefix = `agent:main:cron:${jobId}:run:`
+  let bestMatch: { key: string; updatedAt: number } | undefined
+
+  for (const rawSession of rawSessions) {
+    const session = asRecord(rawSession)
+    const key = typeof session.key === "string" ? session.key : ""
+    if (!key.startsWith(keyPrefix)) {
+      continue
+    }
+
+    const updatedAt = typeof session.updatedAt === "number" ? session.updatedAt : 0
+    if (!bestMatch || updatedAt >= bestMatch.updatedAt) {
+      bestMatch = { key, updatedAt }
+    }
+  }
+
+  return bestMatch?.key
+}
+
+async function waitForRunSessionKey(
+  jobId: string,
+  options: { maxWaitMs?: number; pollIntervalMs?: number } = {},
+): Promise<string | undefined> {
+  const maxWaitMs = options.maxWaitMs ?? 10_000
+  const pollIntervalMs = options.pollIntervalMs ?? 500
+  const deadline = Date.now() + maxWaitMs
+
+  while (Date.now() <= deadline) {
+    const sessionsResult = spawnSync("openclaw", ["sessions", "--active", "240", "--json"], {
+      encoding: "utf8",
+      timeout: 10_000,
+    })
+
+    if (!sessionsResult.error && sessionsResult.status === 0 && sessionsResult.stdout) {
+      const sessionKey = parseRunSessionKeyFromSessions(sessionsResult.stdout, jobId)
+      if (sessionKey) {
+        return sessionKey
+      }
+    }
+
+    if (Date.now() + pollIntervalMs > deadline) {
+      break
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+  }
+
+  return undefined
 }
 
 async function fireMigrateEvent(values: Record<string, string>): Promise<MigrateEventResult> {
@@ -368,7 +450,6 @@ async function fireMigrateEvent(values: Record<string, string>): Promise<Migrate
       "--message",
       eventText,
       "--announce",
-      "--delete-after-run",
       "--timeout-seconds",
       "1800",
       "--json",
@@ -407,6 +488,7 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
 
   const layout = await detectVaultLayout(vaultPath)
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
+  configureOpenClawEnvForWorkspace(workspacePath)
   const memoryPath = join(workspacePath, "memory")
 
   if (!(await isDirectory(memoryPath))) {
@@ -477,15 +559,19 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   log.success(`Migration started! Your agent will process ${summary.files.length} files.`)
 
   if (eventResult.jobId) {
-    log.message(
-      [
-        "Watch progress with:",
-        `  openclaw cron runs --id ${eventResult.jobId}`,
-        `  openclaw tui --session ${MIGRATE_SESSION_TARGET}`,
-      ].join("\n"),
-    )
+    const locateSessionSpinner = spinner()
+    locateSessionSpinner.start("Locating migration session")
+    const runSessionKey = await waitForRunSessionKey(eventResult.jobId, {
+      maxWaitMs: MIGRATE_SESSION_LOOKUP_TIMEOUT_MS,
+    })
+    const sessionAttachCommand = runSessionKey
+      ? `openclaw tui --session "${runSessionKey}"`
+      : `openclaw tui --session "agent:main:cron:${eventResult.jobId}"`
+    locateSessionSpinner.stop(runSessionKey ? "Migration session ready" : "Migration session pending")
+
+    log.message(`Connect to migration session:\n  ${sessionAttachCommand}`)
     return
   }
 
-  log.message(`Watch progress with:\n  openclaw tui --session ${MIGRATE_SESSION_TARGET}`)
+  log.message(`Connect to migration session:\n  openclaw tui --session "${MIGRATE_SESSION_TARGET}"`)
 }

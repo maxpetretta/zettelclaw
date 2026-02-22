@@ -21,7 +21,7 @@ List markdown files in `{{workspacePath}}/memory/` and split them into two lists
 
 Then process each list in batches of 5.
 
-For each batch, spawn sub-agents (one per file) using model `{{model}}`.
+For each batch, delegate to subagents (one per file) using model `{{model}}`.
 
 Maintain an accumulated **wikilink index** — a list of all note titles that exist in the vault. Start by listing existing notes:
 ```bash
@@ -37,7 +37,9 @@ ls "{{vaultPath}}/{{notesFolder}}/"
 - Enforce two-way `[[wikilinks]]` when journal content references typed notes:
   - Journal side: add `[[Note Title]]` links to relevant typed notes.
   - Typed note side: add a reciprocal link back to the source journal day (for example `[[YYYY-MM-DD]]`, derived from `<filename>`).
-- Report back: lists of note titles created and updated (for wikilink index updates)
+- Report back with exactly two sections:
+  - `Summary:` a concise summary of what this sub-agent wrote/updated.
+  - `Created Wikilinks:` a deduplicated list of `[[wikilinks]]` newly added by this sub-agent.
 - When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
 
 **For non-daily files**, instruct each sub-agent:
@@ -48,12 +50,14 @@ ls "{{vaultPath}}/{{notesFolder}}/"
 - If the file contains multiple distinct topics, split into multiple evergreen notes
 - Use `[[wikilinks]]` to link to notes in the provided wikilink index
 - When a non-daily note clearly maps to a migrated journal day, add reciprocal links between the note and that journal entry.
-- Report back: lists of note titles created and updated
+- Report back with exactly two sections:
+  - `Summary:` a concise summary of what this sub-agent wrote/updated.
+  - `Created Wikilinks:` a deduplicated list of `[[wikilinks]]` newly added by this sub-agent.
 - When complete, delete the original file: `{{workspacePath}}/memory/<filename>`
 
 ### Step 2: Wait for each batch to complete
 
-After spawning a batch of up to 5 sub-agents, wait for all to complete before starting the next batch. Collect the reported created/updated note titles and add them to the wikilink index for the next batch.
+After spawning a batch of up to 5 sub-agents, wait for all to complete before starting the next batch. Collect each sub-agent's `Created Wikilinks` output and merge those links into the wikilink index for the next batch.
 
 ### Step 3: Final pass
 
@@ -73,6 +77,7 @@ After all files are processed:
 - All filenames must be Title Case
 - All dates must be YYYY-MM-DD
 - Every note must have complete YAML frontmatter
+- Do not insert a blank line between frontmatter and the first content line
 - One idea per note (evergreen)
 - Migration writes typed notes to `{{vaultPath}}/{{notesFolder}}/` (do not route migrated notes to `00 Inbox/`)
 - For existing `project`/`research`/`contact` notes, append instead of overwrite and update frontmatter `updated`
