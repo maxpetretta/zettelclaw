@@ -1,6 +1,13 @@
 import { mock } from "bun:test"
 
-function defaultSpawnSyncResult() {
+interface MockSpawnSyncResult {
+  status: number | null
+  stdout: string
+  stderr: string
+  error?: Error & { code?: string }
+}
+
+function defaultSpawnSyncResult(): MockSpawnSyncResult {
   return {
     status: 0,
     stdout: "",
@@ -8,11 +15,15 @@ function defaultSpawnSyncResult() {
   }
 }
 
-export const spawnSyncMock = mock(defaultSpawnSyncResult)
+function defaultSpawnSync(_command: string, _args?: string[], _options?: Record<string, unknown>): MockSpawnSyncResult {
+  return defaultSpawnSyncResult()
+}
+
+export const spawnSyncMock = mock(defaultSpawnSync)
 
 export function resetSpawnSyncMock(): void {
   spawnSyncMock.mockReset()
-  spawnSyncMock.mockImplementation(defaultSpawnSyncResult)
+  spawnSyncMock.mockImplementation(defaultSpawnSync)
 }
 
 resetSpawnSyncMock()

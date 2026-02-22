@@ -13,7 +13,7 @@
     "vault"
   ],
   "scripts": {
-    "build": "rm -rf dist && bun build src/index.ts --target node --format esm --outdir dist",
+    "build": "rm -rf dist && bun build --target node --outfile dist/index.js src/index.ts && mkdir -p dist/prompts && if [ -d prompts ]; then cp prompts/*.md dist/prompts/ 2>/dev/null || true; fi",
     "sync:skill": "node scripts/sync-skill-assets.mjs",
     "prepack": "bun run build && bun run sync:skill",
     "start": "bun run src/index.ts",
@@ -31,9 +31,6 @@
     "@clack/prompts": "1.0.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.3",
-    "@types/bun": "1.2.5",
-    "@typescript/native-preview": "7.0.0-dev.20260219.1",
-    "typescript": "5.9.3"
+    "@types/bun": "1.2.5"
   }
 }

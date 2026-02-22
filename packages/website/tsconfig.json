@@ -6,8 +6,8 @@
     "allowJs": true,
     "esModuleInterop": true,
     "jsx": "preserve",
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@/*": ["./src/*"]
     },
     "types": ["astro/client"]

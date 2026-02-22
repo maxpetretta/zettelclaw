@@ -11,7 +11,7 @@
     "lint": "bun run lint:astro && bun run lint:biome && bun run lint:typecheck",
     "lint:astro": "astro check",
     "lint:biome": "biome check .",
-    "lint:typecheck": "tsc --noEmit",
+    "lint:typecheck": "tsgo --noEmit",
     "fix": "biome check --write --unsafe ."
   },
   "dependencies": {
@@ -22,9 +22,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.6",
-    "@biomejs/biome": "2.3.10",
     "@tailwindcss/vite": "4.1.18",
-    "tailwindcss": "4.1.18",
-    "typescript": "5.7.2"
+    "tailwindcss": "4.1.18"
   }
 }

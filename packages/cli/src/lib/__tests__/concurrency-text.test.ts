@@ -8,6 +8,7 @@ describe("forEachConcurrent", () => {
     let called = false
     await forEachConcurrent([], 4, () => {
       called = true
+      return Promise.resolve()
     })
 
     expect(called).toBe(false)

@@ -23,9 +23,6 @@
     "fix": "biome check --write ."
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.3",
-    "@types/bun": "1.2.5",
-    "@typescript/native-preview": "7.0.0-dev.20260219.1",
-    "typescript": "5.9.3"
+    "@types/bun": "1.2.5"
   }
 }

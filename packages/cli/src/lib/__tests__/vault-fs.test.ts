@@ -79,7 +79,7 @@ describe("vault-fs helpers", () => {
 
     await writeJsonFile(jsonPath, { a: 1, b: "two" })
 
-    const parsed = await readJsonFileOrDefault(jsonPath, { fallback: false })
+    const parsed = await readJsonFileOrDefault<Record<string, unknown>>(jsonPath, { fallback: false })
     expect(parsed).toEqual({ a: 1, b: "two" })
 
     const raw = await readFile(jsonPath, "utf8")
