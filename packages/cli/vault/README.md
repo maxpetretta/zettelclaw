@@ -15,6 +15,8 @@ If OpenClaw integration is disabled, `02 Agent/` is omitted and numbering is com
 
 Create your first note in `01 Notes/` using one of the templates. The journal template is `04 Templates/journal.md`, and each note type has its own frontmatter.
 
+If you already had files in your OpenClaw workspace `memory/` folder before setup, run `zettelclaw migrate` once. Migration processes `memory/` recursively, backs up `memory/` + `MEMORY.md` + `USER.md`, delegates per-file sub-agent conversion, runs a final synthesis update for `MEMORY.md`/`USER.md`, and then clears `memory/` on success.
+
 ## Workflow
 
 - `/new` and `/reset` append structured session capture to `03 Journal/` (journal-only raw layer).

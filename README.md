@@ -8,8 +8,6 @@ Zettelclaw sets up an Obsidian vault designed for dual human+agent authorship â€
 
 ```bash
 npx zettelclaw init
-# or
-bunx zettelclaw init
 ```
 
 The wizard asks for a vault path and sync method, then auto-configures everything: templates, plugins, and OpenClaw integration (if detected).
@@ -18,6 +16,12 @@ For a fully non-interactive setup:
 
 ```bash
 npx zettelclaw init --yes --vault ~/my-vault
+```
+
+If you already have OpenClaw workspace memory files, run migrate once after init:
+
+```bash
+npx zettelclaw migrate
 ```
 
 ## What It Does
@@ -34,6 +38,11 @@ npx zettelclaw init --yes --vault ~/my-vault
   - `zettelclaw-reset` (daily 02:00 local transcript sweep trigger)
   - `zettelclaw-nightly` (daily 03:00 local isolated maintenance pass)
 - Sets up frontmatter-driven note types that both humans and AI agents can read/write
+- Includes a CLI-orchestrated migration pipeline for existing workspace `memory/` files:
+  - Per-file sub-agent jobs (recursive `memory/**/*.md`)
+  - One final synthesis pass for `MEMORY.md` and `USER.md`
+  - Full recursive cleanup of `memory/` after successful migration
+  - Resume support via a state file (`.zettelclaw/migrate-state.json` by default)
 
 ## Memory Flow
 
@@ -41,6 +50,27 @@ npx zettelclaw init --yes --vault ~/my-vault
 - Supervised layer (human + agent): updates typed notes directly in `01 Notes/` when meaningful work is done
 - Nightly maintenance cron layer (agent-only, isolated): reviews the past day of journals, updates existing `project`/`research`/`contact` notes, writes net-new synthesis to `00 Inbox/`, and flags possible hook/cron drift when journal coverage is missing for 72+ hours
 - Linking: nightly maintenance enforces two-way links between journal entries and typed notes (`journal -> note` and `note -> journal/session`)
+
+## CLI Commands
+
+```bash
+# Initialize vault + OpenClaw integration
+npx zettelclaw init
+
+# Migrate existing workspace memory into the vault
+npx zettelclaw migrate
+
+# Programmatically verify setup
+npx zettelclaw verify
+```
+
+Useful migrate flags:
+
+- `--workspace <path>`: OpenClaw workspace path (default `~/.openclaw/workspace`)
+- `--vault <path>`: explicit vault path
+- `--model <name>`: model alias/key for migration agents
+- `--state-path <path>`: override migration resume state file path
+- `--parallel-jobs <n>`: run multiple per-file sub-agent jobs concurrently
 
 ## Web Clipper Template
 
