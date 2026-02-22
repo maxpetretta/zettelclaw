@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { parseJson, runOpenClawCommand } from "./openclaw-command"
 
 interface OpenClawCommandOptions {
   timeoutMs?: number
@@ -71,34 +71,26 @@ export interface ScheduledAgentCronJob {
 }
 
 function runOpenClaw(args: string[], options: OpenClawCommandOptions = {}): OpenClawCommandResult {
-  const result = spawnSync("openclaw", args, {
-    encoding: "utf8",
-    timeout: options.timeoutMs ?? 30_000,
-  })
-
-  if (result.error) {
-    const code = "code" in result.error ? result.error.code : undefined
-    if (code === "ENOENT") {
-      throw new OpenClawJobError("CLI_NOT_FOUND", "openclaw CLI was not found on PATH.")
-    }
-
-    throw new OpenClawJobError(
-      "COMMAND_FAILED",
-      `openclaw ${args.join(" ")} failed before execution.`,
-      result.error.message,
-    )
+  const commandOptions: { timeoutMs?: number } = {}
+  if (options.timeoutMs !== undefined) {
+    commandOptions.timeoutMs = options.timeoutMs
   }
 
-  const status = result.status ?? 1
-  const stdout = result.stdout ?? ""
-  const stderr = result.stderr ?? ""
+  const result = runOpenClawCommand(args, commandOptions)
 
-  if (status !== 0 && !options.allowFailure) {
-    const detail = stderr.trim() || stdout.trim() || `exit code ${status}`
-    throw new OpenClawJobError("COMMAND_FAILED", `openclaw ${args.join(" ")} failed.`, detail)
+  if (!result.ok && result.errorCode === "ENOENT") {
+    throw new OpenClawJobError("CLI_NOT_FOUND", "openclaw CLI was not found on PATH.")
   }
 
-  return { status, stdout, stderr }
+  if (!result.ok && options.allowFailure !== true) {
+    throw new OpenClawJobError("COMMAND_FAILED", `openclaw ${args.join(" ")} failed.`, result.message)
+  }
+
+  return {
+    status: result.status,
+    stdout: result.stdout,
+    stderr: result.stderr,
+  }
 }
 
 export async function scheduleAgentCronJob(params: ScheduleAgentCronJobParams): Promise<ScheduledAgentCronJob> {
@@ -108,32 +100,37 @@ export async function scheduleAgentCronJob(params: ScheduleAgentCronJobParams): 
   const shouldDeleteAfterRun = params.deleteAfterRun !== false
   const shouldAnnounce = params.announce === true
 
-  const legacyArgs = [
-    "cron",
-    "add",
-    "--at",
-    "+0s",
-    "--session",
-    sessionTarget,
-    "--name",
-    sessionName,
-    "--message",
-    params.message,
-  ]
+  const buildCronAddArgs = (atValue: string): string[] => {
+    const args = [
+      "cron",
+      "add",
+      "--at",
+      atValue,
+      "--session",
+      sessionTarget,
+      "--name",
+      sessionName,
+      "--message",
+      params.message,
+    ]
 
-  if (!shouldAnnounce) {
-    legacyArgs.push("--no-deliver")
-  }
-  if (shouldDeleteAfterRun) {
-    legacyArgs.push("--delete-after-run")
-  }
-  legacyArgs.push("--timeout-seconds", String(timeoutSeconds), "--json")
+    if (!shouldAnnounce) {
+      args.push("--no-deliver")
+    }
+    if (shouldDeleteAfterRun) {
+      args.push("--delete-after-run")
+    }
 
-  if (params.model) {
-    legacyArgs.push("--model", params.model)
+    args.push("--timeout-seconds", String(timeoutSeconds), "--json")
+
+    if (params.model) {
+      args.push("--model", params.model)
+    }
+
+    return args
   }
 
-  const legacyResult = await runOpenClawWithRetries(legacyArgs, {
+  const legacyResult = await runOpenClawWithRetries(buildCronAddArgs("+0s"), {
     allowFailure: true,
     timeoutMs: 60_000,
     retries: { attempts: 3, baseDelayMs: 900, maxDelayMs: 6_000 },
@@ -146,32 +143,7 @@ export async function scheduleAgentCronJob(params: ScheduleAgentCronJobParams): 
     }
   }
 
-  const compatibleArgs = [
-    "cron",
-    "add",
-    "--at",
-    new Date().toISOString(),
-    "--session",
-    sessionTarget,
-    "--name",
-    sessionName,
-    "--message",
-    params.message,
-  ]
-
-  if (!shouldAnnounce) {
-    compatibleArgs.push("--no-deliver")
-  }
-  if (shouldDeleteAfterRun) {
-    compatibleArgs.push("--delete-after-run")
-  }
-  compatibleArgs.push("--timeout-seconds", String(timeoutSeconds), "--json")
-
-  if (params.model) {
-    compatibleArgs.push("--model", params.model)
-  }
-
-  const compatibleResult = await runOpenClawWithRetries(compatibleArgs, {
+  const compatibleResult = await runOpenClawWithRetries(buildCronAddArgs(new Date().toISOString()), {
     allowFailure: true,
     timeoutMs: 60_000,
     retries: { attempts: 3, baseDelayMs: 900, maxDelayMs: 6_000 },
@@ -239,17 +211,14 @@ export async function waitForCronSummary(jobId: string, timeoutMs = 1_900_000): 
       continue
     }
 
-    let parsed: CronRunsResponse
-    try {
-      parsed = parseJson<CronRunsResponse>(result.stdout)
-    } catch (error) {
-      const wrapped = toOpenClawJobError(error)
+    const parsed = parseJson<CronRunsResponse>(result.stdout)
+    if (!parsed.value) {
       transientFailures += 1
       if (transientFailures >= 5) {
         throw new OpenClawJobError(
           "INVALID_JSON",
           `openclaw cron runs returned invalid JSON repeatedly for job ${jobId}.`,
-          wrapped.details ?? wrapped.message,
+          parsed.error,
         )
       }
 
@@ -258,7 +227,7 @@ export async function waitForCronSummary(jobId: string, timeoutMs = 1_900_000): 
     }
 
     transientFailures = 0
-    const entries = Array.isArray(parsed.entries) ? parsed.entries : []
+    const entries = Array.isArray(parsed.value.entries) ? parsed.value.entries : []
     const finishedEntry = entries
       .filter((entry) => entry.action === "finished")
       .sort((left, right) => (right.ts ?? 0) - (left.ts ?? 0))[0]
@@ -312,21 +281,12 @@ export function removeCronJob(jobId: string): void {
 
 function parseCronAddJobId(stdout: string): string {
   const parsed = parseJson<CronAddResponse>(stdout)
-  const id = typeof parsed.id === "string" ? parsed.id : ""
+  const id = typeof parsed.value?.id === "string" ? parsed.value.id : ""
   if (id.length === 0) {
     throw new OpenClawJobError("SCHEDULING_FAILED", "openclaw cron add did not return a job id.", stdout)
   }
 
   return id
-}
-
-function parseJson<T>(value: string): T {
-  try {
-    return JSON.parse(value) as T
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    throw new OpenClawJobError("INVALID_JSON", "Could not parse OpenClaw JSON output.", message)
-  }
 }
 
 async function runOpenClawWithRetries(

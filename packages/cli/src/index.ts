@@ -19,6 +19,28 @@ interface ParsedArgs {
   }
 }
 
+type ParsedFlagKey = keyof ParsedArgs["flags"]
+
+type OptionKind = "boolean" | "string" | "integer"
+
+interface OptionSpec {
+  longName: string
+  flag: ParsedFlagKey
+  kind: OptionKind
+}
+
+const OPTION_SPECS: readonly OptionSpec[] = [
+  { longName: "--yes", flag: "yes", kind: "boolean" },
+  { longName: "--minimal", flag: "minimal", kind: "boolean" },
+  { longName: "--vault", flag: "vaultPath", kind: "string" },
+  { longName: "--workspace", flag: "workspacePath", kind: "string" },
+  { longName: "--model", flag: "model", kind: "string" },
+  { longName: "--state-path", flag: "statePath", kind: "string" },
+  { longName: "--parallel-jobs", flag: "parallelJobs", kind: "integer" },
+]
+
+const OPTION_SPEC_BY_LONG_NAME = new Map(OPTION_SPECS.map((spec) => [spec.longName, spec]))
+
 function usage(): string {
   return [
     "zettelclaw — A human+agent knowledge system built on Obsidian and OpenClaw",
@@ -58,13 +80,98 @@ function takeValue(args: string[], index: number, key: string): string {
   return value
 }
 
-function parseInlineValue(arg: string, prefix: string, key: string): string {
-  const value = arg.slice(prefix.length)
-  if (value.length === 0) {
-    throw new Error(`Missing value for ${key}`)
+function parseIntegerValue(raw: string, key: string): number {
+  if (!/^\d+$/u.test(raw)) {
+    throw new Error(`Invalid value for ${key}: ${raw}`)
   }
 
-  return value
+  const parsedValue = Number(raw)
+  if (!Number.isSafeInteger(parsedValue)) {
+    throw new Error(`Invalid value for ${key}: ${raw}`)
+  }
+
+  return parsedValue
+}
+
+function parseOptionToken(arg: string): { longName: string; inlineValue?: string } {
+  const splitIndex = arg.indexOf("=")
+  if (splitIndex < 0) {
+    return { longName: arg }
+  }
+
+  return {
+    longName: arg.slice(0, splitIndex),
+    inlineValue: arg.slice(splitIndex + 1),
+  }
+}
+
+function assignParsedFlag(parsed: ParsedArgs, spec: OptionSpec, rawValue?: string): void {
+  if (spec.kind === "boolean") {
+    if (rawValue !== undefined) {
+      throw new Error(`Unknown argument: ${spec.longName}=${rawValue}`)
+    }
+
+    if (spec.flag === "yes" || spec.flag === "minimal") {
+      parsed.flags[spec.flag] = true
+      return
+    }
+
+    throw new Error(`Unsupported boolean option mapping for ${spec.longName}`)
+  }
+
+  if (typeof rawValue !== "string") {
+    throw new Error(`Missing value for ${spec.longName}`)
+  }
+
+  if (rawValue.length === 0) {
+    throw new Error(`Missing value for ${spec.longName}`)
+  }
+
+  const value = spec.kind === "integer" ? parseIntegerValue(rawValue, spec.longName) : rawValue
+
+  switch (spec.flag) {
+    case "vaultPath":
+      parsed.flags.vaultPath = value as string
+      return
+    case "workspacePath":
+      parsed.flags.workspacePath = value as string
+      return
+    case "model":
+      parsed.flags.model = value as string
+      return
+    case "statePath":
+      parsed.flags.statePath = value as string
+      return
+    case "parallelJobs":
+      parsed.flags.parallelJobs = value as number
+      return
+    default:
+      throw new Error(`Unsupported value option mapping for ${spec.longName}`)
+  }
+}
+
+function applyOption(parsed: ParsedArgs, rest: string[], index: number): number {
+  const arg = rest[index]
+  if (!arg) {
+    return 0
+  }
+
+  const token = parseOptionToken(arg)
+  const spec = OPTION_SPEC_BY_LONG_NAME.get(token.longName)
+
+  if (!spec) {
+    throw new Error(`Unknown argument: ${arg}`)
+  }
+
+  if (spec.kind === "boolean") {
+    assignParsedFlag(parsed, spec, token.inlineValue)
+    return 0
+  }
+
+  const rawValue = token.inlineValue ?? takeValue(rest, index, spec.longName)
+  assignParsedFlag(parsed, spec, rawValue)
+
+  return token.inlineValue === undefined ? 1 : 0
 }
 
 function validateArgs(parsed: ParsedArgs): void {
@@ -123,82 +230,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       return parsed
     }
 
-    if (arg === "--yes") {
-      parsed.flags.yes = true
-      continue
-    }
-
-    if (arg === "--minimal") {
-      parsed.flags.minimal = true
-      continue
-    }
-
-    if (arg.startsWith("--vault=")) {
-      parsed.flags.vaultPath = parseInlineValue(arg, "--vault=", "--vault")
-      continue
-    }
-
-    if (arg === "--vault") {
-      parsed.flags.vaultPath = takeValue(rest, index, "--vault")
-      index += 1
-      continue
-    }
-
-    if (arg.startsWith("--workspace=")) {
-      parsed.flags.workspacePath = parseInlineValue(arg, "--workspace=", "--workspace")
-      continue
-    }
-
-    if (arg === "--workspace") {
-      parsed.flags.workspacePath = takeValue(rest, index, "--workspace")
-      index += 1
-      continue
-    }
-
-    if (arg.startsWith("--model=")) {
-      parsed.flags.model = parseInlineValue(arg, "--model=", "--model")
-      continue
-    }
-
-    if (arg === "--model") {
-      parsed.flags.model = takeValue(rest, index, "--model")
-      index += 1
-      continue
-    }
-
-    if (arg.startsWith("--state-path=")) {
-      parsed.flags.statePath = parseInlineValue(arg, "--state-path=", "--state-path")
-      continue
-    }
-
-    if (arg === "--state-path") {
-      parsed.flags.statePath = takeValue(rest, index, "--state-path")
-      index += 1
-      continue
-    }
-
-    if (arg.startsWith("--parallel-jobs=")) {
-      const raw = parseInlineValue(arg, "--parallel-jobs=", "--parallel-jobs")
-      const parsedValue = Number.parseInt(raw, 10)
-      if (Number.isNaN(parsedValue)) {
-        throw new Error(`Invalid value for --parallel-jobs: ${raw}`)
-      }
-      parsed.flags.parallelJobs = parsedValue
-      continue
-    }
-
-    if (arg === "--parallel-jobs") {
-      const raw = takeValue(rest, index, "--parallel-jobs")
-      const parsedValue = Number.parseInt(raw, 10)
-      if (Number.isNaN(parsedValue)) {
-        throw new Error(`Invalid value for --parallel-jobs: ${raw}`)
-      }
-      parsed.flags.parallelJobs = parsedValue
-      index += 1
-      continue
-    }
-
-    throw new Error(`Unknown argument: ${arg}`)
+    const consumed = applyOption(parsed, rest, index)
+    index += consumed
   }
 
   validateArgs(parsed)

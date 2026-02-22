@@ -1,14 +1,18 @@
-import { spawnSync } from "node:child_process"
 import { readFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { intro, log, text } from "@clack/prompts"
 
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES } from "../lib/folders"
-import { asRecord, asStringArray, type JsonRecord } from "../lib/json"
+import { asRecord } from "../lib/json"
+import { runOpenClawCommand } from "../lib/openclaw-command"
+import { readHookEnabled, readOpenClawConfigFile, readOpenClawExtraPathsByScope } from "../lib/openclaw-config"
+import { type CronJobSnapshot, parseCronJobs, toCronJobSnapshots } from "../lib/openclaw-cron"
+import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { resolveSkillPackageDir } from "../lib/skill"
-import { isDirectory, pathExists } from "../lib/vault"
+import { detectVaultFromOpenClawConfig, looksLikeZettelclawVault } from "../lib/vault-detect"
+import { isDirectory, pathExists } from "../lib/vault-fs"
 
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
 
@@ -24,93 +28,12 @@ export interface VerifyOptions {
   workspacePath?: string | undefined
 }
 
-interface OpenClawWorkspaceEnv {
-  stateDir: string
-  configPath: string
-}
-
 type CheckStatus = "pass" | "warn" | "fail"
 
 interface VerifyCheck {
   name: string
   status: CheckStatus
   detail: string
-}
-
-interface CronJobSnapshot {
-  name: string
-  enabled: boolean
-  expression: string | undefined
-  session: string | undefined
-  message: string | undefined
-}
-
-function resolveOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
-  const openclawStateDir = dirname(workspacePath)
-  return {
-    stateDir: openclawStateDir,
-    configPath: join(openclawStateDir, "openclaw.json"),
-  }
-}
-
-function configureOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
-  const env = resolveOpenClawEnvForWorkspace(workspacePath)
-  process.env.OPENCLAW_STATE_DIR = env.stateDir
-  process.env.OPENCLAW_CONFIG_PATH = env.configPath
-  return env
-}
-
-async function detectExistingFolder(vaultPath: string, candidates: readonly string[]): Promise<string | undefined> {
-  for (const folder of candidates) {
-    if (await isDirectory(join(vaultPath, folder))) {
-      return folder
-    }
-  }
-
-  return undefined
-}
-
-async function looksLikeZettelclawVault(vaultPath: string): Promise<boolean> {
-  if (!(await isDirectory(vaultPath))) {
-    return false
-  }
-
-  const notesFolder = await detectExistingFolder(vaultPath, NOTES_FOLDER_CANDIDATES)
-  const journalFolder = await detectExistingFolder(vaultPath, JOURNAL_FOLDER_CANDIDATES)
-  return typeof notesFolder === "string" && typeof journalFolder === "string"
-}
-
-async function detectVaultFromOpenClawConfig(configPath: string): Promise<string | undefined> {
-  if (!(await pathExists(configPath))) {
-    return undefined
-  }
-
-  try {
-    const raw = await readFile(configPath, "utf8")
-    const config = asRecord(JSON.parse(raw))
-    const directMemorySearch = asRecord(config.memorySearch)
-    const agents = asRecord(config.agents)
-    const defaults = asRecord(agents.defaults)
-    const defaultsMemorySearch = asRecord(defaults.memorySearch)
-
-    const extraPathsCandidates = [directMemorySearch.extraPaths, defaultsMemorySearch.extraPaths]
-    const extraPaths = extraPathsCandidates.flatMap((value) => (Array.isArray(value) ? value : []))
-
-    for (const candidate of extraPaths) {
-      if (typeof candidate !== "string") {
-        continue
-      }
-
-      const resolvedCandidate = resolveUserPath(candidate)
-      if (await looksLikeZettelclawVault(resolvedCandidate)) {
-        return resolvedCandidate
-      }
-    }
-  } catch {
-    return undefined
-  }
-
-  return undefined
 }
 
 async function promptVaultPath(): Promise<string> {
@@ -131,7 +54,11 @@ async function detectVaultPath(options: VerifyOptions, workspacePath: string): P
   }
 
   const openclawConfigPath = join(dirname(workspacePath), "openclaw.json")
-  const detected = await detectVaultFromOpenClawConfig(openclawConfigPath)
+  const detected = await detectVaultFromOpenClawConfig(
+    openclawConfigPath,
+    NOTES_FOLDER_CANDIDATES,
+    JOURNAL_FOLDER_CANDIDATES,
+  )
   if (detected) {
     return detected
   }
@@ -143,48 +70,11 @@ async function detectVaultPath(options: VerifyOptions, workspacePath: string): P
   return resolveUserPath(await promptVaultPath())
 }
 
-function readText(record: JsonRecord, keys: string[]): string | undefined {
-  for (const key of keys) {
-    const value = record[key]
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim()
-    }
-  }
-
-  return undefined
-}
-
-function readHookEnabled(value: unknown): boolean | undefined {
-  if (typeof value === "boolean") {
-    return value
-  }
-
-  const record = asRecord(value)
-  return typeof record.enabled === "boolean" ? record.enabled : undefined
-}
-
 async function readFileText(path: string): Promise<string | undefined> {
   try {
     return await readFile(path, "utf8")
   } catch {
     return undefined
-  }
-}
-
-async function readOpenClawConfig(configPath: string): Promise<{ config?: JsonRecord; error?: string }> {
-  if (!(await pathExists(configPath))) {
-    return { error: `OpenClaw config not found at ${toTildePath(configPath)}` }
-  }
-
-  const raw = await readFileText(configPath)
-  if (!raw) {
-    return { error: `Could not read ${toTildePath(configPath)}` }
-  }
-
-  try {
-    return { config: asRecord(JSON.parse(raw)) }
-  } catch {
-    return { error: `Could not parse JSON in ${toTildePath(configPath)}` }
   }
 }
 
@@ -198,50 +88,17 @@ function pathListIncludes(paths: readonly string[], targetPath: string): boolean
 }
 
 function listCronJobs(): { jobs: CronJobSnapshot[]; error?: string } {
-  const result = spawnSync("openclaw", ["cron", "list", "--json"], {
-    encoding: "utf8",
-    timeout: 15_000,
-  })
-
-  if (result.error) {
-    return { jobs: [], error: `Could not list cron jobs: ${result.error.message}` }
+  const result = runOpenClawCommand(["cron", "list", "--json"], { timeoutMs: 15_000 })
+  if (!result.ok) {
+    return { jobs: [], error: result.message ?? "Could not list cron jobs." }
   }
 
-  if (result.status !== 0) {
-    const stderr = result.stderr?.trim()
-    return {
-      jobs: [],
-      error: stderr.length > 0 ? stderr : `openclaw cron list exited with code ${result.status}`,
-    }
-  }
-
-  let parsedValue: unknown
-  try {
-    parsedValue = JSON.parse(result.stdout)
-  } catch {
+  const parsed = parseCronJobs(result.stdout)
+  if (parsed.error) {
     return { jobs: [], error: "Could not parse `openclaw cron list --json` output." }
   }
 
-  const parsed = asRecord(parsedValue)
-  const rawJobs = Array.isArray(parsed.jobs) ? parsed.jobs : []
-  const jobs = rawJobs
-    .map((entry) => asRecord(entry))
-    .map((job) => {
-      const schedule = asRecord(job.schedule)
-      const payload = asRecord(job.payload)
-      const enabledValue = job.enabled
-
-      return {
-        name: readText(job, ["name"]) ?? "",
-        enabled: enabledValue === true || enabledValue === "true",
-        expression: readText(schedule, ["expr", "cron"]) ?? readText(job, ["cron", "schedule"]),
-        session: readText(job, ["sessionTarget", "session", "sessionKey"]) ?? readText(payload, ["sessionTarget"]),
-        message: readText(job, ["message"]) ?? readText(payload, ["message"]),
-      }
-    })
-    .filter((job) => job.name.length > 0)
-
-  return { jobs }
+  return { jobs: toCronJobSnapshots(parsed.jobs) }
 }
 
 function buildCronCheck(
@@ -291,18 +148,6 @@ function buildCronCheck(
     name: `${options.name} cron`,
     status: "pass",
     detail: `enabled (${enabledJob.expression}, ${enabledJob.session})`,
-  }
-}
-
-function readConfigExtraPaths(config: JsonRecord): { global: string[]; defaults: string[] } {
-  const memorySearch = asRecord(config.memorySearch)
-  const agents = asRecord(config.agents)
-  const defaults = asRecord(agents.defaults)
-  const defaultsMemorySearch = asRecord(defaults.memorySearch)
-
-  return {
-    global: asStringArray(memorySearch.extraPaths),
-    defaults: asStringArray(defaultsMemorySearch.extraPaths),
   }
 }
 
@@ -382,7 +227,7 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
   checks.push({ name: "OpenClaw config path", status: "pass", detail: openclawConfigPath })
   checks.push({ name: "Vault path", status: "pass", detail: vaultPath })
 
-  if (await looksLikeZettelclawVault(vaultPath)) {
+  if (await looksLikeZettelclawVault(vaultPath, NOTES_FOLDER_CANDIDATES, JOURNAL_FOLDER_CANDIDATES)) {
     checks.push({ name: "Vault structure", status: "pass", detail: "notes + journal folders detected" })
   } else {
     checks.push({ name: "Vault structure", status: "fail", detail: "notes/journal folders not detected" })
@@ -413,12 +258,15 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
     })
   }
 
-  const configReadResult = await readOpenClawConfig(openclawConfigPath)
+  const configReadResult = await readOpenClawConfigFile(openclawConfigPath)
   if (!configReadResult.config) {
     checks.push({
       name: "OpenClaw config",
       status: "fail",
-      detail: configReadResult.error ?? `could not read ${toTildePath(openclawConfigPath)}`,
+      detail:
+        typeof configReadResult.error === "string"
+          ? configReadResult.error.replaceAll(openclawConfigPath, toTildePath(openclawConfigPath))
+          : `could not read ${toTildePath(openclawConfigPath)}`,
     })
   } else {
     const config = configReadResult.config
@@ -446,7 +294,7 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
       })
     }
 
-    const extraPaths = readConfigExtraPaths(config)
+    const extraPaths = readOpenClawExtraPathsByScope(config)
     const inGlobalPaths = pathListIncludes(extraPaths.global, vaultPath)
     const inDefaultPaths = pathListIncludes(extraPaths.defaults, vaultPath)
     const detail = `memorySearch.extraPaths=${inGlobalPaths ? "yes" : "no"}, agents.defaults.memorySearch.extraPaths=${inDefaultPaths ? "yes" : "no"}`

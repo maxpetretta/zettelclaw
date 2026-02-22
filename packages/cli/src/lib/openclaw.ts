@@ -1,11 +1,21 @@
-import { spawnSync } from "node:child_process"
-import { cp, lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { createHash } from "node:crypto"
+import { cp, lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 
 import { asRecord, type JsonRecord } from "./json"
+import { runOpenClawCommand } from "./openclaw-command"
+import {
+  isCronJobEnabled,
+  parseCronJobs,
+  readCronJobExpression,
+  readCronJobId,
+  readCronJobMessage,
+  readCronJobSession,
+  readCronJobTimeZone,
+} from "./openclaw-cron"
 import { resolveSkillPackageDir, resolveSkillPath } from "./skill"
 import { substituteTemplate } from "./template"
-import { pathExists } from "./vault"
+import { pathExists } from "./vault-fs"
 
 const HOOK_SOURCE_DIR = resolveSkillPath("hooks", "zettelclaw")
 const TEMPLATE_SOURCE_DIR = resolveSkillPath("templates")
@@ -36,23 +46,63 @@ async function hookInstallLooksValid(hookPath: string): Promise<boolean> {
   return (await pathExists(join(hookPath, "HOOK.md"))) && (await pathExists(join(hookPath, "handler.ts")))
 }
 
+async function listFilesRecursive(rootPath: string, relativePath = ""): Promise<string[]> {
+  const absolutePath = relativePath.length > 0 ? join(rootPath, relativePath) : rootPath
+  const entries = await readdir(absolutePath, { withFileTypes: true })
+  const files: string[] = []
+
+  for (const entry of entries) {
+    const nextRelative = relativePath.length > 0 ? `${relativePath}/${entry.name}` : entry.name
+    if (entry.isDirectory()) {
+      files.push(...(await listFilesRecursive(rootPath, nextRelative)))
+      continue
+    }
+
+    if (entry.isFile()) {
+      files.push(nextRelative)
+    }
+  }
+
+  return files
+}
+
+async function computeDirectoryHash(pathToDir: string): Promise<string> {
+  const hash = createHash("sha256")
+  const files = (await listFilesRecursive(pathToDir)).sort((left, right) => left.localeCompare(right))
+
+  for (const relativeFile of files) {
+    const content = await readFile(join(pathToDir, relativeFile))
+    hash.update(relativeFile)
+    hash.update("\u0000")
+    hash.update(content)
+    hash.update("\u0000")
+  }
+
+  return hash.digest("hex")
+}
+
 export async function installOpenClawHook(openclawDir: string): Promise<HookInstallResult> {
   const hookPath = join(openclawDir, "hooks", "zettelclaw")
 
   try {
+    if (!(await pathExists(HOOK_SOURCE_DIR))) {
+      return { status: "failed", message: `Missing bundled hook at ${HOOK_SOURCE_DIR}` }
+    }
+
+    const sourceHash = await computeDirectoryHash(HOOK_SOURCE_DIR)
+
     if (await pathExists(hookPath)) {
       const existingStats = await lstat(hookPath)
 
       if (existingStats.isDirectory() && (await hookInstallLooksValid(hookPath))) {
-        return { status: "skipped" }
+        const installedHash = await computeDirectoryHash(hookPath)
+        if (installedHash === sourceHash) {
+          return { status: "skipped" }
+        }
       }
 
       // Remove partial or invalid installs and replace with the bundled hook.
       await rm(hookPath, { recursive: true, force: true })
-    }
-
-    if (!(await pathExists(HOOK_SOURCE_DIR))) {
-      return { status: "failed", message: `Missing bundled hook at ${HOOK_SOURCE_DIR}` }
     }
 
     await mkdir(dirname(hookPath), { recursive: true })
@@ -151,71 +201,6 @@ export async function patchOpenClawConfig(vaultPath: string, openclawDir: string
   }
 }
 
-function parseCronJobs(raw: string): JsonRecord[] {
-  try {
-    const parsed = asRecord(JSON.parse(raw))
-    const jobs = Array.isArray(parsed.jobs) ? parsed.jobs : []
-    return jobs.map((entry) => asRecord(entry))
-  } catch {
-    return []
-  }
-}
-
-function readCronJobText(job: JsonRecord, keys: string[]): string | undefined {
-  for (const key of keys) {
-    const value = job[key]
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim()
-    }
-  }
-
-  return undefined
-}
-
-function isCronJobEnabled(job: JsonRecord): boolean {
-  return job.enabled === true || job.enabled === "true"
-}
-
-function readCronJobExpression(job: JsonRecord): string | undefined {
-  const direct = readCronJobText(job, ["cron", "schedule"])
-  if (direct) {
-    return direct
-  }
-
-  const schedule = asRecord(job.schedule)
-  return readCronJobText(schedule, ["expr", "cron"])
-}
-
-function readCronJobTimeZone(job: JsonRecord): string | undefined {
-  const direct = readCronJobText(job, ["tz", "timezone"])
-  if (direct) {
-    return direct
-  }
-
-  const schedule = asRecord(job.schedule)
-  return readCronJobText(schedule, ["tz", "timezone"])
-}
-
-function readCronJobSession(job: JsonRecord): string | undefined {
-  const direct = readCronJobText(job, ["session", "sessionKey", "sessionTarget"])
-  if (direct) {
-    return direct
-  }
-
-  const payload = asRecord(job.payload)
-  return readCronJobText(payload, ["session", "sessionKey", "sessionTarget"])
-}
-
-function readCronJobMessage(job: JsonRecord): string | undefined {
-  const direct = readCronJobText(job, ["message"])
-  if (direct) {
-    return direct
-  }
-
-  const payload = asRecord(job.payload)
-  return readCronJobText(payload, ["message"])
-}
-
 function sweepCronJobMatchesDesiredSchedule(job: JsonRecord, expectedTimeZone: string): boolean {
   const expression = readCronJobExpression(job)
   const timeZone = readCronJobTimeZone(job)
@@ -257,41 +242,18 @@ function resolveLocalTimeZone(): string {
   return "UTC"
 }
 
-function getCronJobId(job: JsonRecord): string | undefined {
-  const id = job.id
-  return typeof id === "string" && id.trim().length > 0 ? id.trim() : undefined
-}
-
 function runCronCommand(args: string[]): { ok: boolean; stdout: string; stderr: string; message?: string } {
-  const result = spawnSync("openclaw", args, {
-    encoding: "utf8",
-    timeout: 15_000,
-  })
-
-  if (result.error) {
-    return {
-      ok: false,
-      stdout: result.stdout ?? "",
-      stderr: result.stderr ?? "",
-      message: result.error.message,
-    }
+  const result = runOpenClawCommand(args, { timeoutMs: 15_000 })
+  const output: { ok: boolean; stdout: string; stderr: string; message?: string } = {
+    ok: result.ok,
+    stdout: result.stdout,
+    stderr: result.stderr,
+  }
+  if (typeof result.message === "string") {
+    output.message = result.message
   }
 
-  if (result.status !== 0) {
-    const stderr = result.stderr.trim()
-    return {
-      ok: false,
-      stdout: result.stdout ?? "",
-      stderr,
-      message: stderr.length > 0 ? stderr : `openclaw ${args.join(" ")} exited with code ${result.status}`,
-    }
-  }
-
-  return {
-    ok: true,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  }
+  return output
 }
 
 export interface CronJobResult {
@@ -310,7 +272,12 @@ function ensureCronJob(
     return { status: "failed", message: `Could not list cron jobs: ${listed.message ?? "unknown error"}` }
   }
 
-  const jobs = parseCronJobs(listed.stdout)
+  const parsedJobs = parseCronJobs(listed.stdout)
+  if (parsedJobs.error) {
+    return { status: "failed", message: `Could not parse cron jobs JSON: ${parsedJobs.error}` }
+  }
+
+  const jobs = parsedJobs.jobs
   const namedJobs = jobs.filter((job) => job.name === jobName)
   const enabledJob = namedJobs.find((job) => isCronJobEnabled(job))
 
@@ -319,7 +286,7 @@ function ensureCronJob(
       return { status: "skipped" }
     }
 
-    const enabledJobId = getCronJobId(enabledJob)
+    const enabledJobId = readCronJobId(enabledJob)
     if (!enabledJobId) {
       return {
         status: "failed",
@@ -337,11 +304,11 @@ function ensureCronJob(
   }
 
   const matchingDisabledJobWithId = namedJobs.find(
-    (job) => !isCronJobEnabled(job) && matchesDesiredSchedule(job) && getCronJobId(job),
+    (job) => !isCronJobEnabled(job) && matchesDesiredSchedule(job) && readCronJobId(job),
   )
 
   if (matchingDisabledJobWithId) {
-    const jobId = getCronJobId(matchingDisabledJobWithId) as string
+    const jobId = readCronJobId(matchingDisabledJobWithId) as string
     const enabled = runCronCommand(["cron", "enable", jobId])
 
     if (!enabled.ok) {
@@ -449,7 +416,6 @@ export interface EventFireResult {
 }
 
 export async function firePostInitEvent(vaultPath: string): Promise<EventFireResult> {
-  // Read the post-init event template
   const templatePath = join(TEMPLATE_SOURCE_DIR, "post-init-event.md")
   let template: string
   try {
@@ -459,35 +425,27 @@ export async function firePostInitEvent(vaultPath: string): Promise<EventFireRes
     return { sent: false, message: `Could not read template ${templatePath}: ${message}` }
   }
 
-  // Substitute variables
   const eventText = substituteTemplate(template, {
     VAULT_PATH: vaultPath,
     SKILL_PACKAGE_PATH: resolveSkillPackageDir(),
   })
 
-  // Fire the system event via OpenClaw CLI
-  const result = spawnSync("openclaw", ["system", "event", "--text", eventText, "--mode", "now"], {
-    encoding: "utf8",
-    timeout: 10_000,
+  const direct = runOpenClawCommand(["system", "event", "--text", eventText, "--mode", "now"], {
+    timeoutMs: 10_000,
   })
-
-  if (result.error || result.status !== 0) {
-    // Try the cron wake approach as fallback
-    const fallback = spawnSync("openclaw", ["system", "event", "--text", eventText], {
-      encoding: "utf8",
-      timeout: 10_000,
-    })
-
-    if (fallback.error || fallback.status !== 0) {
-      const errorMessage =
-        fallback.error?.message ??
-        fallback.stderr?.trim() ??
-        result.error?.message ??
-        result.stderr?.trim() ??
-        "unknown error"
-      return { sent: false, message: `Could not fire post-init event via OpenClaw CLI: ${errorMessage}` }
-    }
+  if (direct.ok) {
+    return { sent: true }
   }
 
-  return { sent: true }
+  const fallback = runOpenClawCommand(["system", "event", "--text", eventText], {
+    timeoutMs: 10_000,
+  })
+  if (fallback.ok) {
+    return { sent: true }
+  }
+
+  return {
+    sent: false,
+    message: `Could not fire post-init event via OpenClaw CLI: ${fallback.message ?? direct.message ?? "unknown error"}`,
+  }
 }

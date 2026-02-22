@@ -2,9 +2,11 @@ import { createHash } from "node:crypto"
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 
+import { forEachConcurrent } from "../lib/concurrency"
 import { asStringArray } from "../lib/json"
 import { OpenClawJobError, scheduleAgentCronJob, waitForCronSummary } from "../lib/openclaw-jobs"
-import { pathExists } from "../lib/vault"
+import { uniqueTrimmedStrings } from "../lib/text"
+import { pathExists } from "../lib/vault-fs"
 import type {
   MigratePipelineOptions,
   MigratePipelineResult,
@@ -53,7 +55,6 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
     const parallelJobs = resolveParallelJobs(options.parallelJobs, pendingTasks.length)
     let settledTasks = 0
     let activeJobs = 0
-    let nextTaskIndex = 0
     let saveChain = Promise.resolve()
 
     options.onProgress?.(
@@ -65,62 +66,47 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
       await saveChain
     }
 
-    const worker = async (): Promise<void> => {
-      while (true) {
-        const index = nextTaskIndex
-        nextTaskIndex += 1
-        if (index >= pendingTasks.length) {
-          return
+    await forEachConcurrent(pendingTasks, parallelJobs, async (task) => {
+      activeJobs += 1
+      try {
+        const extraction = await runTaskMigration(task, {
+          workspacePath: options.workspacePath,
+          vaultPath: options.vaultPath,
+          notesFolder: options.notesFolder,
+          journalFolder: options.journalFolder,
+          model: options.model,
+          wikilinkTitles,
+        })
+
+        if (extraction.status !== "ok") {
+          throw new Error(extraction.summary.length > 0 ? extraction.summary : "Sub-agent reported error status.")
         }
 
-        const task = pendingTasks[index]
-        if (!task) {
-          return
+        if (!extraction.deletedSource && (await pathExists(task.sourcePath))) {
+          throw new Error(`Source file was not deleted: ${task.relativePath}`)
         }
 
-        activeJobs += 1
-        try {
-          const extraction = await runTaskMigration(task, {
-            workspacePath: options.workspacePath,
-            vaultPath: options.vaultPath,
-            notesFolder: options.notesFolder,
-            journalFolder: options.journalFolder,
-            model: options.model,
-            wikilinkTitles,
-          })
-
-          if (extraction.status !== "ok") {
-            throw new Error(extraction.summary.length > 0 ? extraction.summary : "Sub-agent reported error status.")
-          }
-
-          if (!extraction.deletedSource && (await pathExists(task.sourcePath))) {
-            throw new Error(`Source file was not deleted: ${task.relativePath}`)
-          }
-
-          const completedAt = new Date().toISOString()
-          state.completed[task.id] = {
-            taskId: task.id,
-            relativePath: task.relativePath,
-            extraction,
-            completedAt,
-          }
-          state.updatedAt = completedAt
-          mergeExtractionWikilinks(wikilinkTitles, extraction)
-          await enqueueStateSave()
-          processedTasks += 1
-        } catch (error) {
-          failedTaskErrors.push(formatTaskError(task, error))
-        } finally {
-          activeJobs -= 1
-          settledTasks += 1
-          options.onProgress?.(
-            `Progress: ${settledTasks}/${pendingTasks.length} files complete (${failedTaskErrors.length} failed, ${activeJobs} active, ${skippedTasks} skipped)`,
-          )
+        const completedAt = new Date().toISOString()
+        state.completed[task.id] = {
+          taskId: task.id,
+          relativePath: task.relativePath,
+          extraction,
+          completedAt,
         }
+        state.updatedAt = completedAt
+        mergeExtractionWikilinks(wikilinkTitles, extraction)
+        await enqueueStateSave()
+        processedTasks += 1
+      } catch (error) {
+        failedTaskErrors.push(formatTaskError(task, error))
+      } finally {
+        activeJobs -= 1
+        settledTasks += 1
+        options.onProgress?.(
+          `Progress: ${settledTasks}/${pendingTasks.length} files complete (${failedTaskErrors.length} failed, ${activeJobs} active, ${skippedTasks} skipped)`,
+        )
       }
-    }
-
-    await Promise.all(Array.from({ length: parallelJobs }, () => worker()))
+    })
     await saveChain
   }
 
@@ -134,7 +120,7 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
       finalSynthesisSummary: "",
       statePath: options.statePath,
       cleanupCompleted: state.cleanupCompleted,
-      completedResults: selectCompletedResults(options.tasks, state),
+      completedResults: selectAllCompletedResults(state),
     }
   }
 
@@ -146,7 +132,7 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
       notesFolder: options.notesFolder,
       journalFolder: options.journalFolder,
       model: options.model,
-      completedResults: selectCompletedResults(options.tasks, state),
+      completedResults: selectAllCompletedResults(state),
     })
 
     const memoryPath = join(options.workspacePath, "MEMORY.md")
@@ -180,7 +166,7 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
     finalSynthesisSummary: state.finalSynthesisSummary ?? "",
     statePath: options.statePath,
     cleanupCompleted: state.cleanupCompleted,
-    completedResults: selectCompletedResults(options.tasks, state),
+    completedResults: selectAllCompletedResults(state),
   }
 }
 
@@ -297,10 +283,8 @@ function formatTaskError(task: MigrateTask, error: unknown): string {
   return `${task.relativePath}: ${message}`
 }
 
-function selectCompletedResults(tasks: MigrateTask[], state: MigrateRunState): StoredMigrateTaskResult[] {
-  return tasks
-    .map((task) => state.completed[task.id])
-    .filter((result): result is StoredMigrateTaskResult => result !== undefined)
+function selectAllCompletedResults(state: MigrateRunState): StoredMigrateTaskResult[] {
+  return Object.values(state.completed).sort((left, right) => left.relativePath.localeCompare(right.relativePath))
 }
 
 function resolveParallelJobs(value: number | undefined, pendingCount: number): number {
@@ -528,27 +512,5 @@ async function listMarkdownTitles(rootPath: string): Promise<string[]> {
     }
   }
 
-  return uniqueStrings(titles)
-}
-
-function uniqueStrings(values: string[]): string[] {
-  const seen = new Set<string>()
-  const output: string[] = []
-
-  for (const value of values) {
-    const trimmed = value.trim()
-    if (trimmed.length === 0) {
-      continue
-    }
-
-    const key = trimmed.toLowerCase()
-    if (seen.has(key)) {
-      continue
-    }
-
-    seen.add(key)
-    output.push(trimmed)
-  }
-
-  return output
+  return uniqueTrimmedStrings(titles)
 }

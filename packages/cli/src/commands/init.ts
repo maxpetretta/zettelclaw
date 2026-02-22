@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process"
 import { cp, readdir } from "node:fs/promises"
-import { basename, dirname, join } from "node:path"
+import { dirname, join } from "node:path"
 import { confirm, intro, log, select, spinner, text } from "@clack/prompts"
+
+import { chooseFileBackupPath } from "../lib/backups"
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import {
   ensureZettelclawNightlyMaintenanceCronJob,
@@ -10,23 +12,21 @@ import {
   installOpenClawHook,
   patchOpenClawConfig,
 } from "../lib/openclaw"
+import { runOpenClawCommand } from "../lib/openclaw-command"
+import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
-import { downloadPlugins } from "../lib/plugins"
+import { type DownloadResult, downloadPlugins } from "../lib/plugins"
 import { resolveSkillPath } from "../lib/skill"
+import { configureAgentFolder, createAgentSymlinks } from "../lib/vault-agent"
+import { isDirectory, pathExists } from "../lib/vault-fs"
 import {
-  type CopyResult,
-  configureAgentFolder,
   configureApp,
   configureCommunityPlugins,
   configureCoreSync,
   configureMinimalTheme,
-  copyVaultSeed,
-  createAgentSymlinks,
-  isDirectory,
-  pathExists,
   type SyncMethod,
-  seedVaultStarterContent,
-} from "../lib/vault"
+} from "../lib/vault-obsidian"
+import { type CopyResult, copyVaultSeed, seedVaultStarterContent } from "../lib/vault-seed"
 
 export interface InitOptions {
   yes: boolean
@@ -35,10 +35,13 @@ export interface InitOptions {
   workspacePath?: string | undefined
 }
 
-function configureOpenClawEnvForWorkspace(workspacePath: string): void {
-  const openclawStateDir = dirname(workspacePath)
-  process.env.OPENCLAW_STATE_DIR = openclawStateDir
-  process.env.OPENCLAW_CONFIG_PATH = join(openclawStateDir, "openclaw.json")
+type InstallStatus = "installed" | "skipped" | "failed"
+
+interface IntegrationSummary {
+  hookInstallStatus: InstallStatus | null
+  sweepCronStatus: InstallStatus | null
+  nightlyMaintenanceCronStatus: InstallStatus | null
+  gatewayRestarted: boolean
 }
 
 function initGitRepository(vaultPath: string): string | null {
@@ -63,51 +66,12 @@ function initGitRepository(vaultPath: string): string | null {
   return null
 }
 
-interface CommandOutcome {
-  ok: boolean
-  stdout: string
-  stderr: string
-  message?: string
-}
-
-function runOpenClawCommand(args: string[], timeoutMs: number): CommandOutcome {
-  const result = spawnSync("openclaw", args, {
-    encoding: "utf8",
-    timeout: timeoutMs,
-  })
-
-  if (result.error) {
-    return {
-      ok: false,
-      stdout: result.stdout ?? "",
-      stderr: result.stderr ?? "",
-      message: result.error.message,
-    }
-  }
-
-  if (result.status !== 0) {
-    const stderr = result.stderr.trim()
-    return {
-      ok: false,
-      stdout: result.stdout ?? "",
-      stderr,
-      message: stderr.length > 0 ? stderr : `openclaw ${args.join(" ")} exited with code ${result.status}`,
-    }
-  }
-
-  return {
-    ok: true,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  }
-}
-
 async function waitForGatewayHealthy(maxWaitMs = 60_000, pollIntervalMs = 2_000): Promise<string | null> {
   const deadline = Date.now() + maxWaitMs
   let lastError = "Gateway did not report a healthy state."
 
   while (Date.now() < deadline) {
-    const health = runOpenClawCommand(["gateway", "health", "--json", "--timeout", "5000"], 10_000)
+    const health = runOpenClawCommand(["gateway", "health", "--json", "--timeout", "5000"], { timeoutMs: 10_000 })
 
     if (health.ok) {
       try {
@@ -134,31 +98,12 @@ async function waitForGatewayHealthy(maxWaitMs = 60_000, pollIntervalMs = 2_000)
 }
 
 async function restartGatewayAndWait(): Promise<string | null> {
-  const restart = runOpenClawCommand(["gateway", "restart", "--json"], 20_000)
+  const restart = runOpenClawCommand(["gateway", "restart", "--json"], { timeoutMs: 20_000 })
   if (!restart.ok) {
     return `Could not restart OpenClaw gateway: ${restart.message ?? "unknown error"}`
   }
 
   return await waitForGatewayHealthy()
-}
-
-async function chooseFileBackupPath(sourcePath: string): Promise<{ backupPath: string; label: string }> {
-  const sourceName = basename(sourcePath)
-  const sourceDirectory = dirname(sourcePath)
-  const maxAttempts = 10_000
-
-  for (let index = 0; index < maxAttempts; index += 1) {
-    const label = index === 0 ? `${sourceName}.bak` : `${sourceName}.bak.${index}`
-    const backupPath = join(sourceDirectory, label)
-
-    if (!(await pathExists(backupPath))) {
-      return { backupPath, label }
-    }
-  }
-
-  throw new Error(
-    `Could not find an available backup path for ${sourceName} under ${toTildePath(sourceDirectory)} after ${maxAttempts} attempts`,
-  )
 }
 
 async function backupWorkspaceRewriteFiles(workspacePath: string): Promise<string[]> {
@@ -248,6 +193,159 @@ async function promptSyncMethod(defaultMethod: SyncMethod): Promise<SyncMethod> 
   throw new Error(`Invalid sync method selected: ${String(selection)}`)
 }
 
+async function configureVaultBase(
+  vaultPath: string,
+  includeAgentFolder: boolean,
+  syncMethod: SyncMethod,
+  minimal: boolean,
+) {
+  await configureAgentFolder(vaultPath, includeAgentFolder)
+  await copyVaultSeed(vaultPath, { overwrite: false, includeAgent: includeAgentFolder })
+  await seedVaultStarterContent(vaultPath, includeAgentFolder)
+  await configureCoreSync(vaultPath, syncMethod)
+  await configureCommunityPlugins(vaultPath, {
+    enabled: true,
+    includeGit: syncMethod === "git",
+    includeMinimalThemeTools: minimal,
+  })
+  await configureMinimalTheme(vaultPath, minimal)
+}
+
+function downloadVaultPlugins(vaultPath: string, syncMethod: SyncMethod, minimal: boolean): Promise<DownloadResult> {
+  return downloadPlugins(vaultPath, {
+    includeGit: syncMethod === "git",
+    includeMinimal: minimal,
+  })
+}
+
+async function runOpenClawIntegration(input: {
+  openclawRequested: boolean
+  shouldCreateSymlinks: boolean
+  vaultPath: string
+  workspacePath: string
+  openclawDir: string
+  onRestartStart: () => void
+  onRestartStop: (message: string) => void
+}): Promise<IntegrationSummary> {
+  const summary: IntegrationSummary = {
+    hookInstallStatus: null,
+    sweepCronStatus: null,
+    nightlyMaintenanceCronStatus: null,
+    gatewayRestarted: false,
+  }
+
+  let symlinkResult: CopyResult = { added: [], skipped: [], failed: [] }
+  let configPatched = false
+  const integrationFailures: string[] = []
+
+  if (input.shouldCreateSymlinks) {
+    symlinkResult = await createAgentSymlinks(input.vaultPath, input.workspacePath)
+    if (symlinkResult.failed.length > 0) {
+      integrationFailures.push(
+        `Could not create agent symlinks:\n${symlinkResult.failed.map((line) => `- ${line}`).join("\n")}`,
+      )
+    }
+  }
+
+  if (input.openclawRequested) {
+    const hookInstallResult = await installOpenClawHook(input.openclawDir)
+    summary.hookInstallStatus = hookInstallResult.status
+
+    if (summary.hookInstallStatus === "failed") {
+      integrationFailures.push(hookInstallResult.message ?? "Could not install OpenClaw hook.")
+    }
+
+    const configPatchResult = await patchOpenClawConfig(input.vaultPath, input.openclawDir)
+    configPatched = configPatchResult.changed
+
+    if (configPatchResult.message) {
+      integrationFailures.push(configPatchResult.message)
+    }
+  }
+
+  const restartRequired = input.openclawRequested && (summary.hookInstallStatus === "installed" || configPatched)
+  if (restartRequired && integrationFailures.length === 0) {
+    input.onRestartStart()
+    const restartError = await restartGatewayAndWait()
+    if (restartError) {
+      input.onRestartStop("OpenClaw gateway restart failed")
+      integrationFailures.push(restartError)
+    } else {
+      input.onRestartStop("OpenClaw gateway restarted")
+      summary.gatewayRestarted = true
+    }
+  }
+
+  if (input.openclawRequested && integrationFailures.length === 0) {
+    const sweepCronResult = ensureZettelclawSweepCronJob()
+    summary.sweepCronStatus = sweepCronResult.status
+
+    if (summary.sweepCronStatus === "failed") {
+      integrationFailures.push(sweepCronResult.message ?? "Could not configure zettelclaw-reset cron trigger.")
+    }
+  }
+
+  if (input.openclawRequested && integrationFailures.length === 0) {
+    const nightlyMaintenanceCronResult = await ensureZettelclawNightlyMaintenanceCronJob(input.vaultPath)
+    summary.nightlyMaintenanceCronStatus = nightlyMaintenanceCronResult.status
+
+    if (summary.nightlyMaintenanceCronStatus === "failed") {
+      integrationFailures.push(
+        nightlyMaintenanceCronResult.message ?? "Could not configure zettelclaw-nightly cron trigger.",
+      )
+    }
+  }
+
+  if (integrationFailures.length > 0) {
+    throw new Error(`OpenClaw integration failed:\n${integrationFailures.map((line) => `- ${line}`).join("\n")}`)
+  }
+
+  return summary
+}
+
+async function maybeNotifyAgentUpdate(
+  options: InitOptions,
+  openclawRequested: boolean,
+  workspacePath: string,
+  vaultPath: string,
+): Promise<void> {
+  if (!openclawRequested) {
+    return
+  }
+
+  const shouldNotify = options.yes
+    ? true
+    : unwrapPrompt(
+        await confirm({
+          message: "Notify your OpenClaw agent to update AGENTS.md memory guidance?",
+          initialValue: true,
+        }),
+      )
+
+  if (shouldNotify) {
+    await backupWorkspaceRewriteFiles(workspacePath)
+
+    const eventResult = await firePostInitEvent(vaultPath)
+    if (eventResult.sent) {
+      log.success("Agent notified — it will update AGENTS.md memory guidance")
+    } else {
+      const templatesDir = resolveSkillPath("templates")
+      const reason = eventResult.message ?? "Could not reach the agent. Is the OpenClaw gateway running?"
+      log.warn(`${reason}\nYou can manually update using the templates in: ${templatesDir}`)
+    }
+
+    return
+  }
+
+  const templatesDir = resolveSkillPath("templates")
+  log.message(
+    [
+      "Skipped. You can manually update AGENTS.md memory guidance later.",
+      `Template file is: ${join(templatesDir, "agents-memory.md")}`,
+    ].join("\n"),
+  )
+}
+
 export async function runInit(options: InitOptions): Promise<void> {
   intro("🦞 Welcome to Zettelclaw")
 
@@ -255,10 +353,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   const rawVaultPath = options.vaultPath ?? (options.yes ? defaultVaultPath : await promptVaultPath(defaultVaultPath))
   const vaultPath = resolveUserPath(rawVaultPath)
 
-  if (await pathExists(vaultPath)) {
-    if (!(await isDirectory(vaultPath))) {
-      throw new Error(`Vault path is not a directory: ${vaultPath}`)
-    }
+  if ((await pathExists(vaultPath)) && !(await isDirectory(vaultPath))) {
+    throw new Error(`Vault path is not a directory: ${vaultPath}`)
   }
 
   const syncMethod = options.yes ? "git" : await promptSyncMethod("git")
@@ -296,120 +392,42 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   startSpinnerStep("Configuring vault")
-
-  await configureAgentFolder(vaultPath, includeAgentFolder)
-  await copyVaultSeed(vaultPath, { overwrite: false, includeAgent: includeAgentFolder })
-  await seedVaultStarterContent(vaultPath, includeAgentFolder)
-  await configureCoreSync(vaultPath, syncMethod)
-  await configureCommunityPlugins(vaultPath, {
-    enabled: true,
-    includeGit: syncMethod === "git",
-    includeMinimalThemeTools: options.minimal,
-  })
-  await configureMinimalTheme(vaultPath, options.minimal)
+  await configureVaultBase(vaultPath, includeAgentFolder, syncMethod, options.minimal)
   completeSpinnerStep("Vault configured")
 
   startSpinnerStep("Downloading plugins")
-  const pluginResult = await downloadPlugins(vaultPath, {
-    includeGit: syncMethod === "git",
-    includeMinimal: options.minimal,
-  })
+  const pluginResult = await downloadVaultPlugins(vaultPath, syncMethod, options.minimal)
   completeSpinnerStep("Plugins downloaded")
 
-  let configPatched = false
-  let hookInstallStatus: "installed" | "skipped" | "failed" | null = null
-  let hookInstallMessage: string | undefined
-  let configPatchMessage: string | undefined
-  let sweepCronStatus: "installed" | "skipped" | "failed" | null = null
-  let sweepCronMessage: string | undefined
-  let nightlyMaintenanceCronStatus: "installed" | "skipped" | "failed" | null = null
-  let nightlyMaintenanceCronMessage: string | undefined
-  let gatewayRestarted = false
-  let symlinkResult: CopyResult = { added: [], skipped: [], failed: [] }
-  const integrationFailures: string[] = []
   let setupSucceeded = false
+  let integrationSummary: IntegrationSummary = {
+    hookInstallStatus: null,
+    sweepCronStatus: null,
+    nightlyMaintenanceCronStatus: null,
+    gatewayRestarted: false,
+  }
 
   try {
-    if (shouldCreateSymlinks) {
-      symlinkResult = await createAgentSymlinks(vaultPath, workspacePath)
-      if (symlinkResult.failed.length > 0) {
-        integrationFailures.push(
-          `Could not create agent symlinks:\n${symlinkResult.failed.map((line) => `- ${line}`).join("\n")}`,
-        )
-      }
-    }
-
-    if (openclawRequested) {
-      const hookInstallResult = await installOpenClawHook(openclawDir)
-      hookInstallStatus = hookInstallResult.status
-      hookInstallMessage = hookInstallResult.message
-
-      if (hookInstallStatus === "failed") {
-        integrationFailures.push(hookInstallMessage ?? "Could not install OpenClaw hook.")
-      }
-
-      const configPatchResult = await patchOpenClawConfig(vaultPath, openclawDir)
-      configPatched = configPatchResult.changed
-      configPatchMessage = configPatchResult.message
-
-      if (configPatchMessage) {
-        integrationFailures.push(configPatchMessage)
-      }
-    }
-
-    const restartRequired = openclawRequested && (hookInstallStatus === "installed" || configPatched)
-    if (restartRequired && integrationFailures.length === 0) {
-      startSpinnerStep("OpenClaw gateway restarting")
-      const restartError = await restartGatewayAndWait()
-      if (restartError) {
-        completeSpinnerStep("OpenClaw gateway restart failed")
-        integrationFailures.push(restartError)
-      } else {
-        completeSpinnerStep("OpenClaw gateway restarted")
-        gatewayRestarted = true
-      }
-    }
-
-    if (openclawRequested && integrationFailures.length === 0) {
-      const sweepCronResult = ensureZettelclawSweepCronJob()
-      sweepCronStatus = sweepCronResult.status
-      sweepCronMessage = sweepCronResult.message
-
-      if (sweepCronStatus === "failed") {
-        integrationFailures.push(sweepCronMessage ?? "Could not configure zettelclaw-reset cron trigger.")
-      }
-    }
-
-    if (openclawRequested && integrationFailures.length === 0) {
-      const nightlyMaintenanceCronResult = await ensureZettelclawNightlyMaintenanceCronJob(vaultPath)
-      nightlyMaintenanceCronStatus = nightlyMaintenanceCronResult.status
-      nightlyMaintenanceCronMessage = nightlyMaintenanceCronResult.message
-
-      if (nightlyMaintenanceCronStatus === "failed") {
-        integrationFailures.push(
-          nightlyMaintenanceCronMessage ?? "Could not configure zettelclaw-nightly cron trigger.",
-        )
-      }
-    }
-
-    if (integrationFailures.length > 0) {
-      throw new Error(`OpenClaw integration failed:\n${integrationFailures.map((line) => `- ${line}`).join("\n")}`)
-    }
+    integrationSummary = await runOpenClawIntegration({
+      openclawRequested,
+      shouldCreateSymlinks,
+      vaultPath,
+      workspacePath,
+      openclawDir,
+      onRestartStart: () => startSpinnerStep("OpenClaw gateway restarting"),
+      onRestartStop: (message) => completeSpinnerStep(message),
+    })
 
     await configureApp(vaultPath, includeAgentFolder)
 
-    let gitInitError: string | null = null
-
     if (shouldInitGit) {
       const gitDir = join(vaultPath, ".git")
-
       if (!(await pathExists(gitDir))) {
-        gitInitError = initGitRepository(vaultPath)
+        const gitInitError = initGitRepository(vaultPath)
+        if (gitInitError) {
+          log.warn(`Could not initialize Git repository: ${gitInitError}`)
+        }
       }
-    }
-
-    if (gitInitError) {
-      log.warn(`Could not initialize Git repository: ${gitInitError}`)
     }
 
     setupSucceeded = true
@@ -427,15 +445,18 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   summaryLines.push("Skill:       /zettelclaw")
 
-  if (hookInstallStatus === "installed" || hookInstallStatus === "skipped") {
+  if (integrationSummary.hookInstallStatus === "installed" || integrationSummary.hookInstallStatus === "skipped") {
     summaryLines.push("Hooks:       zettelclaw (command:new/reset) replaces session-memory")
   }
 
-  if (sweepCronStatus === "installed" || sweepCronStatus === "skipped") {
+  if (integrationSummary.sweepCronStatus === "installed" || integrationSummary.sweepCronStatus === "skipped") {
     summaryLines.push("Cron:        zettelclaw-reset (daily 02:00 local, isolated /reset)")
   }
 
-  if (nightlyMaintenanceCronStatus === "installed" || nightlyMaintenanceCronStatus === "skipped") {
+  if (
+    integrationSummary.nightlyMaintenanceCronStatus === "installed" ||
+    integrationSummary.nightlyMaintenanceCronStatus === "skipped"
+  ) {
     summaryLines.push("Cron:        zettelclaw-nightly (daily 03:00 local, isolated vault maintenance)")
   }
 
@@ -451,42 +472,11 @@ export async function runInit(options: InitOptions): Promise<void> {
     )
   }
 
-  if (gatewayRestarted) {
+  if (integrationSummary.gatewayRestarted) {
     log.success("OpenClaw gateway restarted and healthy.")
   }
 
-  // Prompt to notify the agent to update workspace files
-  if (openclawRequested) {
-    const shouldNotify = options.yes
-      ? true
-      : unwrapPrompt(
-          await confirm({
-            message: "Notify your OpenClaw agent to update AGENTS.md memory guidance?",
-            initialValue: true,
-          }),
-        )
-
-    if (shouldNotify) {
-      await backupWorkspaceRewriteFiles(workspacePath)
-
-      const eventResult = await firePostInitEvent(vaultPath)
-      if (eventResult.sent) {
-        log.success("Agent notified — it will update AGENTS.md memory guidance")
-      } else {
-        const templatesDir = resolveSkillPath("templates")
-        const reason = eventResult.message ?? "Could not reach the agent. Is the OpenClaw gateway running?"
-        log.warn(`${reason}\nYou can manually update using the templates in: ${templatesDir}`)
-      }
-    } else {
-      const templatesDir = resolveSkillPath("templates")
-      log.message(
-        [
-          "Skipped. You can manually update AGENTS.md memory guidance later.",
-          `Template file is: ${join(templatesDir, "agents-memory.md")}`,
-        ].join("\n"),
-      )
-    }
-  }
+  await maybeNotifyAgentUpdate(options, openclawRequested, workspacePath, vaultPath)
 
   log.success("Done! Open it in Obsidian to get started.")
 

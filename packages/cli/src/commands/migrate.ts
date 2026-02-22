@@ -1,14 +1,17 @@
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { cp, readdir, readFile, stat } from "node:fs/promises"
-import { basename, dirname, join } from "node:path"
+import { cp, readdir, stat } from "node:fs/promises"
+import { basename, join } from "node:path"
 import { intro, log, select, spinner, text } from "@clack/prompts"
 
+import { chooseDirectoryBackupPath, chooseFileBackupPath } from "../lib/backups"
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES } from "../lib/folders"
 import { asRecord, asStringArray } from "../lib/json"
+import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
-import { isDirectory, pathExists } from "../lib/vault"
+import { detectExistingFolder, detectVaultFromOpenClawConfig } from "../lib/vault-detect"
+import { isDirectory, pathExists } from "../lib/vault-fs"
 import type { MigrateTask } from "../migrate/contracts"
 import { runMigratePipeline } from "../migrate/pipeline"
 
@@ -23,11 +26,6 @@ export interface MigrateOptions {
   model?: string | undefined
   statePath?: string | undefined
   parallelJobs?: number | undefined
-}
-
-interface OpenClawWorkspaceEnv {
-  stateDir: string
-  configPath: string
 }
 
 interface ModelInfo {
@@ -55,21 +53,6 @@ interface MemorySummary {
 interface VaultLayout {
   notesFolder: string
   journalFolder: string
-}
-
-function resolveOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
-  const openclawStateDir = dirname(workspacePath)
-  return {
-    stateDir: openclawStateDir,
-    configPath: join(openclawStateDir, "openclaw.json"),
-  }
-}
-
-function configureOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
-  const env = resolveOpenClawEnvForWorkspace(workspacePath)
-  process.env.OPENCLAW_STATE_DIR = env.stateDir
-  process.env.OPENCLAW_CONFIG_PATH = env.configPath
-  return env
 }
 
 function isDailyFile(filename: string): boolean {
@@ -148,41 +131,6 @@ function resolveRequestedModel(models: ModelInfo[], requested: string): ModelInf
   })
 }
 
-async function detectVaultFromOpenClawConfig(): Promise<string | undefined> {
-  const configPath = resolveUserPath("~/.openclaw/openclaw.json")
-
-  if (!(await pathExists(configPath))) {
-    return undefined
-  }
-
-  try {
-    const raw = await readFile(configPath, "utf8")
-    const config = asRecord(JSON.parse(raw))
-    const directMemorySearch = asRecord(config.memorySearch)
-    const agents = asRecord(config.agents)
-    const defaults = asRecord(agents.defaults)
-    const defaultsMemorySearch = asRecord(defaults.memorySearch)
-
-    const extraPathsCandidates = [directMemorySearch.extraPaths, defaultsMemorySearch.extraPaths]
-    const extraPaths = extraPathsCandidates.flatMap((value) => (Array.isArray(value) ? value : []))
-
-    for (const candidate of extraPaths) {
-      if (typeof candidate !== "string") {
-        continue
-      }
-
-      const resolvedCandidate = resolveUserPath(candidate)
-      if (await looksLikeZettelclawVault(resolvedCandidate)) {
-        return resolvedCandidate
-      }
-    }
-  } catch {
-    return undefined
-  }
-
-  return undefined
-}
-
 async function promptVaultPath(): Promise<string> {
   const defaultPath = resolveUserPath(DEFAULT_VAULT_PATH)
 
@@ -200,7 +148,11 @@ async function detectVaultPath(options: MigrateOptions): Promise<string | undefi
     return resolveUserPath(options.vaultPath)
   }
 
-  const detected = await detectVaultFromOpenClawConfig()
+  const detected = await detectVaultFromOpenClawConfig(
+    resolveUserPath("~/.openclaw/openclaw.json"),
+    NOTES_FOLDER_CANDIDATES,
+    JOURNAL_FOLDER_CANDIDATES,
+  )
   if (detected) {
     return detected
   }
@@ -210,26 +162,6 @@ async function detectVaultPath(options: MigrateOptions): Promise<string | undefi
   }
 
   return resolveUserPath(await promptVaultPath())
-}
-
-async function detectExistingFolder(vaultPath: string, candidates: readonly string[]): Promise<string | undefined> {
-  for (const folder of candidates) {
-    if (await isDirectory(join(vaultPath, folder))) {
-      return folder
-    }
-  }
-
-  return undefined
-}
-
-async function looksLikeZettelclawVault(vaultPath: string): Promise<boolean> {
-  if (!(await isDirectory(vaultPath))) {
-    return false
-  }
-
-  const notesFolder = await detectExistingFolder(vaultPath, NOTES_FOLDER_CANDIDATES)
-  const journalFolder = await detectExistingFolder(vaultPath, JOURNAL_FOLDER_CANDIDATES)
-  return typeof notesFolder === "string" && typeof journalFolder === "string"
 }
 
 async function detectVaultLayout(vaultPath: string): Promise<VaultLayout> {
@@ -309,41 +241,6 @@ function buildMigrateTasks(files: MemoryFileRecord[]): MigrateTask[] {
     sourcePath: file.sourcePath,
     kind: isDailyFile(file.basename) ? "daily" : "other",
   }))
-}
-
-async function chooseFileBackupPath(sourcePath: string): Promise<{ backupPath: string; label: string }> {
-  const dir = dirname(sourcePath)
-  const sourceBase = basename(sourcePath)
-  const maxAttempts = 10_000
-
-  for (let index = 0; index < maxAttempts; index += 1) {
-    const label = index === 0 ? `${sourceBase}.bak` : `${sourceBase}.bak.${index}`
-    const backupPath = join(dir, label)
-
-    if (!(await pathExists(backupPath))) {
-      return { backupPath, label }
-    }
-  }
-
-  throw new Error(`Could not find an available backup path for ${sourceBase} after ${maxAttempts} attempts`)
-}
-
-async function chooseBackupPath(workspacePath: string): Promise<{ source: string; backup: string; label: string }> {
-  const source = join(workspacePath, "memory")
-  const maxAttempts = 10_000
-
-  for (let index = 0; index < maxAttempts; index += 1) {
-    const label = index === 0 ? "memory.bak" : `memory.bak.${index}`
-    const backup = join(workspacePath, label)
-
-    if (!(await pathExists(backup))) {
-      return { source, backup, label }
-    }
-  }
-
-  throw new Error(
-    `Could not find an available backup path under ${toTildePath(workspacePath)} after ${maxAttempts} attempts`,
-  )
 }
 
 function readModelsFromOpenClaw(): ModelInfo[] {
@@ -470,25 +367,26 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
     ].join("\n"),
   )
 
-  const backup = await chooseBackupPath(workspacePath)
+  const memoryBackup = await chooseDirectoryBackupPath(workspacePath, "memory")
+  const memorySourcePath = join(workspacePath, "memory")
   try {
-    await cp(backup.source, backup.backup, { recursive: true })
+    await cp(memorySourcePath, memoryBackup.backupPath, { recursive: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     throw new Error(`Could not back up memory directory: ${message}`)
   }
-  log.success(`Backed up memory/ → ${backup.label}/`)
+  log.success(`Backed up memory/ → ${memoryBackup.label}/`)
 
   const memoryMdPath = join(workspacePath, "MEMORY.md")
   if (await pathExists(memoryMdPath)) {
-    const memoryBackup = await chooseFileBackupPath(memoryMdPath)
+    const memoryFileBackup = await chooseFileBackupPath(memoryMdPath)
     try {
-      await cp(memoryMdPath, memoryBackup.backupPath)
+      await cp(memoryMdPath, memoryFileBackup.backupPath)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(`Could not back up MEMORY.md: ${message}`)
     }
-    log.success(`Backed up MEMORY.md → ${memoryBackup.label}`)
+    log.success(`Backed up MEMORY.md → ${memoryFileBackup.label}`)
   }
 
   const userMdPath = join(workspacePath, "USER.md")
