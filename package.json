@@ -9,6 +9,7 @@
     "cli:init": "bun run --cwd packages/cli init",
     "cli:migrate": "bun run --cwd packages/cli migrate",
     "cli:verify": "bun run --cwd packages/cli verify",
+    "cli:test": "bun run --cwd packages/cli test",
     "init": "bun run cli:init",
     "migrate": "bun run cli:migrate",
     "verify": "bun run cli:verify",
