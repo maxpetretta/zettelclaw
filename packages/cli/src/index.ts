@@ -4,6 +4,7 @@ import { log } from "@clack/prompts"
 
 import { runInit } from "./commands/init"
 import { runMigrate } from "./commands/migrate"
+import { runVerify } from "./commands/verify"
 
 interface ParsedArgs {
   command: string | undefined
@@ -23,6 +24,7 @@ function usage(): string {
     "Usage:",
     "  zettelclaw init [options]     Set up a new Zettelclaw vault",
     "  zettelclaw migrate [options]  Migrate OpenClaw workspace memory into the vault",
+    "  zettelclaw verify [options]   Verify Zettelclaw setup with local programmatic checks",
     "",
     "Init options:",
     "  --vault <path>      Set vault path (default: ~/zettelclaw)",
@@ -34,6 +36,11 @@ function usage(): string {
     "  --vault <path>      Vault path (auto-detected if not provided)",
     "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --model <name>      Model alias/key for migration sub-agents",
+    "  --yes               Accept defaults non-interactively",
+    "",
+    "Verify options:",
+    "  --vault <path>      Vault path (auto-detected if not provided)",
+    "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --yes               Accept defaults non-interactively",
   ].join("\n")
 }
@@ -57,15 +64,15 @@ function parseInlineValue(arg: string, prefix: string, key: string): string {
 }
 
 function validateArgs(parsed: ParsedArgs): void {
-  if (parsed.command !== "init" && parsed.command !== "migrate") {
+  if (parsed.command !== "init" && parsed.command !== "migrate" && parsed.command !== "verify") {
     return
   }
 
-  if (parsed.command === "init" && parsed.flags.model) {
+  if (parsed.command !== "migrate" && parsed.flags.model) {
     throw new Error("--model is only supported with `zettelclaw migrate`")
   }
 
-  if (parsed.command === "migrate" && parsed.flags.minimal) {
+  if (parsed.command !== "init" && parsed.flags.minimal) {
     throw new Error("--minimal is only supported with `zettelclaw init`")
   }
 }
@@ -171,6 +178,15 @@ async function main(): Promise<void> {
       vaultPath: parsed.flags.vaultPath,
       workspacePath: parsed.flags.workspacePath,
       model: parsed.flags.model,
+    })
+    return
+  }
+
+  if (parsed.command === "verify") {
+    await runVerify({
+      yes: parsed.flags.yes,
+      vaultPath: parsed.flags.vaultPath,
+      workspacePath: parsed.flags.workspacePath,
     })
     return
   }

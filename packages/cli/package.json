@@ -17,6 +17,7 @@
     "start": "bun run src/index.ts",
     "init": "bun run src/index.ts init",
     "migrate": "bun run src/index.ts migrate",
+    "verify": "bun run src/index.ts verify",
     "lint": "biome check . && tsgo --noEmit",
     "lint:biome": "biome check .",
     "lint:typecheck": "tsgo --noEmit",

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises"
+import { cp, lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 
 import { asRecord, type JsonRecord } from "./json"
@@ -32,12 +32,23 @@ export interface HookInstallResult {
   message?: string
 }
 
+async function hookInstallLooksValid(hookPath: string): Promise<boolean> {
+  return (await pathExists(join(hookPath, "HOOK.md"))) && (await pathExists(join(hookPath, "handler.ts")))
+}
+
 export async function installOpenClawHook(openclawDir: string): Promise<HookInstallResult> {
   const hookPath = join(openclawDir, "hooks", "zettelclaw")
 
   try {
     if (await pathExists(hookPath)) {
-      return { status: "skipped" }
+      const existingStats = await lstat(hookPath)
+
+      if (existingStats.isDirectory() && (await hookInstallLooksValid(hookPath))) {
+        return { status: "skipped" }
+      }
+
+      // Remove partial or invalid installs and replace with the bundled hook.
+      await rm(hookPath, { recursive: true, force: true })
     }
 
     if (!(await pathExists(HOOK_SOURCE_DIR))) {
@@ -66,6 +77,9 @@ export async function patchOpenClawConfig(vaultPath: string, openclawDir: string
     const config = asRecord(JSON.parse(raw))
     let changed = false
 
+    const legacyMemorySearch = asRecord(config.memorySearch)
+    const legacyExtraPaths = Array.isArray(legacyMemorySearch.extraPaths) ? [...legacyMemorySearch.extraPaths] : []
+
     const agents = asRecord(config.agents)
     config.agents = agents
     const defaults = asRecord(agents.defaults)
@@ -76,8 +90,25 @@ export async function patchOpenClawConfig(vaultPath: string, openclawDir: string
     const extraPaths = Array.isArray(memorySearch.extraPaths) ? [...memorySearch.extraPaths] : []
     memorySearch.extraPaths = extraPaths
 
+    for (const candidate of legacyExtraPaths) {
+      if (typeof candidate !== "string") {
+        continue
+      }
+
+      if (!extraPaths.includes(candidate)) {
+        extraPaths.push(candidate)
+        changed = true
+      }
+    }
+
     if (!extraPaths.includes(vaultPath)) {
       extraPaths.push(vaultPath)
+      changed = true
+    }
+
+    if ("memorySearch" in config) {
+      // Preserve object shape for lint and rely on JSON.stringify omitting undefined keys.
+      config.memorySearch = undefined
       changed = true
     }
 
