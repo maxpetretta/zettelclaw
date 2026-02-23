@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { cp, readdir } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { confirm, intro, log, select, spinner, text } from "@clack/prompts"
@@ -12,7 +12,6 @@ import {
   installOpenClawHook,
   patchOpenClawConfig,
 } from "../lib/openclaw"
-import { runOpenClawCommand } from "../lib/openclaw-command"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { type DownloadResult, downloadPlugins } from "../lib/plugins"
@@ -66,12 +65,139 @@ function initGitRepository(vaultPath: string): string | null {
   return null
 }
 
+function formatOpenClawFailure(args: string[], status: number, stderr: string, stdout: string): string {
+  const trimmedStderr = stderr.trim()
+  if (trimmedStderr.length > 0) {
+    return trimmedStderr
+  }
+
+  const trimmedStdout = stdout.trim()
+  if (trimmedStdout.length > 0) {
+    return trimmedStdout
+  }
+
+  return `openclaw ${args.join(" ")} exited with code ${status}`
+}
+
+async function runOpenClawCommandAsync(
+  args: string[],
+  options: { timeoutMs?: number } = {},
+): Promise<{
+  ok: boolean
+  status: number
+  stdout: string
+  stderr: string
+  message?: string
+  errorCode?: string
+}> {
+  const timeoutMs = options.timeoutMs ?? 30_000
+
+  return await new Promise((resolve) => {
+    const process = spawn("openclaw", args, {
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+    process.stdout?.setEncoding("utf8")
+    process.stderr?.setEncoding("utf8")
+
+    let stdout = ""
+    let stderr = ""
+    let timedOut = false
+    let settled = false
+
+    const settle = (result: {
+      ok: boolean
+      status: number
+      stdout: string
+      stderr: string
+      message?: string
+      errorCode?: string
+    }): void => {
+      if (settled) {
+        return
+      }
+
+      settled = true
+      clearTimeout(timeoutId)
+      resolve(result)
+    }
+
+    const timeoutId = setTimeout(() => {
+      timedOut = true
+      process.kill()
+    }, timeoutMs)
+
+    process.stdout?.on("data", (chunk: string) => {
+      stdout += chunk
+    })
+    process.stderr?.on("data", (chunk: string) => {
+      stderr += chunk
+    })
+
+    process.once("error", (error: NodeJS.ErrnoException) => {
+      const result: {
+        ok: boolean
+        status: number
+        stdout: string
+        stderr: string
+        message?: string
+        errorCode?: string
+      } = {
+        ok: false,
+        status: 1,
+        stdout,
+        stderr,
+        message: error.message,
+      }
+
+      if (typeof error.code === "string") {
+        result.errorCode = error.code
+      }
+
+      settle(result)
+    })
+
+    process.once("close", (statusCode) => {
+      const status = typeof statusCode === "number" ? statusCode : 1
+      if (timedOut) {
+        settle({
+          ok: false,
+          status,
+          stdout,
+          stderr,
+          message: `openclaw ${args.join(" ")} timed out after ${Math.round(timeoutMs / 1000)}s`,
+        })
+        return
+      }
+
+      if (status !== 0) {
+        settle({
+          ok: false,
+          status,
+          stdout,
+          stderr,
+          message: formatOpenClawFailure(args, status, stderr, stdout),
+        })
+        return
+      }
+
+      settle({
+        ok: true,
+        status,
+        stdout,
+        stderr,
+      })
+    })
+  })
+}
+
 async function waitForGatewayHealthy(maxWaitMs = 60_000, pollIntervalMs = 2_000): Promise<string | null> {
   const deadline = Date.now() + maxWaitMs
   let lastError = "Gateway did not report a healthy state."
 
   while (Date.now() < deadline) {
-    const health = runOpenClawCommand(["gateway", "health", "--json", "--timeout", "5000"], { timeoutMs: 10_000 })
+    const health = await runOpenClawCommandAsync(["gateway", "health", "--json", "--timeout", "5000"], {
+      timeoutMs: 10_000,
+    })
 
     if (health.ok) {
       try {
@@ -98,7 +224,7 @@ async function waitForGatewayHealthy(maxWaitMs = 60_000, pollIntervalMs = 2_000)
 }
 
 async function restartGatewayAndWait(): Promise<string | null> {
-  const restart = runOpenClawCommand(["gateway", "restart", "--json"], { timeoutMs: 20_000 })
+  const restart = await runOpenClawCommandAsync(["gateway", "restart", "--json"], { timeoutMs: 20_000 })
   if (!restart.ok) {
     return `Could not restart OpenClaw gateway: ${restart.message ?? "unknown error"}`
   }
@@ -155,12 +281,8 @@ async function countFilesRecursive(path: string): Promise<number> {
   return count
 }
 
-function quoteShellArg(value: string): string {
-  return `'${value.replaceAll("'", "'\\''")}'`
-}
-
-function buildMigrateCommand(vaultPath: string, workspacePath: string): string {
-  return `zettelclaw migrate --vault ${quoteShellArg(vaultPath)} --workspace ${quoteShellArg(workspacePath)}`
+function buildMigrateCommand(): string {
+  return "npx zettelclaw migrate"
 }
 
 async function promptVaultPath(defaultPath: string): Promise<string> {
@@ -347,7 +469,7 @@ async function maybeNotifyAgentUpdate(
 }
 
 export async function runInit(options: InitOptions): Promise<void> {
-  intro("🦞 Welcome to Zettelclaw")
+  intro("🦞 Zettelclaw - Shared human + agent memory")
 
   const defaultVaultPath = resolveUserPath(DEFAULT_VAULT_PATH)
   const rawVaultPath = options.vaultPath ?? (options.yes ? defaultVaultPath : await promptVaultPath(defaultVaultPath))
@@ -414,7 +536,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       vaultPath,
       workspacePath,
       openclawDir,
-      onRestartStart: () => startSpinnerStep("OpenClaw gateway restarting"),
+      onRestartStart: () => startSpinnerStep("Restarting OpenClaw gateway (waiting for healthy state)"),
       onRestartStop: (message) => completeSpinnerStep(message),
     })
 
@@ -479,6 +601,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   await maybeNotifyAgentUpdate(options, openclawRequested, workspacePath, vaultPath)
 
   log.success("Done! Open it in Obsidian to get started.")
+  log.message("Want to migrate historical tasks and conversations? Reclaw: https://reclaw.sh")
 
   if (openclawRequested) {
     const memoryPath = join(workspacePath, "memory")
@@ -490,7 +613,7 @@ export async function runInit(options: InitOptions): Promise<void> {
         [
           `Detected ${existingMemoryFileCount} existing ${fileLabel} in ${toTildePath(memoryPath)}.`,
           "Run migrate to import legacy workspace memory:",
-          `  ${buildMigrateCommand(vaultPath, workspacePath)}`,
+          `  ${buildMigrateCommand()}`,
         ].join("\n"),
       )
     }

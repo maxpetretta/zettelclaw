@@ -43,7 +43,7 @@ const OPTION_SPEC_BY_LONG_NAME = new Map(OPTION_SPECS.map((spec) => [spec.longNa
 
 function usage(): string {
   return [
-    "zettelclaw — A human+agent knowledge system built on Obsidian and OpenClaw",
+    "zettelclaw — Shared human + agent memory",
     "",
     "Usage:",
     "  zettelclaw init [options]     Set up a new Zettelclaw vault",

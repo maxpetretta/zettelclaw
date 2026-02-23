@@ -205,7 +205,7 @@ async function buildMemoryCheck(memoryPath: string, vaultPath: string): Promise<
 }
 
 export async function runVerify(options: VerifyOptions): Promise<void> {
-  intro("🦞 Verify Zettelclaw Setup")
+  intro("🦞 Zettelclaw - Shared human + agent memory")
 
   const checks: VerifyCheck[] = []
 

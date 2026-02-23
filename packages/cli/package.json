@@ -1,7 +1,7 @@
 {
   "name": "zettelclaw",
   "version": "0.1.0",
-  "description": "CLI and vault template for the Zettelclaw human+agent knowledge system",
+  "description": "CLI and vault template for Zettelclaw shared human + agent memory",
   "type": "module",
   "bin": {
     "zettelclaw": "./bin/zettelclaw.js"
