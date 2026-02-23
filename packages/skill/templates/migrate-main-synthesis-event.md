@@ -18,19 +18,37 @@ Do not delegate.
 {{SUBAGENT_SUMMARIES}}
 
 ## Required Actions
-1. Read current `MEMORY.md`, `USER.md`, and `IDENTITY.md` (when present).
-2. Update `MEMORY.md` as hot working memory only:
-   - Include current focus, active projects, immediate constraints, and actionable context.
-   - Keep concise and high-signal.
-3. Update `USER.md` with durable user context only when warranted by migration evidence.
-4. Enforce separation of concerns:
-   - `MEMORY.md` must NOT duplicate identity/profile details already in `USER.md` or `IDENTITY.md`.
-   - If needed, MEMORY may reference USER/IDENTITY briefly instead of repeating content.
-5. Preserve existing useful content where possible (append or refine rather than destructive rewrite unless clearly needed).
-6. Keep edits concise and avoid line-by-line global rewrites when a targeted update is sufficient.
+
+### 1. Audit migrated notes for quality
+Scan notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}` and fix any that violate these rules:
+- **Template structure:** Project notes must use `## Goal` / `## Log`. Research notes must use `## Question` / `## Findings` / `## Conclusion` / `## Sources`. Contact notes must use `## Context` / `## Notes`. No custom section headers.
+- **Frontmatter:** Every note must have `type`, `tags` (pluralized), `summary`, `created`, `updated`. No `status` except on `project` and `research` notes.
+- **Atomicity:** Flag notes that cover multiple unrelated topics. Split them if feasible without excessive rewrites.
+- **Hard filter:** Remove general knowledge that any LLM could produce without user context. Keep only user-specific decisions, preferences, project details, and relationships.
+- Keep fixes surgical — don't rewrite notes that are already good.
+
+### 2. Audit journal entries
+Spot-check journals in `{{VAULT_PATH}}/{{JOURNAL_FOLDER}}`:
+- Must follow structure: frontmatter → `## Done` → `## Decisions` → `## Facts` → `## Open` → `---` → `## Sessions`
+- Must have `tags: [journals]`
+- Must have `[[wikilinks]]` to relevant typed notes
+
+### 3. Update MEMORY.md
+Read current `MEMORY.md`, `USER.md`, and `IDENTITY.md` (when present).
+- MEMORY.md is hot working memory only: current focus, active projects, immediate constraints, actionable context.
+- Keep concise and high-signal.
+- Must NOT duplicate identity/profile details already in `USER.md` or `IDENTITY.md`.
+- Preserve existing useful content (append or refine, not destructive rewrite).
+
+### 4. Update USER.md
+Update with durable user context only when warranted by migration evidence.
+- Preserve existing content.
+- Keep edits concise.
 
 ## Output
-After completing file edits, reply with a short bullet list:
+After completing all actions, reply with a short bullet list:
+- `Notes audited:` count checked, count fixed, issues found
+- `Journals audited:` count checked, count fixed
 - `MEMORY.md:` what changed
 - `USER.md:` what changed
 - `Separation:` confirmation that MEMORY no longer overlaps USER/IDENTITY

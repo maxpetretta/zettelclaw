@@ -13,20 +13,59 @@ Do not delegate. Do not process any file except the one listed here.
 ## Existing wikilink index
 {{WIKILINK_INDEX}}
 
+## Note Quality Rules
+
+### Frontmatter (required on every note)
+- `type`: one of `project`, `research`, `evergreen`, `contact`, `writing`
+- `tags`: ALWAYS pluralized (`projects` not `project`, `tools` not `tool`)
+- `summary`: one-sentence description
+- `source`: where the knowledge came from
+- `created`: `YYYY-MM-DD`
+- `updated`: `YYYY-MM-DD`
+- Do NOT add `status` except on `project` and `research` notes.
+
+### Atomicity
+- **One core idea per note.** The title should capture the idea.
+- If the source material covers 5 topics, write 5 small notes — not 1 mega-note.
+- A good note can be understood without reading any other note.
+- Prefer more small notes over fewer large ones.
+
+### Template Structures (must follow)
+- **Project:** frontmatter → `## Goal` → `## Log` (append dated entries)
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`
+- **Evergreen:** frontmatter only (body is freeform prose)
+- **Contact:** frontmatter → `## Context` → `## Notes`
+- **Writing:** frontmatter only (body is the writing)
+
+Do NOT invent custom section headers. Use the template sections above.
+
+### Naming
+- Filenames are Title Case.
+- Project note filenames MUST end with `Project`.
+- Research note filenames MUST end with `Research`.
+
+### Content Quality
+- High-signal durable knowledge only. No transient details.
+- Write conclusions, not transcripts. Summarize what was decided/learned, not the process.
+- Research notes MUST state a clear question and conclusion. If the source doesn't have a conclusion, state what's still open.
+- Use `[[wikilinks]]` where they materially improve navigation.
+
+### Hard Filter (apply to every line)
+- Keep only information specific to the user or their projects.
+- If a general-purpose LLM could produce this content without user context, do NOT include it.
+- No textbook definitions, no general tech explanations, no encyclopedia entries.
+
 ## Required Actions
 1. Read `{{SOURCE_PATH}}`.
 2. Determine note type(s): evergreen, project, research, contact, or writing.
-3. Write updates in `{{VAULT_PATH}}/{{NOTES_FOLDER}}`:
-   - Keep this focused and concise (high-signal durable points only).
-   - For `project` / `research` / `contact`, prefer updating an existing matching note (append-only, update frontmatter `updated`) instead of creating duplicates.
-   - Update/create at most 2 typed notes for this file unless more is absolutely necessary.
+3. Write notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}`:
+   - Prefer updating existing notes (append-only, preserve structure, update `updated` date).
    - Create new typed notes only when no suitable existing note exists.
-   - If creating a project note, title MUST end with `Project`.
-   - If creating a research note, title MUST end with `Research`.
-   - If content has multiple distinct durable topics, still prioritize one primary note plus at most one secondary note.
-4. Add relevant `[[wikilinks]]` only where they materially improve navigation.
+   - Follow the template structure for each note type (see above).
+   - No cap on note count — create as many atomic notes as the content warrants, but don't force notes from thin content.
+4. Add `[[wikilinks]]` where they materially improve navigation.
 5. When content maps to a migrated journal day, enforce two-way links:
-   - Typed note links to the day/session.
+   - Typed note links to the day `[[YYYY-MM-DD]]`.
    - Journal day links back to the typed note when relevant.
 6. Delete the source file `{{SOURCE_PATH}}`.
 7. Tool usage constraints:
