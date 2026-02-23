@@ -18,6 +18,7 @@ import { runMigratePipeline } from "../migrate/pipeline"
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
 const DEFAULT_MIGRATE_STATE_PATH = ".zettelclaw/migrate-state.json"
 const DEFAULT_PARALLEL_JOBS = 5
+const PROGRESS_TICKER_FRAMES = ["", ".", "..", "..."] as const
 
 export interface MigrateOptions {
   yes: boolean
@@ -293,7 +294,7 @@ async function chooseModel(models: ModelInfo[], options: MigrateOptions): Promis
 
   const selectedKey = unwrapPrompt(
     await select({
-      message: "Which model should migration agents use?",
+      message: "Which model should migration agents use? (Recommended: Claude Haiku 4.5)",
       initialValue: defaultModel.key,
       options: models.map((model) => {
         const baseLabel = model.alias ? `${model.name} (${model.alias})` : `${model.name} (${model.key})`
@@ -332,6 +333,66 @@ function resolveParallelJobs(options: MigrateOptions): number {
   }
 
   return normalized
+}
+
+function startProgressTicker(progressSpinner: ReturnType<typeof spinner>): {
+  setMessage: (message: string) => void
+  stop: (message: string) => void
+} {
+  let baseMessage = "Migration in progress"
+  let frameIndex = 0
+
+  progressSpinner.start(baseMessage)
+
+  const interval = setInterval(() => {
+    frameIndex = (frameIndex + 1) % PROGRESS_TICKER_FRAMES.length
+    progressSpinner.message(`${baseMessage}${PROGRESS_TICKER_FRAMES[frameIndex]}`)
+  }, 150)
+  interval.unref?.()
+
+  return {
+    setMessage(message: string): void {
+      const trimmed = message.trim()
+      if (trimmed.length === 0) {
+        return
+      }
+
+      baseMessage = trimmed
+      progressSpinner.message(`${baseMessage}${PROGRESS_TICKER_FRAMES[frameIndex]}`)
+    },
+    stop(message: string): void {
+      clearInterval(interval)
+      progressSpinner.stop(message)
+    },
+  }
+}
+
+function formatConjoinedList(items: readonly string[]): string {
+  const first = items[0]
+  if (!first) {
+    return ""
+  }
+
+  if (items.length === 1) {
+    return first
+  }
+
+  if (items.length === 2) {
+    const second = items[1]
+    if (!second) {
+      return first
+    }
+
+    return `${first} and ${second}`
+  }
+
+  const head = items.slice(0, -1).join(", ")
+  const tail = items[items.length - 1]
+  if (!tail) {
+    return head
+  }
+
+  return `${head}, and ${tail}`
 }
 
 export async function runMigrate(options: MigrateOptions): Promise<void> {
@@ -375,7 +436,8 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
     const message = error instanceof Error ? error.message : String(error)
     throw new Error(`Could not back up memory directory: ${message}`)
   }
-  log.success(`Backed up memory/ → ${memoryBackup.label}/`)
+
+  let backedUpMemoryFile = false
 
   const memoryMdPath = join(workspacePath, "MEMORY.md")
   if (await pathExists(memoryMdPath)) {
@@ -386,8 +448,10 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(`Could not back up MEMORY.md: ${message}`)
     }
-    log.success(`Backed up MEMORY.md → ${memoryFileBackup.label}`)
+    backedUpMemoryFile = true
   }
+
+  let backedUpUserFile = false
 
   const userMdPath = join(workspacePath, "USER.md")
   if (await pathExists(userMdPath)) {
@@ -398,8 +462,18 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(`Could not back up USER.md: ${message}`)
     }
-    log.success(`Backed up USER.md → ${userBackup.label}`)
+    backedUpUserFile = true
   }
+
+  const backupTargets: string[] = []
+  if (backedUpUserFile) {
+    backupTargets.push("USER.md")
+  }
+  if (backedUpMemoryFile) {
+    backupTargets.push("MEMORY.md")
+  }
+  backupTargets.push("memory/ dir")
+  log.success(`Backed up ${formatConjoinedList(backupTargets)}`)
 
   const s = spinner()
   s.start("Loading available models")
@@ -412,7 +486,7 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
 
   const tasks = buildMigrateTasks(summary.files)
   const progressSpinner = spinner()
-  progressSpinner.start("Migration in progress")
+  const progressTicker = startProgressTicker(progressSpinner)
   let lastProgressMessage = ""
 
   let result: Awaited<ReturnType<typeof runMigratePipeline>>
@@ -432,15 +506,15 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
           return
         }
         lastProgressMessage = message
-        progressSpinner.message(message)
+        progressTicker.setMessage(message)
       },
     })
   } catch (error) {
-    progressSpinner.stop("Migration failed")
+    progressTicker.stop("Migration failed")
     throw error
   }
 
-  progressSpinner.stop(
+  progressTicker.stop(
     `Migration complete (${result.processedTasks + result.skippedTasks}/${result.totalTasks} files processed)`,
   )
 
