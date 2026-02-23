@@ -67,6 +67,9 @@ Curated durable notes live in `01 Notes/` — flat, no subfolders.
 - If the human is present, create/update notes directly in `01 Notes/` with proper frontmatter.
 - If the agent is alone in nightly maintenance, it may update existing `project`/`research`/`contact` notes in `01 Notes/` when journals provide clear evidence. Net-new synthesis notes still go to `00 Inbox/` for human promotion.
 
+### Content Filter
+Before writing any note, ask: **"Would I need to know this person to know this?"** If a general-purpose LLM could produce the content without user context, it doesn't belong in the vault. No textbook definitions, no general tech explanations, no encyclopedia entries. Keep only user-specific decisions, preferences, project details, and relationships.
+
 ### Frontmatter Rules
 - Every note MUST have YAML frontmatter with at least `type`, `created`, `updated`
 - Tags are ALWAYS pluralized (`projects` not `project`)
@@ -81,6 +84,15 @@ Curated durable notes live in `01 Notes/` — flat, no subfolders.
   - `evergreen.md`, `project.md`, `research.md`, `contact.md`, `writing.md`
 - Follow template frontmatter/sections exactly when the template exists.
 - If a template is missing, use a minimal fallback frontmatter with `type`, `created`, and `updated`, then add note-type fields only when required by rules below.
+
+**Required section structures:**
+- **Project:** frontmatter → `## Goal` → `## Log` (append dated entries)
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`
+- **Contact:** frontmatter → `## Context` → `## Notes`
+- **Evergreen:** frontmatter only (body is freeform prose)
+- **Writing:** frontmatter only (body is the writing)
+
+Do NOT invent custom section headers. Use the structures above.
 - `project` status values: `active` / `paused` / `archived` (append dated entries to `## Log`).
 - `research` status values: `active` / `archived`.
 - `contact` must include `contacts` in tags; use `aliases` for nicknames.
