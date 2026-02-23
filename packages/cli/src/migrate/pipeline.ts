@@ -18,6 +18,7 @@ import type {
 import {
   buildMainSynthesisPrompt,
   buildSubagentPrompt,
+  normalizeAndSortWikilinkTitles,
   normalizeWikilinkToken,
   parseSubagentExtraction,
   wikilinkTitleFromToken,
@@ -46,6 +47,17 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
   const wikilinkTitles = await loadWikilinkIndex(join(options.vaultPath, options.notesFolder))
   for (const entry of Object.values(state.completed)) {
     mergeExtractionWikilinks(wikilinkTitles, entry.extraction)
+  }
+  let cachedWikilinkTitles: string[] | null = null
+  const getWikilinkTitlesForPrompt = (): string[] => {
+    if (!cachedWikilinkTitles) {
+      cachedWikilinkTitles = normalizeAndSortWikilinkTitles([...wikilinkTitles])
+    }
+
+    return cachedWikilinkTitles
+  }
+  const invalidateWikilinkTitlesForPrompt = (): void => {
+    cachedWikilinkTitles = null
   }
 
   let processedTasks = 0
@@ -88,7 +100,7 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
           notesFolder: options.notesFolder,
           journalFolder: options.journalFolder,
           model: options.model,
-          wikilinkTitles,
+          getWikilinkTitles: getWikilinkTitlesForPrompt,
           onDebug: (message) => options.onDebug?.(`[${task.relativePath}] ${message}`),
         })
 
@@ -108,7 +120,9 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
           completedAt,
         }
         state.updatedAt = completedAt
-        mergeExtractionWikilinks(wikilinkTitles, extraction)
+        if (mergeExtractionWikilinks(wikilinkTitles, extraction)) {
+          invalidateWikilinkTitlesForPrompt()
+        }
         await enqueueStateSave()
         processedTasks += 1
         options.onDebug?.(
@@ -268,7 +282,7 @@ async function runTaskMigration(
     notesFolder: string
     journalFolder: string
     model: string
-    wikilinkTitles: Set<string>
+    getWikilinkTitles: () => string[]
     onDebug?: (message: string) => void
   },
 ): Promise<MigrateSubagentExtraction> {
@@ -279,7 +293,8 @@ async function runTaskMigration(
     vaultPath: options.vaultPath,
     notesFolder: options.notesFolder,
     journalFolder: options.journalFolder,
-    wikilinkTitles: [...options.wikilinkTitles],
+    wikilinkTitles: options.getWikilinkTitles(),
+    wikilinkTitlesNormalized: true,
   })
   options.onDebug?.(`Prompt built in ${Date.now() - promptStartedAt}ms (${prompt.length} chars).`)
 
@@ -358,11 +373,17 @@ async function loadWikilinkIndex(notesPath: string): Promise<Set<string>> {
   return new Set(titles)
 }
 
-function mergeExtractionWikilinks(index: Set<string>, extraction: MigrateSubagentExtraction): void {
+function mergeExtractionWikilinks(index: Set<string>, extraction: MigrateSubagentExtraction): boolean {
+  let changed = false
+
   for (const wikilink of extraction.createdWikilinks) {
     const title = wikilinkTitleFromToken(wikilink)
     if (title) {
+      const beforeSize = index.size
       index.add(title)
+      if (index.size > beforeSize) {
+        changed = true
+      }
     }
   }
 
@@ -374,9 +395,15 @@ function mergeExtractionWikilinks(index: Set<string>, extraction: MigrateSubagen
 
     const title = wikilinkTitleFromToken(normalized)
     if (title) {
+      const beforeSize = index.size
       index.add(title)
+      if (index.size > beforeSize) {
+        changed = true
+      }
     }
   }
+
+  return changed
 }
 
 async function clearMemoryDirectory(memoryPath: string): Promise<void> {

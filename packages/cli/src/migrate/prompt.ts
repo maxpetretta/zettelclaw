@@ -20,6 +20,7 @@ export interface BuildSubagentPromptOptions {
   notesFolder: string
   journalFolder: string
   wikilinkTitles: string[]
+  wikilinkTitlesNormalized?: boolean
 }
 
 export interface BuildMainSynthesisPromptOptions {
@@ -40,6 +41,7 @@ export async function buildSubagentPrompt(options: BuildSubagentPromptOptions): 
     options.task,
     options.wikilinkTitles,
     MAX_SUBAGENT_WIKILINK_TITLES,
+    options.wikilinkTitlesNormalized === true,
   )
 
   return substituteTemplate(template, {
@@ -321,14 +323,23 @@ function formatWikilinkIndex(titles: string[]): string {
   return uniqueTitles.map((title) => `- [[${title}]]`).join("\n")
 }
 
-function selectWikilinksForTask(task: MigrateTask, titles: string[], limit: number): string[] {
+export function normalizeAndSortWikilinkTitles(titles: string[]): string[] {
+  return uniqueStrings(titles.map((title) => title.trim()).filter((title) => title.length > 0)).sort((a, b) =>
+    a.localeCompare(b),
+  )
+}
+
+function selectWikilinksForTask(
+  task: MigrateTask,
+  titles: string[],
+  limit: number,
+  normalizedInput: boolean,
+): string[] {
   if (limit < 1) {
     return []
   }
 
-  const deduped = uniqueStrings(titles.map((title) => title.trim()).filter((title) => title.length > 0)).sort((a, b) =>
-    a.localeCompare(b),
-  )
+  const deduped = normalizedInput ? titles : normalizeAndSortWikilinkTitles(titles)
   if (deduped.length <= limit) {
     return deduped
   }
