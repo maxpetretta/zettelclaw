@@ -2,44 +2,23 @@
 
 This is your knowledge base. Here's how it's organized:
 
-- **00 Inbox/** — drop quick captures here, triage them later
-- **01 Notes/** — everything else: ideas, projects, research, contacts, writing
-- **02 Agent/** — OpenClaw symlinks (only present when OpenClaw integration is enabled)
-- **03 Journal/** — journal notes (one per day, auto-created via template)
+- **00 Inbox/** — quick captures and agent synthesis drafts (triage these)
+- **01 Notes/** — typed notes: ideas, projects, research, contacts, writing
+- **02 Agent/** — OpenClaw symlinks (only when integration is enabled)
+- **03 Journal/** — daily journals (one per day, auto-populated by session hooks)
 - **04 Templates/** — note templates (used automatically when creating new notes)
 - **05 Attachments/** — files and media assets
 
-If OpenClaw integration is disabled, `02 Agent/` is omitted and numbering is compacted to `02 Journal/`, `03 Templates/`, and `04 Attachments/`.
-
-## Getting started
-
-Create your first note in `01 Notes/` using one of the templates. The journal template is `04 Templates/journal.md`, and each note type has its own frontmatter.
-
-If you already had files in your OpenClaw workspace `memory/` folder before setup, run `zettelclaw migrate` once. Migration processes `memory/` recursively, backs up `memory/` + `MEMORY.md` + `USER.md`, delegates per-file sub-agent conversion, runs a final synthesis update for `MEMORY.md`/`USER.md`, and then clears `memory/` on success.
+When OpenClaw integration is disabled, `02 Agent/` is omitted and numbering compacts.
 
 ## Workflow
 
-- `/new` and `/reset` append structured session capture to `03 Journal/` (journal-only raw layer).
-- During supervised sessions, update meaningful `01 Notes/` content directly.
-- A dedicated nightly isolated maintenance run updates existing `project`/`research`/`contact` notes and synthesizes net-new ideas into `00 Inbox/`.
-- Nightly maintenance linking should be two-way between journals and typed notes.
+1. **Hook layer** — `/new` and `/reset` append structured capture to `03 Journal/` (raw, no links)
+2. **Supervised layer** — during sessions, update meaningful notes directly in `01 Notes/`
+3. **Nightly layer** — an isolated maintenance pass updates existing notes, synthesizes new ideas into `00 Inbox/`, and enforces two-way links between journals and notes
 
-## Starter Content (Init)
+## Getting Started
 
-On first setup, Zettelclaw seeds:
-- `01 Notes/Zettelclaw Is Shared Human + Agent Memory.md`
-- `00 Inbox/Reclaw Can Recover Memories From Old Chats.md`
-- Today's journal file with a `Done` entry: "Zettelclaw setup and installed."
-- `05 Attachments/OpenClaw Logo.png` (or `04 Attachments/` when Agent folder is disabled)
-
-## Web Clipper
-
-This vault includes an Obsidian Web Clipper template at `04 Templates/clipper-inbox.json` that clips pages into `00 Inbox/`.
-
-To import it in the Web Clipper extension:
-1. Open extension settings.
-2. Go to `Templates`.
-3. Click `New Template`.
-4. Paste the JSON from `04 Templates/clipper-inbox.json`.
+Create your first note in `01 Notes/` using one of the templates. If you had existing OpenClaw workspace memory files, run `zettelclaw migrate` once.
 
 For more, visit [zettelclaw.com](https://zettelclaw.com).

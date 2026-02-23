@@ -2,9 +2,7 @@
 
 > Your agent's second brain, built together.
 
-A PKM methodology for humans and AI agents to co-build a shared knowledge base, powered by Obsidian and OpenClaw.
-
-Zettelclaw sets up an Obsidian vault designed for dual authorship — you and your AI agent co-building knowledge with evergreen notes, rich linking, frontmatter as API, and automated extraction from conversations to durable memory.
+A PKM system for humans and AI agents to co-build a shared knowledge base, powered by Obsidian and OpenClaw.
 
 ## Quick Start
 
@@ -12,15 +10,15 @@ Zettelclaw sets up an Obsidian vault designed for dual authorship — you and yo
 npx zettelclaw init
 ```
 
-The wizard asks for a vault path and sync method, then auto-configures everything: templates, plugins, and OpenClaw integration (if detected).
+The wizard asks for a vault path and sync method, then configures everything: templates, plugins, and OpenClaw integration (if detected).
 
-For a fully non-interactive setup:
+For a non-interactive setup:
 
 ```bash
 npx zettelclaw init --yes --vault ~/my-vault
 ```
 
-If you already have OpenClaw workspace memory files, run migrate once after init:
+If you have existing OpenClaw workspace memory files, migrate them once after init:
 
 ```bash
 npx zettelclaw migrate
@@ -28,64 +26,46 @@ npx zettelclaw migrate
 
 ## What It Does
 
-- Creates a ready-to-use Obsidian vault with 6 note templates (journal via `journal.md`, evergreen via `evergreen.md`, project, research, contact, writing)
-- Seeds starter content on first setup:
-  - `01 Notes/Zettelclaw Is Shared Human + Agent Memory.md`
-  - `00 Inbox/Reclaw Can Recover Memories From Old Chats.md`
-  - Today's journal with a `Done` entry for setup/installation
-  - `05 Attachments/OpenClaw Logo.png`
+- Creates an Obsidian vault with 6 note templates (journal, evergreen, project, research, contact, writing)
 - Configures community plugins (Templater, Linter, Obsidian Git)
-- Auto-detects OpenClaw and creates `02 Agent/` symlinks + workspace injection (or compacts numbering when disabled)
-- Installs OpenClaw cron jobs for:
-  - `zettelclaw-reset` (daily 02:00 local transcript sweep trigger)
-  - `zettelclaw-nightly` (daily 03:00 local isolated maintenance pass)
-- Sets up frontmatter-driven note types that both humans and AI agents can read/write
-- Includes a CLI-orchestrated migration pipeline for existing workspace `memory/` files:
-  - Per-file sub-agent jobs (recursive `memory/**/*.md`)
-  - One final synthesis pass for `MEMORY.md` and `USER.md`
-  - Full recursive cleanup of `memory/` after successful migration
-  - Resume support via a state file (`.zettelclaw/migrate-state.json` by default)
+- Auto-detects OpenClaw and wires up `02 Agent/` symlinks, workspace injection, and cron jobs
+- Seeds starter content: an evergreen note, an inbox note, today's journal, and the OpenClaw logo
 
 ## Memory Flow
 
-- Hook layer (`/new` or `/reset`): appends link-free capture to daily journals under `Done`, `Decisions`, `Facts`, and `Open`, then records `SESSION_ID — HH:MM` under `## Sessions` in `03 Journal/`
-- Supervised layer (human + agent): updates typed notes directly in `01 Notes/` when meaningful work is done
-- Nightly maintenance cron layer (agent-only, isolated): reviews the past day of journals, updates existing `project`/`research`/`contact` notes, writes net-new synthesis to `00 Inbox/`, and flags possible hook/cron drift when journal coverage is missing for 72+ hours
-- Linking: nightly maintenance enforces two-way links between journal entries and typed notes (`journal -> note` and `note -> journal/session`)
+```
+Hook (/new, /reset)  →  Journal (raw capture, no links)
+                            ↓
+Supervised session   →  Typed notes in 01 Notes/ (human + agent)
+                            ↓
+Nightly maintenance  →  Update existing notes, synthesize to 00 Inbox/, enforce two-way links
+```
+
+All content passes a hard filter: only user-specific knowledge enters the vault. General knowledge that any LLM could produce without user context is excluded.
+
+## Vault Structure
+
+```
+00 Inbox/        — quick captures, agent synthesis drafts (triage these)
+01 Notes/        — typed notes: evergreen, project, research, contact, writing
+02 Agent/        — OpenClaw symlinks (when integration is enabled)
+03 Journal/      — YYYY-MM-DD.md daily journals
+04 Templates/    — Templater note templates
+05 Attachments/  — images, PDFs, non-markdown
+```
 
 ## CLI Commands
 
 ```bash
-# Initialize vault + OpenClaw integration
-npx zettelclaw init
-
-# Migrate existing workspace memory into the vault
-npx zettelclaw migrate
-
-# Programmatically verify setup
-npx zettelclaw verify
-
-# Remove Zettelclaw OpenClaw integration
-npx zettelclaw uninstall
+npx zettelclaw init         # Initialize vault + OpenClaw integration
+npx zettelclaw migrate      # Migrate existing workspace memory into the vault
+npx zettelclaw verify       # Programmatically verify setup
+npx zettelclaw uninstall    # Remove OpenClaw integration
 ```
 
-Useful migrate flags:
+## Web Clipper
 
-- `--workspace <path>`: OpenClaw workspace path (default `~/.openclaw/workspace`)
-- `--vault <path>`: explicit vault path
-- `--model <name>`: model alias/key for migration agents
-- `--state-path <path>`: override migration resume state file path
-- `--parallel-jobs <n>`: run multiple per-file sub-agent jobs concurrently
-
-## Web Clipper Template
-
-The project ships an Obsidian Web Clipper template at `vault/04 Templates/clipper-inbox.json` that captures clips into `00 Inbox/`.
-
-Import steps in the Web Clipper extension:
-1. Open extension settings.
-2. Go to `Templates`.
-3. Click `New Template`.
-4. Paste the JSON from `vault/04 Templates/clipper-inbox.json`.
+The vault includes an Obsidian Web Clipper template at `04 Templates/clipper-inbox.json` for capturing pages into `00 Inbox/`.
 
 ## Links
 
