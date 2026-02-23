@@ -24,6 +24,7 @@
     "init": "bun run src/index.ts init",
     "migrate": "bun run src/index.ts migrate",
     "verify": "bun run src/index.ts verify",
+    "uninstall": "bun run src/index.ts uninstall",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "lint": "biome check . && tsgo --noEmit",
