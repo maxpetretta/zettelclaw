@@ -52,7 +52,15 @@ jobs:
 
       - name: Publish To npm
         working-directory: packages/cli
-        run: npm publish --provenance --access public
+        run: |
+          npm publish --provenance --access public 2>&1 || {
+            exit_code=$?
+            if npm view zettelclaw@"$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+              echo "Version already published — continuing."
+            else
+              exit $exit_code
+            fi
+          }
 
       - name: Install ClawHub CLI
         run: npm i -g clawhub
