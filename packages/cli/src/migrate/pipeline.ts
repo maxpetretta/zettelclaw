@@ -25,6 +25,8 @@ import {
 
 const SUBAGENT_SESSION_NAME = "zettelclaw-migrate-subagent"
 const FINAL_SYNTHESIS_SESSION_NAME = "zettelclaw-migrate-synthesis"
+const FINAL_SYNTHESIS_MAX_ATTEMPTS = 2
+const FINAL_SYNTHESIS_FALLBACK_FILE_BASENAME = "final-synthesis-fallback"
 
 export async function runMigratePipeline(options: MigratePipelineOptions): Promise<MigratePipelineResult> {
   const runKey = buildRunKey(options)
@@ -126,14 +128,33 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
 
   if (!state.finalSynthesisCompleted) {
     options.onProgress?.("Running final MEMORY.md/USER.md synthesis")
-    const synthesisSummary = await runFinalSynthesis({
-      workspacePath: options.workspacePath,
-      vaultPath: options.vaultPath,
-      notesFolder: options.notesFolder,
-      journalFolder: options.journalFolder,
-      model: options.model,
-      completedResults: selectAllCompletedResults(state),
-    })
+    let synthesisSummary = ""
+    for (let attempt = 1; attempt <= FINAL_SYNTHESIS_MAX_ATTEMPTS; attempt += 1) {
+      synthesisSummary = await runFinalSynthesis({
+        workspacePath: options.workspacePath,
+        vaultPath: options.vaultPath,
+        notesFolder: options.notesFolder,
+        journalFolder: options.journalFolder,
+        model: options.model,
+        completedResults: selectAllCompletedResults(state),
+      })
+
+      if (!finalSynthesisHasEditConflict(synthesisSummary)) {
+        break
+      }
+
+      if (attempt < FINAL_SYNTHESIS_MAX_ATTEMPTS) {
+        options.onProgress?.("Final synthesis reported edit conflicts; retrying once")
+      }
+    }
+
+    if (finalSynthesisHasEditConflict(synthesisSummary)) {
+      const fallbackPath = await writeFinalSynthesisFallbackSummary(options.statePath, synthesisSummary)
+      throw new Error(
+        `Final synthesis reported unresolved edit conflicts after ${FINAL_SYNTHESIS_MAX_ATTEMPTS} attempts. ` +
+          `Saved fallback summary to ${fallbackPath}.`,
+      )
+    }
 
     const memoryPath = join(options.workspacePath, "MEMORY.md")
     const userPath = join(options.workspacePath, "USER.md")
@@ -168,6 +189,39 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
     cleanupCompleted: state.cleanupCompleted,
     completedResults: selectAllCompletedResults(state),
   }
+}
+
+function finalSynthesisHasEditConflict(summary: string): boolean {
+  if (summary.trim().length === 0) {
+    return false
+  }
+
+  return /failed:\s*Could not find the exact text/iu.test(summary)
+}
+
+async function writeFinalSynthesisFallbackSummary(statePath: string, summary: string): Promise<string> {
+  const stateDir = dirname(statePath)
+  await mkdir(stateDir, { recursive: true })
+
+  for (let sequence = 1; sequence <= 99; sequence += 1) {
+    const suffix = sequence === 1 ? "" : `.${sequence}`
+    const fallbackPath = join(stateDir, `${FINAL_SYNTHESIS_FALLBACK_FILE_BASENAME}${suffix}.md`)
+    if (await pathExists(fallbackPath)) {
+      continue
+    }
+
+    const content = summary.trim().length > 0 ? `${summary.trim()}\n` : "(empty synthesis summary)\n"
+    await writeFile(fallbackPath, content, "utf8")
+    return fallbackPath
+  }
+
+  const timestampedFallbackPath = join(
+    stateDir,
+    `${FINAL_SYNTHESIS_FALLBACK_FILE_BASENAME}.${new Date().toISOString().replaceAll(":", "-")}.md`,
+  )
+  const content = summary.trim().length > 0 ? `${summary.trim()}\n` : "(empty synthesis summary)\n"
+  await writeFile(timestampedFallbackPath, content, "utf8")
+  return timestampedFallbackPath
 }
 
 async function runTaskMigration(

@@ -481,6 +481,114 @@ describe("runMigratePipeline", () => {
     ).rejects.toThrow("Final synthesis did not produce required file updates")
   })
 
+  it("retries final synthesis when summary reports edit conflicts", async () => {
+    const root = await mkdtemp(join(tmpdir(), "zettelclaw-migrate-pipeline-synthesis-retry-"))
+    tempPaths.push(root)
+
+    const workspacePath = join(root, "workspace")
+    const memoryPath = join(workspacePath, "memory")
+    const vaultPath = join(root, "vault")
+    const notesPath = join(vaultPath, "01 Notes")
+    const statePath = join(workspacePath, ".zettelclaw", "migrate-state.json")
+
+    await mkdir(memoryPath, { recursive: true })
+    await mkdir(notesPath, { recursive: true })
+    await writeFile(join(workspacePath, "MEMORY.md"), "memory baseline", "utf8")
+    await writeFile(join(workspacePath, "USER.md"), "user baseline", "utf8")
+
+    const failedSummary =
+      "⚠️ 📝 Edit failed: Could not find the exact text in /tmp/workspace/USER.md while applying update."
+
+    spawnSyncMock
+      .mockReturnValueOnce({ status: 0, stdout: '{"id":"job-synthesis-1"}', stderr: "" })
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          entries: [{ action: "finished", status: "ok", summary: failedSummary, ts: 10 }],
+        }),
+        stderr: "",
+      })
+      .mockReturnValueOnce({ status: 0, stdout: '{"id":"job-synthesis-2"}', stderr: "" })
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          entries: [{ action: "finished", status: "ok", summary: "Recovered synthesis", ts: 20 }],
+        }),
+        stderr: "",
+      })
+
+    const result = await runMigratePipeline({
+      workspacePath,
+      memoryPath,
+      vaultPath,
+      notesFolder: "01 Notes",
+      journalFolder: "03 Journal",
+      model: "claude-sonnet",
+      statePath,
+      tasks: [],
+      parallelJobs: 1,
+    })
+
+    expect(result.failedTasks).toBe(0)
+    expect(result.finalSynthesisSummary).toBe("Recovered synthesis")
+    expect(spawnSyncMock).toHaveBeenCalledTimes(4)
+  })
+
+  it("writes fallback synthesis output and fails when edit conflicts persist", async () => {
+    const root = await mkdtemp(join(tmpdir(), "zettelclaw-migrate-pipeline-synthesis-fallback-"))
+    tempPaths.push(root)
+
+    const workspacePath = join(root, "workspace")
+    const memoryPath = join(workspacePath, "memory")
+    const vaultPath = join(root, "vault")
+    const notesPath = join(vaultPath, "01 Notes")
+    const statePath = join(workspacePath, ".zettelclaw", "migrate-state.json")
+
+    await mkdir(memoryPath, { recursive: true })
+    await mkdir(notesPath, { recursive: true })
+    await writeFile(join(workspacePath, "MEMORY.md"), "memory baseline", "utf8")
+    await writeFile(join(workspacePath, "USER.md"), "user baseline", "utf8")
+
+    const failedSummary =
+      "⚠️ 📝 Edit failed: Could not find the exact text in /tmp/workspace/USER.md while applying update."
+
+    spawnSyncMock
+      .mockReturnValueOnce({ status: 0, stdout: '{"id":"job-synthesis-1"}', stderr: "" })
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          entries: [{ action: "finished", status: "ok", summary: failedSummary, ts: 10 }],
+        }),
+        stderr: "",
+      })
+      .mockReturnValueOnce({ status: 0, stdout: '{"id":"job-synthesis-2"}', stderr: "" })
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          entries: [{ action: "finished", status: "ok", summary: failedSummary, ts: 20 }],
+        }),
+        stderr: "",
+      })
+
+    await expect(
+      runMigratePipeline({
+        workspacePath,
+        memoryPath,
+        vaultPath,
+        notesFolder: "01 Notes",
+        journalFolder: "03 Journal",
+        model: "claude-sonnet",
+        statePath,
+        tasks: [],
+        parallelJobs: 1,
+      }),
+    ).rejects.toThrow("Final synthesis reported unresolved edit conflicts")
+
+    const fallbackPath = join(workspacePath, ".zettelclaw", "final-synthesis-fallback.md")
+    const fallbackContents = await readFile(fallbackPath, "utf8")
+    expect(fallbackContents).toContain("Could not find the exact text")
+  })
+
   it("captures parse failures from malformed sub-agent output", async () => {
     const root = await mkdtemp(join(tmpdir(), "zettelclaw-migrate-pipeline-parse-fail-"))
     tempPaths.push(root)
