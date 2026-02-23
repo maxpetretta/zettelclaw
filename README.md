@@ -1,8 +1,10 @@
 # Zettelclaw 🦞
 
-A human+agent knowledge system built on Obsidian and OpenClaw.
+**Your agent's second brain, built together.**
 
-Zettelclaw sets up an Obsidian vault designed for dual human+agent authorship — evergreen notes, rich linking, frontmatter as API, and automated extraction from conversations to durable knowledge.
+A PKM methodology for humans and AI agents to co-build a shared knowledge base, powered by Obsidian and OpenClaw.
+
+Zettelclaw sets up an Obsidian vault designed for dual authorship — you and your AI agent co-building knowledge with evergreen notes, rich linking, frontmatter as API, and automated extraction from conversations to durable memory.
 
 ## Quick Start
 
@@ -28,8 +30,8 @@ npx zettelclaw migrate
 
 - Creates a ready-to-use Obsidian vault with 6 note templates (journal via `journal.md`, evergreen via `evergreen.md`, project, research, contact, writing)
 - Seeds starter content on first setup:
-  - `01 Notes/Zettelclaw Is Collaborative Memory For Your Agent.md`
-  - `00 Inbox/Use Reclaw To Import Old Conversation History.md`
+  - `01 Notes/Zettelclaw Is Shared Human + Agent Memory.md`
+  - `00 Inbox/Reclaw Can Recover Memories From Old Chats.md`
   - Today's journal with a `Done` entry for setup/installation
   - `05 Attachments/OpenClaw Logo.png`
 - Configures community plugins (Templater, Linter, Obsidian Git)

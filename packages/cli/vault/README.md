@@ -27,8 +27,8 @@ If you already had files in your OpenClaw workspace `memory/` folder before setu
 ## Starter Content (Init)
 
 On first setup, Zettelclaw seeds:
-- `01 Notes/Zettelclaw Is Collaborative Memory For Your Agent.md`
-- `00 Inbox/Use Reclaw To Import Old Conversation History.md`
+- `01 Notes/Zettelclaw Is Shared Human + Agent Memory.md`
+- `00 Inbox/Reclaw Can Recover Memories From Old Chats.md`
 - Today's journal file with a `Done` entry: "Zettelclaw setup and installed."
 - `05 Attachments/OpenClaw Logo.png` (or `04 Attachments/` when Agent folder is disabled)
 
