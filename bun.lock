@@ -11,7 +11,7 @@
     },
     "packages/cli": {
       "name": "zettelclaw",
-      "version": "0.1.0",
+      "version": "2026.2.23",
       "bin": {
         "zettelclaw": "./bin/zettelclaw.js",
       },
@@ -24,14 +24,14 @@
     },
     "packages/skill": {
       "name": "@zettelclaw/skill",
-      "version": "0.1.0",
+      "version": "2026.2.23",
       "devDependencies": {
         "@types/bun": "1.2.5",
       },
     },
     "packages/website": {
       "name": "@zettelclaw/website",
-      "version": "1.0.0",
+      "version": "2026.2.23",
       "dependencies": {
         "@astrojs/sitemap": "3.6.0",
         "@astrojs/vercel": "8.0.4",

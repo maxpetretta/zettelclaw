@@ -1,6 +1,6 @@
 {
   "name": "zettelclaw",
-  "version": "0.1.0",
+  "version": "2026.2.23",
   "description": "CLI and vault template for Zettelclaw - your agent's second brain, built together",
   "type": "module",
   "bin": {
