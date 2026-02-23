@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish Release Artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify Tag Matches Package Versions
+        shell: bash
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          cli_version="$(node -p "require('./packages/cli/package.json').version")"
+          skill_version="$(node -p "require('./packages/skill/package.json').version")"
+          normalized_tag="${tag#v}"
+
+          if [[ "$normalized_tag" != "$cli_version" ]]; then
+            echo "Release tag ($tag) does not match packages/cli version ($cli_version)."
+            exit 1
+          fi
+
+          if [[ "$normalized_tag" != "$skill_version" ]]; then
+            echo "Release tag ($tag) does not match packages/skill version ($skill_version)."
+            exit 1
+          fi
+
+      - name: Publish To npm
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+      - name: Install ClawHub CLI
+        run: npm i -g clawhub
+
+      - name: Login To ClawHub
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        run: clawhub login --token "$CLAWHUB_TOKEN" --no-browser
+
+      - name: Publish Skill To ClawHub
+        shell: bash
+        env:
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          skill_version="$(node -p "require('./packages/skill/package.json').version")"
+          changelog="$(echo "$RELEASE_BODY" | tr '\n' ' ')"
+
+          clawhub --no-input publish packages/skill \
+            --slug zettelclaw \
+            --name "Zettelclaw" \
+            --version "$skill_version" \
+            --tags latest \
+            --changelog "$changelog"
