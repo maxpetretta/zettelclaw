@@ -17,16 +17,22 @@ Do not delegate. Do not process any file except the one listed here.
 1. Read `{{SOURCE_PATH}}`.
 2. Determine note type(s): evergreen, project, research, contact, or writing.
 3. Write updates in `{{VAULT_PATH}}/{{NOTES_FOLDER}}`:
+   - Keep this focused and concise (high-signal durable points only).
    - For `project` / `research` / `contact`, prefer updating an existing matching note (append-only, update frontmatter `updated`) instead of creating duplicates.
+   - Update/create at most 2 typed notes for this file unless more is absolutely necessary.
    - Create new typed notes only when no suitable existing note exists.
    - If creating a project note, title MUST end with `Project`.
    - If creating a research note, title MUST end with `Research`.
-   - If content has multiple distinct durable topics, split into multiple evergreen notes.
-4. Link aggressively with `[[wikilinks]]` using the provided index plus newly created notes.
+   - If content has multiple distinct durable topics, still prioritize one primary note plus at most one secondary note.
+4. Add relevant `[[wikilinks]]` only where they materially improve navigation.
 5. When content maps to a migrated journal day, enforce two-way links:
    - Typed note links to the day/session.
    - Journal day links back to the typed note when relevant.
 6. Delete the source file `{{SOURCE_PATH}}`.
+7. Tool usage constraints:
+   - Use exact file paths with spaces as-is (do NOT escape spaces with backslashes).
+   - Read/edit files only (do not try to read directories).
+   - Avoid broad refactors or exhaustive rewrites.
 
 ## Output Format
 Return ONLY valid JSON (no prose, no markdown fences):

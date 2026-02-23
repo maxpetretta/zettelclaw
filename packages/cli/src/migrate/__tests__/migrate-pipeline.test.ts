@@ -98,6 +98,7 @@ describe("runMigratePipeline", () => {
         stderr: "",
       })
 
+    const debugMessages: string[] = []
     const result = await runMigratePipeline({
       workspacePath,
       memoryPath,
@@ -116,6 +117,9 @@ describe("runMigratePipeline", () => {
         },
       ],
       parallelJobs: 0,
+      onDebug: (message) => {
+        debugMessages.push(message)
+      },
     })
 
     expect(result.failedTasks).toBe(0)
@@ -134,6 +138,8 @@ describe("runMigratePipeline", () => {
 
     expect(savedState.finalSynthesisCompleted).toBe(true)
     expect(savedState.cleanupCompleted).toBe(true)
+    expect(debugMessages.some((message) => message.includes("Task start"))).toBe(true)
+    expect(debugMessages.some((message) => message.includes("Final synthesis"))).toBe(true)
   })
 
   it("returns failed tasks and skips cleanup when sub-agent extraction reports error status", async () => {
@@ -197,6 +203,141 @@ describe("runMigratePipeline", () => {
 
     const remainingMemoryEntries = await readdir(memoryPath)
     expect(remainingMemoryEntries).toEqual(["bad.md"])
+  })
+
+  it("skips tasks when the source file is already missing", async () => {
+    const root = await mkdtemp(join(tmpdir(), "zettelclaw-migrate-pipeline-skip-missing-preflight-"))
+    tempPaths.push(root)
+
+    const workspacePath = join(root, "workspace")
+    const memoryPath = join(workspacePath, "memory")
+    const vaultPath = join(root, "vault")
+    const notesPath = join(vaultPath, "01 Notes")
+    const statePath = join(workspacePath, ".zettelclaw", "migrate-state.json")
+
+    await mkdir(memoryPath, { recursive: true })
+    await mkdir(notesPath, { recursive: true })
+    await writeFile(join(workspacePath, "MEMORY.md"), "memory baseline", "utf8")
+    await writeFile(join(workspacePath, "USER.md"), "user baseline", "utf8")
+
+    const sourcePath = join(memoryPath, "missing.md")
+
+    spawnSyncMock
+      .mockReturnValueOnce({ status: 0, stdout: '{"id":"job-synthesis"}', stderr: "" })
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          entries: [{ action: "finished", status: "ok", summary: "Synthesis after skip", ts: 10 }],
+        }),
+        stderr: "",
+      })
+
+    const debugMessages: string[] = []
+    const result = await runMigratePipeline({
+      workspacePath,
+      memoryPath,
+      vaultPath,
+      notesFolder: "01 Notes",
+      journalFolder: "03 Journal",
+      model: "claude-sonnet",
+      statePath,
+      tasks: [
+        {
+          id: "task-missing-preflight",
+          relativePath: "missing.md",
+          basename: "missing.md",
+          sourcePath,
+          kind: "other",
+        },
+      ],
+      parallelJobs: 1,
+      onDebug: (message) => {
+        debugMessages.push(message)
+      },
+    })
+
+    expect(result.failedTasks).toBe(0)
+    expect(result.processedTasks).toBe(0)
+    expect(result.skippedTasks).toBe(1)
+    expect(result.cleanupCompleted).toBe(true)
+    expect(result.finalSynthesisSummary).toBe("Synthesis after skip")
+    expect(spawnSyncMock).toHaveBeenCalledTimes(2)
+    expect(debugMessages.some((message) => message.includes("Task skipped"))).toBe(true)
+  })
+
+  it("skips missing-source errors returned by sub-agent extraction", async () => {
+    const root = await mkdtemp(join(tmpdir(), "zettelclaw-migrate-pipeline-skip-missing-runtime-"))
+    tempPaths.push(root)
+
+    const workspacePath = join(root, "workspace")
+    const memoryPath = join(workspacePath, "memory")
+    const vaultPath = join(root, "vault")
+    const notesPath = join(vaultPath, "01 Notes")
+    const statePath = join(workspacePath, ".zettelclaw", "migrate-state.json")
+
+    await mkdir(memoryPath, { recursive: true })
+    await mkdir(notesPath, { recursive: true })
+    await writeFile(join(workspacePath, "MEMORY.md"), "memory baseline", "utf8")
+    await writeFile(join(workspacePath, "USER.md"), "user baseline", "utf8")
+
+    const sourcePath = join(memoryPath, "missing-runtime.md")
+    await writeFile(sourcePath, "legacy memory", "utf8")
+
+    const extractionPayload = JSON.stringify({
+      sourceFile: "missing-runtime.md",
+      status: "error",
+      summary: `Source file not found at ${sourcePath}. Migration cannot proceed without source file.`,
+      createdWikilinks: [],
+      createdNotes: [],
+      updatedNotes: [],
+      journalDaysTouched: [],
+      deletedSource: false,
+    })
+
+    spawnSyncMock
+      .mockReturnValueOnce({ status: 0, stdout: '{"id":"job-subagent"}', stderr: "" })
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          entries: [{ action: "finished", status: "ok", summary: extractionPayload, ts: 10 }],
+        }),
+        stderr: "",
+      })
+      .mockReturnValueOnce({ status: 0, stdout: '{"id":"job-synthesis"}', stderr: "" })
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          entries: [{ action: "finished", status: "ok", summary: "Synthesis after runtime skip", ts: 20 }],
+        }),
+        stderr: "",
+      })
+
+    const result = await runMigratePipeline({
+      workspacePath,
+      memoryPath,
+      vaultPath,
+      notesFolder: "01 Notes",
+      journalFolder: "03 Journal",
+      model: "claude-sonnet",
+      statePath,
+      tasks: [
+        {
+          id: "task-missing-runtime",
+          relativePath: "missing-runtime.md",
+          basename: "missing-runtime.md",
+          sourcePath,
+          kind: "other",
+        },
+      ],
+      parallelJobs: 1,
+    })
+
+    expect(result.failedTasks).toBe(0)
+    expect(result.processedTasks).toBe(0)
+    expect(result.skippedTasks).toBe(1)
+    expect(result.cleanupCompleted).toBe(true)
+    expect(result.finalSynthesisSummary).toBe("Synthesis after runtime skip")
+    expect(spawnSyncMock).toHaveBeenCalledTimes(4)
   })
 
   it("parses existing state and continues from completed results for synthesis", async () => {

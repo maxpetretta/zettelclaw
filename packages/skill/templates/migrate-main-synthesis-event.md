@@ -27,6 +27,7 @@ Do not delegate.
    - `MEMORY.md` must NOT duplicate identity/profile details already in `USER.md` or `IDENTITY.md`.
    - If needed, MEMORY may reference USER/IDENTITY briefly instead of repeating content.
 5. Preserve existing useful content where possible (append or refine rather than destructive rewrite unless clearly needed).
+6. Keep edits concise and avoid line-by-line global rewrites when a targeted update is sufficient.
 
 ## Output
 After completing file edits, reply with a short bullet list:

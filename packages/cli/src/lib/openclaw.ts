@@ -119,6 +119,70 @@ export interface ConfigPatchResult {
   message?: string
 }
 
+export interface ConfigUnpatchResult {
+  changed: boolean
+  removedVaultPaths: number
+  message?: string
+}
+
+export interface HookRemoveResult {
+  status: "removed" | "skipped" | "failed"
+  message?: string
+}
+
+export interface MigrateConcurrencyPatchResult {
+  changed: boolean
+  cronMaxConcurrentRuns?: number
+  agentMaxConcurrent?: number
+  message?: string
+}
+
+function readPositiveInteger(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const normalized = Math.floor(value)
+    return normalized > 0 ? normalized : undefined
+  }
+
+  if (typeof value === "string" && /^\d+$/u.test(value.trim())) {
+    const parsed = Number(value.trim())
+    const normalized = Number.isFinite(parsed) ? Math.floor(parsed) : 0
+    return normalized > 0 ? normalized : undefined
+  }
+
+  return undefined
+}
+
+function normalizePathForComparison(value: string): string {
+  return value.trim().replaceAll("\\", "/").replace(/\/+$/u, "")
+}
+
+function removeExtraPathValue(container: JsonRecord, targetPath: string): number {
+  if (!Array.isArray(container.extraPaths)) {
+    return 0
+  }
+
+  const normalizedTarget = normalizePathForComparison(targetPath)
+  let removedCount = 0
+  const filtered = container.extraPaths.filter((entry) => {
+    if (typeof entry !== "string") {
+      return true
+    }
+
+    if (normalizePathForComparison(entry) !== normalizedTarget) {
+      return true
+    }
+
+    removedCount += 1
+    return false
+  })
+
+  if (removedCount > 0) {
+    container.extraPaths = filtered
+  }
+
+  return removedCount
+}
+
 export async function patchOpenClawConfig(vaultPath: string, openclawDir: string): Promise<ConfigPatchResult> {
   const configPath = join(openclawDir, "openclaw.json")
 
@@ -198,6 +262,148 @@ export async function patchOpenClawConfig(vaultPath: string, openclawDir: string
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return { changed: false, message: `Could not patch ${configPath}: ${message}` }
+  }
+}
+
+export async function unpatchOpenClawConfig(vaultPath: string | undefined, openclawDir: string): Promise<ConfigUnpatchResult> {
+  const configPath = join(openclawDir, "openclaw.json")
+
+  try {
+    const raw = await readFile(configPath, "utf8")
+    const config = asRecord(JSON.parse(raw))
+    let changed = false
+    let removedVaultPaths = 0
+
+    const hooks = asRecord(config.hooks)
+    config.hooks = hooks
+    const internal = asRecord(hooks.internal)
+    hooks.internal = internal
+    const entries = asRecord(internal.entries)
+    internal.entries = entries
+
+    const zettelclawEntry = coerceHookEntry(entries.zettelclaw)
+    entries.zettelclaw = zettelclawEntry
+    if (zettelclawEntry.enabled !== false) {
+      zettelclawEntry.enabled = false
+      changed = true
+    }
+
+    const sessionMemoryEntry = coerceHookEntry(entries["session-memory"])
+    entries["session-memory"] = sessionMemoryEntry
+    if (sessionMemoryEntry.enabled !== true) {
+      sessionMemoryEntry.enabled = true
+      changed = true
+    }
+
+    if (typeof vaultPath === "string" && vaultPath.trim().length > 0) {
+      const normalizedVaultPath = vaultPath.trim()
+
+      const legacyMemorySearch = asRecord(config.memorySearch)
+      const removedFromLegacy = removeExtraPathValue(legacyMemorySearch, normalizedVaultPath)
+      if (removedFromLegacy > 0) {
+        config.memorySearch = legacyMemorySearch
+        removedVaultPaths += removedFromLegacy
+        changed = true
+      }
+
+      const agents = asRecord(config.agents)
+      config.agents = agents
+      const defaults = asRecord(agents.defaults)
+      agents.defaults = defaults
+      const defaultsMemorySearch = asRecord(defaults.memorySearch)
+      defaults.memorySearch = defaultsMemorySearch
+
+      const removedFromDefaults = removeExtraPathValue(defaultsMemorySearch, normalizedVaultPath)
+      if (removedFromDefaults > 0) {
+        removedVaultPaths += removedFromDefaults
+        changed = true
+      }
+    }
+
+    if (changed) {
+      await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8")
+    }
+
+    return {
+      changed,
+      removedVaultPaths,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return {
+      changed: false,
+      removedVaultPaths: 0,
+      message: `Could not unpatch ${configPath}: ${message}`,
+    }
+  }
+}
+
+export async function uninstallOpenClawHook(openclawDir: string): Promise<HookRemoveResult> {
+  const hookPath = join(openclawDir, "hooks", "zettelclaw")
+
+  try {
+    if (!(await pathExists(hookPath))) {
+      return { status: "skipped" }
+    }
+
+    await rm(hookPath, { recursive: true, force: true })
+    return { status: "removed" }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { status: "failed", message: `Could not remove hook at ${hookPath}: ${message}` }
+  }
+}
+
+export async function ensureMigrateConcurrencyConfig(
+  openclawDir: string,
+  minimumConcurrent: number,
+): Promise<MigrateConcurrencyPatchResult> {
+  const configPath = join(openclawDir, "openclaw.json")
+  const normalizedMinimum = Number.isFinite(minimumConcurrent) ? Math.max(1, Math.floor(minimumConcurrent)) : 1
+
+  try {
+    const raw = await readFile(configPath, "utf8")
+    const config = asRecord(JSON.parse(raw))
+    let changed = false
+
+    const cron = asRecord(config.cron)
+    config.cron = cron
+    const agents = asRecord(config.agents)
+    config.agents = agents
+    const defaults = asRecord(agents.defaults)
+    agents.defaults = defaults
+
+    const currentCronMaxConcurrentRuns = readPositiveInteger(cron.maxConcurrentRuns)
+    const currentAgentMaxConcurrent = readPositiveInteger(defaults.maxConcurrent)
+
+    const targetCronMaxConcurrentRuns = Math.max(currentCronMaxConcurrentRuns ?? 0, normalizedMinimum)
+    const targetAgentMaxConcurrent = Math.max(currentAgentMaxConcurrent ?? 0, normalizedMinimum)
+
+    if (currentCronMaxConcurrentRuns !== targetCronMaxConcurrentRuns || typeof cron.maxConcurrentRuns !== "number") {
+      cron.maxConcurrentRuns = targetCronMaxConcurrentRuns
+      changed = true
+    }
+
+    if (currentAgentMaxConcurrent !== targetAgentMaxConcurrent || typeof defaults.maxConcurrent !== "number") {
+      defaults.maxConcurrent = targetAgentMaxConcurrent
+      changed = true
+    }
+
+    if (changed) {
+      await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8")
+    }
+
+    return {
+      changed,
+      cronMaxConcurrentRuns: targetCronMaxConcurrentRuns,
+      agentMaxConcurrent: targetAgentMaxConcurrent,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return {
+      changed: false,
+      message: `Could not configure migrate concurrency in ${configPath}: ${message}`,
+    }
   }
 }
 

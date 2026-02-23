@@ -4,12 +4,14 @@ import { log } from "@clack/prompts"
 
 import { runInit } from "./commands/init"
 import { runMigrate } from "./commands/migrate"
+import { runUninstall } from "./commands/uninstall"
 import { runVerify } from "./commands/verify"
 
 interface ParsedArgs {
   command: string | undefined
   flags: {
     yes: boolean
+    verbose: boolean
     vaultPath?: string | undefined
     minimal: boolean
     workspacePath?: string | undefined
@@ -31,6 +33,8 @@ interface OptionSpec {
 
 const OPTION_SPECS: readonly OptionSpec[] = [
   { longName: "--yes", flag: "yes", kind: "boolean" },
+  { longName: "--verbose", flag: "verbose", kind: "boolean" },
+  { longName: "--debug", flag: "verbose", kind: "boolean" },
   { longName: "--minimal", flag: "minimal", kind: "boolean" },
   { longName: "--vault", flag: "vaultPath", kind: "string" },
   { longName: "--workspace", flag: "workspacePath", kind: "string" },
@@ -49,6 +53,7 @@ function usage(): string {
     "  zettelclaw init [options]     Set up a new Zettelclaw vault",
     "  zettelclaw migrate [options]  Migrate OpenClaw workspace memory into the vault",
     "  zettelclaw verify [options]   Verify Zettelclaw setup with local programmatic checks",
+    "  zettelclaw uninstall [options] Remove Zettelclaw OpenClaw integration",
     "",
     "Init options:",
     "  --vault <path>      Set vault path (default: ~/zettelclaw)",
@@ -61,11 +66,18 @@ function usage(): string {
     "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --model <name>      Model alias/key for migration sub-agents",
     "  --state-path <path> Resume state file path (default: <workspace>/.zettelclaw/migrate-state.json)",
-    "  --parallel-jobs <n> Number of concurrent sub-agent jobs (default: 5)",
+    "  --parallel-jobs <n> Number of concurrent sub-agent jobs (default: 8)",
+    "  --verbose           Print detailed migrate runtime diagnostics",
+    "  --debug             Alias for --verbose",
     "  --yes               Accept defaults non-interactively",
     "",
     "Verify options:",
     "  --vault <path>      Vault path (auto-detected if not provided)",
+    "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
+    "  --yes               Accept defaults non-interactively",
+    "",
+    "Uninstall options:",
+    "  --vault <path>      Vault path for removing memory-path/symlink wiring (auto-detected if not provided)",
     "  --workspace <path>  OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --yes               Accept defaults non-interactively",
   ].join("\n")
@@ -111,7 +123,7 @@ function assignParsedFlag(parsed: ParsedArgs, spec: OptionSpec, rawValue?: strin
       throw new Error(`Unknown argument: ${spec.longName}=${rawValue}`)
     }
 
-    if (spec.flag === "yes" || spec.flag === "minimal") {
+    if (spec.flag === "yes" || spec.flag === "minimal" || spec.flag === "verbose") {
       parsed.flags[spec.flag] = true
       return
     }
@@ -175,7 +187,7 @@ function applyOption(parsed: ParsedArgs, rest: string[], index: number): number 
 }
 
 function validateArgs(parsed: ParsedArgs): void {
-  if (parsed.command !== "init" && parsed.command !== "migrate" && parsed.command !== "verify") {
+  if (parsed.command !== "init" && parsed.command !== "migrate" && parsed.command !== "verify" && parsed.command !== "uninstall") {
     return
   }
 
@@ -201,6 +213,10 @@ function validateArgs(parsed: ParsedArgs): void {
   if (parsed.command !== "init" && parsed.flags.minimal) {
     throw new Error("--minimal is only supported with `zettelclaw init`")
   }
+
+  if (parsed.command !== "migrate" && parsed.flags.verbose) {
+    throw new Error("--verbose is only supported with `zettelclaw migrate`")
+  }
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -210,6 +226,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     command,
     flags: {
       yes: false,
+      verbose: false,
       minimal: false,
     },
   }
@@ -264,12 +281,22 @@ async function main(): Promise<void> {
       model: parsed.flags.model,
       statePath: parsed.flags.statePath,
       parallelJobs: parsed.flags.parallelJobs,
+      verbose: parsed.flags.verbose,
     })
     return
   }
 
   if (parsed.command === "verify") {
     await runVerify({
+      yes: parsed.flags.yes,
+      vaultPath: parsed.flags.vaultPath,
+      workspacePath: parsed.flags.workspacePath,
+    })
+    return
+  }
+
+  if (parsed.command === "uninstall") {
+    await runUninstall({
       yes: parsed.flags.yes,
       vaultPath: parsed.flags.vaultPath,
       workspacePath: parsed.flags.workspacePath,

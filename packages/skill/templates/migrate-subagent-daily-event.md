@@ -23,7 +23,9 @@ Do not delegate. Do not process any file except the one listed here.
      - `## Sessions`
    - Do not insert a blank line between frontmatter and first content line.
 3. From this file's content, update typed notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}`:
+   - Keep this focused. Do not perform broad vault cleanup.
    - Prefer updating existing `project` / `research` / `contact` notes (append-only, preserve structure, update `updated`).
+   - Update at most 2 typed notes for this file unless more is absolutely necessary.
    - Create new typed notes only when no suitable existing note exists.
    - New project note titles MUST end with `Project`.
    - New research note titles MUST end with `Research`.
@@ -31,6 +33,10 @@ Do not delegate. Do not process any file except the one listed here.
    - Journal side links to typed note(s).
    - Typed note side links back to journal day `[[{{DAY}}]]` when relevant.
 5. Delete the source file `{{SOURCE_PATH}}`.
+6. Tool usage constraints:
+   - Use exact file paths with spaces as-is (do NOT escape spaces with backslashes).
+   - Read/edit files only (do not try to read directories).
+   - Keep edits concise and avoid exhaustive rewrites.
 
 ## Output Format
 Return ONLY valid JSON (no prose, no markdown fences):

@@ -1,5 +1,5 @@
 import { lstat, mkdir, readdir, readlink, rename, symlink } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join, resolve as resolvePath } from "node:path"
 
 import {
   AGENT_FOLDER_ALIASES,
@@ -16,6 +16,28 @@ const AGENT_FILES = ["AGENTS.md", "SOUL.md", "IDENTITY.md", "USER.md", "TOOLS.md
 function isSymlinkPermissionError(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException).code
   return code === "EPERM" || code === "EACCES" || code === "ENOTSUP"
+}
+
+function normalizePathForComparison(value: string): string {
+  return value.replaceAll("\\", "/").replace(/\/+$/u, "")
+}
+
+function resolveSymlinkTarget(linkPath: string, rawTarget: string): string {
+  if (rawTarget.startsWith("/")) {
+    return rawTarget
+  }
+
+  if (/^[A-Za-z]:[\\/]/u.test(rawTarget)) {
+    return rawTarget
+  }
+
+  return resolvePath(dirname(linkPath), rawTarget)
+}
+
+export interface RemoveAgentSymlinksResult {
+  removed: string[]
+  skipped: string[]
+  failed: string[]
 }
 
 export async function createAgentSymlinks(vaultPath: string, workspacePath: string): Promise<CopyResult> {
@@ -82,6 +104,73 @@ export async function createAgentSymlinks(vaultPath: string, workspacePath: stri
   }
 
   await removePathIfExists(join(agentDir, ".gitkeep"))
+
+  return result
+}
+
+export async function removeAgentSymlinks(vaultPath: string, workspacePath: string): Promise<RemoveAgentSymlinksResult> {
+  const result: RemoveAgentSymlinksResult = {
+    removed: [],
+    skipped: [],
+    failed: [],
+  }
+
+  const agentFolders = new Set<string>(AGENT_FOLDER_ALIASES)
+
+  for (const agentFolder of agentFolders) {
+    const agentDir = join(vaultPath, agentFolder)
+    if (!(await pathExists(agentDir))) {
+      continue
+    }
+
+    for (const file of AGENT_FILES) {
+      const linkPath = join(agentDir, file)
+      const relativePath = `${agentFolder}/${file}`
+      const expectedTarget = normalizePathForComparison(join(workspacePath, file))
+
+      let existingStats: Awaited<ReturnType<typeof lstat>> | null = null
+      try {
+        existingStats = await lstat(linkPath)
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code
+        if (code === "ENOENT") {
+          continue
+        }
+
+        const message = error instanceof Error ? error.message : String(error)
+        result.failed.push(`${relativePath}: ${message}`)
+        continue
+      }
+
+      if (!existingStats.isSymbolicLink()) {
+        result.skipped.push(relativePath)
+        continue
+      }
+
+      let rawTarget = ""
+      try {
+        rawTarget = await readlink(linkPath)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        result.failed.push(`${relativePath}: ${message}`)
+        continue
+      }
+
+      const resolvedTarget = normalizePathForComparison(resolveSymlinkTarget(linkPath, rawTarget))
+      if (resolvedTarget !== expectedTarget) {
+        result.skipped.push(relativePath)
+        continue
+      }
+
+      try {
+        await removePathIfExists(linkPath)
+        result.removed.push(relativePath)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        result.failed.push(`${relativePath}: ${message}`)
+      }
+    }
+  }
 
   return result
 }

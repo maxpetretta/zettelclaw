@@ -69,6 +69,35 @@ describe("prompt builders", () => {
     expect(prompt2).toContain("- n/a")
   })
 
+  it("caps subagent wikilink index and prioritizes task-related titles", async () => {
+    const task = createTask({
+      relativePath: "projects/bracky-codebase.md",
+      basename: "bracky-codebase.md",
+      sourcePath: "/workspace/memory/projects/bracky-codebase.md",
+      kind: "other",
+    })
+
+    const titles = [
+      "Bracky Project",
+      "Bracky Research",
+      ...Array.from({ length: 80 }, (_, index) => `Topic ${String(index).padStart(2, "0")}`),
+    ]
+
+    const prompt = await buildSubagentPrompt({
+      task,
+      workspacePath: "/workspace",
+      vaultPath: "/vault",
+      notesFolder: "01 Notes",
+      journalFolder: "03 Journal",
+      wikilinkTitles: titles,
+    })
+
+    const wikilinkLines = prompt.split("\n").filter((line) => line.startsWith("- [["))
+    expect(wikilinkLines.length).toBeLessThanOrEqual(40)
+    expect(prompt).toContain("- [[Bracky Project]]")
+    expect(prompt).toContain("- [[Bracky Research]]")
+  })
+
   it("builds main synthesis prompts and truncates oversized summaries", async () => {
     const hugeSummary = "A".repeat(20_000)
     const results = [

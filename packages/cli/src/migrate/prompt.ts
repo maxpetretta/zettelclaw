@@ -8,6 +8,8 @@ import type { MigrateSubagentExtraction, MigrateTask, StoredMigrateTaskResult } 
 const DAILY_TEMPLATE_PATH = resolveSkillPath("templates", "migrate-subagent-daily-event.md")
 const OTHER_TEMPLATE_PATH = resolveSkillPath("templates", "migrate-subagent-other-event.md")
 const MAIN_SYNTHESIS_TEMPLATE_PATH = resolveSkillPath("templates", "migrate-main-synthesis-event.md")
+const MAX_SUBAGENT_WIKILINK_TITLES = 40
+const MAIN_SYNTHESIS_SUMMARY_BUDGET = 32_000
 
 const templateCache = new Map<string, string>()
 
@@ -34,6 +36,11 @@ export async function buildSubagentPrompt(options: BuildSubagentPromptOptions): 
   const template = await loadTemplate(templatePath)
 
   const day = options.task.kind === "daily" ? options.task.basename.slice(0, 10) : ""
+  const selectedWikilinks = selectWikilinksForTask(
+    options.task,
+    options.wikilinkTitles,
+    MAX_SUBAGENT_WIKILINK_TITLES,
+  )
 
   return substituteTemplate(template, {
     VAULT_PATH: options.vaultPath,
@@ -44,7 +51,7 @@ export async function buildSubagentPrompt(options: BuildSubagentPromptOptions): 
     SOURCE_RELATIVE_PATH: options.task.relativePath,
     FILE_BASENAME: options.task.basename,
     DAY: day,
-    WIKILINK_INDEX: formatWikilinkIndex(options.wikilinkTitles),
+    WIKILINK_INDEX: formatWikilinkIndex(selectedWikilinks),
   })
 }
 
@@ -57,7 +64,7 @@ export async function buildMainSynthesisPrompt(options: BuildMainSynthesisPrompt
     NOTES_FOLDER: options.notesFolder,
     JOURNAL_FOLDER: options.journalFolder,
     MODEL: options.model,
-    SUBAGENT_SUMMARIES: serializeSubagentSummaries(options.completedResults, 56_000),
+    SUBAGENT_SUMMARIES: serializeSubagentSummaries(options.completedResults, MAIN_SYNTHESIS_SUMMARY_BUDGET),
   })
 }
 
@@ -312,6 +319,44 @@ function formatWikilinkIndex(titles: string[]): string {
   }
 
   return uniqueTitles.map((title) => `- [[${title}]]`).join("\n")
+}
+
+function selectWikilinksForTask(task: MigrateTask, titles: string[], limit: number): string[] {
+  if (limit < 1) {
+    return []
+  }
+
+  const deduped = uniqueStrings(titles.map((title) => title.trim()).filter((title) => title.length > 0)).sort((a, b) =>
+    a.localeCompare(b),
+  )
+  if (deduped.length <= limit) {
+    return deduped
+  }
+
+  const taskTokens = extractTaskTokens(task)
+  if (taskTokens.length === 0) {
+    return deduped.slice(0, limit)
+  }
+
+  const matched: string[] = []
+  const unmatched: string[] = []
+
+  for (const title of deduped) {
+    const normalized = title.toLowerCase()
+    if (taskTokens.some((token) => normalized.includes(token))) {
+      matched.push(title)
+      continue
+    }
+    unmatched.push(title)
+  }
+
+  return [...matched, ...unmatched].slice(0, limit)
+}
+
+function extractTaskTokens(task: MigrateTask): string[] {
+  const seed = `${task.relativePath} ${task.basename}`.toLowerCase()
+  const parts = seed.split(/[^a-z0-9]+/u)
+  return uniqueStrings(parts.filter((part) => part.length >= 3 && /[a-z]/u.test(part)))
 }
 
 function serializeSubagentSummaries(results: StoredMigrateTaskResult[], maxChars: number): string {

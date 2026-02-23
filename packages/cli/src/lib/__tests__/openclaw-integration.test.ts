@@ -8,12 +8,14 @@ import { substituteTemplate } from "../template"
 import { resetSpawnSyncMock, spawnSyncMock } from "./helpers/child-process-mock"
 
 let installOpenClawHook: typeof import("../openclaw").installOpenClawHook
+let uninstallOpenClawHook: typeof import("../openclaw").uninstallOpenClawHook
 let ensureZettelclawNightlyMaintenanceCronJob: typeof import("../openclaw").ensureZettelclawNightlyMaintenanceCronJob
 let firePostInitEvent: typeof import("../openclaw").firePostInitEvent
 
 beforeAll(async () => {
   const loaded = await import("../openclaw")
   installOpenClawHook = loaded.installOpenClawHook
+  uninstallOpenClawHook = loaded.uninstallOpenClawHook
   ensureZettelclawNightlyMaintenanceCronJob = loaded.ensureZettelclawNightlyMaintenanceCronJob
   firePostInitEvent = loaded.firePostInitEvent
 })
@@ -87,6 +89,30 @@ describe("installOpenClawHook", () => {
 
     const rewritten = await readFile(handlerPath, "utf8")
     expect(rewritten.endsWith("// drift\n")).toBe(false)
+  })
+})
+
+describe("uninstallOpenClawHook", () => {
+  it("removes an installed hook directory", async () => {
+    const root = await mkdtemp(join(tmpdir(), "zettelclaw-openclaw-uninstall-test-"))
+    tempPaths.push(root)
+
+    const installed = await installOpenClawHook(root)
+    expect(installed).toEqual({ status: "installed" })
+
+    const removed = await uninstallOpenClawHook(root)
+    expect(removed).toEqual({ status: "removed" })
+
+    const hookManifestPath = join(root, "hooks", "zettelclaw", "HOOK.md")
+    await expect(stat(hookManifestPath)).rejects.toThrow()
+  })
+
+  it("returns skipped when hook directory does not exist", async () => {
+    const root = await mkdtemp(join(tmpdir(), "zettelclaw-openclaw-uninstall-test-"))
+    tempPaths.push(root)
+
+    const removed = await uninstallOpenClawHook(root)
+    expect(removed).toEqual({ status: "skipped" })
   })
 })
 

@@ -51,6 +51,7 @@ export interface MigratePipelineOptions {
   tasks: MigrateTask[]
   parallelJobs?: number
   onProgress?: (message: string) => void
+  onDebug?: (message: string) => void
 }
 
 export interface MigratePipelineResult {

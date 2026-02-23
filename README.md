@@ -64,6 +64,9 @@ npx zettelclaw migrate
 
 # Programmatically verify setup
 npx zettelclaw verify
+
+# Remove Zettelclaw OpenClaw integration
+npx zettelclaw uninstall
 ```
 
 Useful migrate flags:
