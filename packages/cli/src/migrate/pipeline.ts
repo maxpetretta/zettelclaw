@@ -3,7 +3,6 @@ import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 
 import { forEachConcurrent } from "../lib/concurrency"
-import { asStringArray } from "../lib/json"
 import { OpenClawJobError, scheduleAgentCronJob, waitForCronSummary } from "../lib/openclaw-jobs"
 import { uniqueTrimmedStrings } from "../lib/text"
 import { pathExists } from "../lib/vault-fs"
@@ -19,9 +18,7 @@ import {
   buildMainSynthesisPrompt,
   buildSubagentPrompt,
   normalizeAndSortWikilinkTitles,
-  normalizeWikilinkToken,
   parseSubagentExtraction,
-  wikilinkTitleFromToken,
 } from "./prompt"
 
 const SUBAGENT_SESSION_NAME = "zettelclaw-migrate-subagent"
@@ -39,37 +36,30 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
     model: options.model,
   })
 
-  if (state.cleanupCompleted && options.tasks.length > 0) {
-    resetState(state, runKey, options)
-    await saveState(options.statePath, state)
-  }
+  const pendingTasks: MigrateTask[] = []
+  let skippedTasks = 0
 
-  const wikilinkTitles = await loadWikilinkIndex(join(options.vaultPath, options.notesFolder))
-  for (const entry of Object.values(state.completed)) {
-    mergeExtractionWikilinks(wikilinkTitles, entry.extraction)
-  }
-  let cachedWikilinkTitles: string[] | null = null
-  const getWikilinkTitlesForPrompt = (): string[] => {
-    if (!cachedWikilinkTitles) {
-      cachedWikilinkTitles = normalizeAndSortWikilinkTitles([...wikilinkTitles])
+  for (const task of options.tasks) {
+    if (state.completed[task.id]) {
+      skippedTasks += 1
+      continue
     }
 
-    return cachedWikilinkTitles
-  }
-  const invalidateWikilinkTitlesForPrompt = (): void => {
-    cachedWikilinkTitles = null
+    pendingTasks.push(task)
   }
 
+  const wikilinkTitles = normalizeAndSortWikilinkTitles(
+    await loadWikilinkIndex(join(options.vaultPath, options.notesFolder)),
+  )
   let processedTasks = 0
-  let skippedTasks = 0
   const failedTaskErrors: string[] = []
-  const pendingTasks: MigrateTask[] = [...options.tasks]
 
   if (pendingTasks.length > 0) {
     const parallelJobs = resolveParallelJobs(options.parallelJobs, pendingTasks.length)
     options.onDebug?.(
       `Starting migration pipeline with ${pendingTasks.length} pending task(s), parallelJobs=${parallelJobs}.`,
     )
+
     let settledTasks = 0
     let activeJobs = 0
     let saveChain = Promise.resolve()
@@ -87,6 +77,7 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
       const taskStartedAt = Date.now()
       options.onDebug?.(`Task start: ${task.relativePath} (${task.kind})`)
       activeJobs += 1
+
       try {
         if (!(await pathExists(task.sourcePath))) {
           skippedTasks += 1
@@ -100,15 +91,11 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
           notesFolder: options.notesFolder,
           journalFolder: options.journalFolder,
           model: options.model,
-          getWikilinkTitles: getWikilinkTitlesForPrompt,
+          wikilinkTitles,
           onDebug: (message) => options.onDebug?.(`[${task.relativePath}] ${message}`),
         })
 
-        if (extraction.status !== "ok") {
-          throw new Error(extraction.summary.length > 0 ? extraction.summary : "Sub-agent reported error status.")
-        }
-
-        if (!extraction.deletedSource && (await pathExists(task.sourcePath))) {
+        if (await pathExists(task.sourcePath)) {
           throw new Error(`Source file was not deleted: ${task.relativePath}`)
         }
 
@@ -120,15 +107,9 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
           completedAt,
         }
         state.updatedAt = completedAt
-        if (mergeExtractionWikilinks(wikilinkTitles, extraction)) {
-          invalidateWikilinkTitlesForPrompt()
-        }
         await enqueueStateSave()
         processedTasks += 1
-        options.onDebug?.(
-          `Task success: ${task.relativePath} in ${Date.now() - taskStartedAt}ms ` +
-            `(created=${extraction.createdNotes.length}, updated=${extraction.updatedNotes.length}, links=${extraction.createdWikilinks.length})`,
-        )
+        options.onDebug?.(`Task success: ${task.relativePath} in ${Date.now() - taskStartedAt}ms.`)
       } catch (error) {
         if (isMissingSourceTaskError(task, error)) {
           skippedTasks += 1
@@ -148,96 +129,84 @@ export async function runMigratePipeline(options: MigratePipelineOptions): Promi
         )
       }
     })
+
     await saveChain
   }
 
-  if (failedTaskErrors.length > 0) {
-    return {
-      totalTasks: options.tasks.length,
-      processedTasks,
-      skippedTasks,
-      failedTasks: failedTaskErrors.length,
-      failedTaskErrors,
-      finalSynthesisSummary: "",
-      statePath: options.statePath,
-      cleanupCompleted: state.cleanupCompleted,
-      completedResults: selectAllCompletedResults(state),
+  const completedResults = options.tasks
+    .map((task) => state.completed[task.id])
+    .filter((entry): entry is StoredMigrateTaskResult => entry !== undefined)
+
+  if (completedResults.length === 0) {
+    const detail = failedTaskErrors.length > 0 ? ` First failure: ${failedTaskErrors[0]}` : ""
+    throw new Error(`Migration produced no successful task results.${detail}`)
+  }
+
+  options.onProgress?.("Running final MEMORY.md/USER.md synthesis")
+  options.onDebug?.("Starting final synthesis phase.")
+
+  let finalSynthesisSummary = ""
+  for (let attempt = 1; attempt <= FINAL_SYNTHESIS_MAX_ATTEMPTS; attempt += 1) {
+    const attemptStartedAt = Date.now()
+    const synthesisOptions = {
+      workspacePath: options.workspacePath,
+      vaultPath: options.vaultPath,
+      notesFolder: options.notesFolder,
+      journalFolder: options.journalFolder,
+      model: options.model,
+      completedResults,
+      ...(options.onDebug ? { onDebug: options.onDebug } : {}),
+    }
+    finalSynthesisSummary = await runFinalSynthesis(synthesisOptions)
+    options.onDebug?.(
+      `Final synthesis attempt ${attempt}/${FINAL_SYNTHESIS_MAX_ATTEMPTS} finished in ${Date.now() - attemptStartedAt}ms.`,
+    )
+
+    if (!finalSynthesisHasEditConflict(finalSynthesisSummary)) {
+      break
+    }
+
+    if (attempt < FINAL_SYNTHESIS_MAX_ATTEMPTS) {
+      options.onProgress?.("Final synthesis reported edit conflicts; retrying once")
     }
   }
 
-  if (!state.finalSynthesisCompleted) {
-    options.onProgress?.("Running final MEMORY.md/USER.md synthesis")
-    options.onDebug?.("Starting final synthesis phase.")
-    let synthesisSummary = ""
-    for (let attempt = 1; attempt <= FINAL_SYNTHESIS_MAX_ATTEMPTS; attempt += 1) {
-      const attemptStartedAt = Date.now()
-      synthesisSummary = await runFinalSynthesis({
-        workspacePath: options.workspacePath,
-        vaultPath: options.vaultPath,
-        notesFolder: options.notesFolder,
-        journalFolder: options.journalFolder,
-        model: options.model,
-        completedResults: selectAllCompletedResults(state),
-        onDebug: options.onDebug,
-      })
-      options.onDebug?.(
-        `Final synthesis attempt ${attempt}/${FINAL_SYNTHESIS_MAX_ATTEMPTS} finished in ${
-          Date.now() - attemptStartedAt
-        }ms.`,
-      )
-
-      if (!finalSynthesisHasEditConflict(synthesisSummary)) {
-        break
-      }
-
-      if (attempt < FINAL_SYNTHESIS_MAX_ATTEMPTS) {
-        options.onProgress?.("Final synthesis reported edit conflicts; retrying once")
-      }
-    }
-
-    if (finalSynthesisHasEditConflict(synthesisSummary)) {
-      const fallbackPath = await writeFinalSynthesisFallbackSummary(options.statePath, synthesisSummary)
-      throw new Error(
-        `Final synthesis reported unresolved edit conflicts after ${FINAL_SYNTHESIS_MAX_ATTEMPTS} attempts. ` +
-          `Saved fallback summary to ${fallbackPath}.`,
-      )
-    }
-
-    const memoryPath = join(options.workspacePath, "MEMORY.md")
-    const userPath = join(options.workspacePath, "USER.md")
-    const [hasMemory, hasUser] = await Promise.all([pathExists(memoryPath), pathExists(userPath)])
-    if (!(hasMemory && hasUser)) {
-      const missing = [hasMemory ? "" : memoryPath, hasUser ? "" : userPath].filter((entry) => entry.length > 0)
-      throw new Error(`Final synthesis did not produce required file updates: ${missing.join(", ")}`)
-    }
-
-    state.finalSynthesisCompleted = true
-    state.finalSynthesisSummary = synthesisSummary
-    state.updatedAt = new Date().toISOString()
-    await saveState(options.statePath, state)
-    options.onDebug?.("Final synthesis completed and state persisted.")
+  if (finalSynthesisHasEditConflict(finalSynthesisSummary)) {
+    const fallbackPath = await writeFinalSynthesisFallbackSummary(options.statePath, finalSynthesisSummary)
+    throw new Error(
+      `Final synthesis reported unresolved edit conflicts after ${FINAL_SYNTHESIS_MAX_ATTEMPTS} attempts. ` +
+        `Saved fallback summary to ${fallbackPath}.`,
+    )
   }
 
-  if (!state.cleanupCompleted) {
+  const memoryDocPath = join(options.workspacePath, "MEMORY.md")
+  const userDocPath = join(options.workspacePath, "USER.md")
+  const [hasMemory, hasUser] = await Promise.all([pathExists(memoryDocPath), pathExists(userDocPath)])
+  if (!(hasMemory && hasUser)) {
+    const missing = [hasMemory ? "" : memoryDocPath, hasUser ? "" : userDocPath].filter((entry) => entry.length > 0)
+    throw new Error(`Final synthesis did not produce required file updates: ${missing.join(", ")}`)
+  }
+
+  let cleanupPerformed = false
+  if (failedTaskErrors.length === 0) {
     options.onProgress?.("Clearing migrated workspace memory directory")
     options.onDebug?.(`Clearing workspace memory directory: ${options.memoryPath}`)
     await clearMemoryDirectory(options.memoryPath)
-    state.cleanupCompleted = true
-    state.updatedAt = new Date().toISOString()
-    await saveState(options.statePath, state)
-    options.onDebug?.("Workspace memory directory cleared and cleanup state persisted.")
+    cleanupPerformed = true
+  } else {
+    options.onDebug?.("Skipping memory cleanup because one or more tasks failed.")
   }
 
   return {
     totalTasks: options.tasks.length,
     processedTasks,
     skippedTasks,
-    failedTasks: 0,
-    failedTaskErrors: [],
-    finalSynthesisSummary: state.finalSynthesisSummary ?? "",
+    failedTasks: failedTaskErrors.length,
+    failedTaskErrors,
+    finalSynthesisSummary,
     statePath: options.statePath,
-    cleanupCompleted: state.cleanupCompleted,
-    completedResults: selectAllCompletedResults(state),
+    cleanupPerformed,
+    completedResults,
   }
 }
 
@@ -282,7 +251,7 @@ async function runTaskMigration(
     notesFolder: string
     journalFolder: string
     model: string
-    getWikilinkTitles: () => string[]
+    wikilinkTitles: string[]
     onDebug?: (message: string) => void
   },
 ): Promise<MigrateSubagentExtraction> {
@@ -293,28 +262,32 @@ async function runTaskMigration(
     vaultPath: options.vaultPath,
     notesFolder: options.notesFolder,
     journalFolder: options.journalFolder,
-    wikilinkTitles: options.getWikilinkTitles(),
+    wikilinkTitles: options.wikilinkTitles,
     wikilinkTitlesNormalized: true,
   })
   options.onDebug?.(`Prompt built in ${Date.now() - promptStartedAt}ms (${prompt.length} chars).`)
 
   const schedulingStartedAt = Date.now()
-  const scheduled = await scheduleAgentCronJob({
+  const schedulingOptions = {
     message: prompt,
     model: options.model,
     sessionName: SUBAGENT_SESSION_NAME,
     timeoutSeconds: 1800,
     sessionTarget: "isolated",
-    onDebug: options.onDebug,
-  })
+    ...(options.onDebug ? { onDebug: options.onDebug } : {}),
+  }
+  const scheduled = await scheduleAgentCronJob(schedulingOptions)
   options.onDebug?.(`Scheduled subagent cron job ${scheduled.jobId} in ${Date.now() - schedulingStartedAt}ms.`)
 
   try {
     const waitStartedAt = Date.now()
-    const summary = await waitForCronSummary(scheduled.jobId, 1_900_000, {
-      onDebug: options.onDebug,
-    })
+    const summary = await waitForCronSummary(
+      scheduled.jobId,
+      1_900_000,
+      options.onDebug ? { onDebug: options.onDebug } : {},
+    )
     options.onDebug?.(`Cron summary received in ${Date.now() - waitStartedAt}ms.`)
+
     const parseStartedAt = Date.now()
     const extraction = parseSubagentExtraction(summary, task)
     options.onDebug?.(`Subagent output parsed in ${Date.now() - parseStartedAt}ms.`)
@@ -350,71 +323,26 @@ async function runFinalSynthesis(options: {
   options.onDebug?.(`Final synthesis prompt built in ${Date.now() - promptStartedAt}ms (${prompt.length} chars).`)
 
   const schedulingStartedAt = Date.now()
-  const scheduled = await scheduleAgentCronJob({
+  const schedulingOptions = {
     message: prompt,
     model: options.model,
     sessionName: FINAL_SYNTHESIS_SESSION_NAME,
     timeoutSeconds: 1800,
     sessionTarget: "isolated",
-    onDebug: options.onDebug,
-  })
+    ...(options.onDebug ? { onDebug: options.onDebug } : {}),
+  }
+  const scheduled = await scheduleAgentCronJob(schedulingOptions)
   options.onDebug?.(`Scheduled final synthesis cron job ${scheduled.jobId} in ${Date.now() - schedulingStartedAt}ms.`)
 
   const waitStartedAt = Date.now()
-  const summary = await waitForCronSummary(scheduled.jobId, 1_900_000, {
-    onDebug: options.onDebug,
-  })
+  const summary = await waitForCronSummary(
+    scheduled.jobId,
+    1_900_000,
+    options.onDebug ? { onDebug: options.onDebug } : {},
+  )
   options.onDebug?.(`Final synthesis summary received in ${Date.now() - waitStartedAt}ms.`)
+
   return summary
-}
-
-async function loadWikilinkIndex(notesPath: string): Promise<Set<string>> {
-  const titles = await listMarkdownTitles(notesPath)
-  return new Set(titles)
-}
-
-function mergeExtractionWikilinks(index: Set<string>, extraction: MigrateSubagentExtraction): boolean {
-  let changed = false
-
-  for (const wikilink of extraction.createdWikilinks) {
-    const title = wikilinkTitleFromToken(wikilink)
-    if (title) {
-      const beforeSize = index.size
-      index.add(title)
-      if (index.size > beforeSize) {
-        changed = true
-      }
-    }
-  }
-
-  for (const notePath of [...extraction.createdNotes, ...extraction.updatedNotes]) {
-    const normalized = normalizeWikilinkToken(notePath)
-    if (!normalized) {
-      continue
-    }
-
-    const title = wikilinkTitleFromToken(normalized)
-    if (title) {
-      const beforeSize = index.size
-      index.add(title)
-      if (index.size > beforeSize) {
-        changed = true
-      }
-    }
-  }
-
-  return changed
-}
-
-async function clearMemoryDirectory(memoryPath: string): Promise<void> {
-  await mkdir(memoryPath, { recursive: true })
-  const entries = await readdir(memoryPath, { withFileTypes: true })
-  await Promise.all(entries.map((entry) => rm(join(memoryPath, entry.name), { recursive: true, force: true })))
-
-  const remaining = await readdir(memoryPath)
-  if (remaining.length > 0) {
-    throw new Error(`Could not fully clear memory directory: ${memoryPath}`)
-  }
 }
 
 function formatTaskError(task: MigrateTask, error: unknown): string {
@@ -439,10 +367,6 @@ function isMissingSourceTaskError(task: MigrateTask, error: unknown): boolean {
   return false
 }
 
-function selectAllCompletedResults(state: MigrateRunState): StoredMigrateTaskResult[] {
-  return Object.values(state.completed).sort((left, right) => left.relativePath.localeCompare(right.relativePath))
-}
-
 function resolveParallelJobs(value: number | undefined, pendingCount: number): number {
   if (pendingCount <= 0) {
     return 1
@@ -460,12 +384,18 @@ function resolveParallelJobs(value: number | undefined, pendingCount: number): n
   return normalized > pendingCount ? pendingCount : normalized
 }
 
-function buildRunKey(options: Pick<MigratePipelineOptions, "workspacePath" | "vaultPath" | "model">): string {
+function buildRunKey(options: Pick<MigratePipelineOptions, "workspacePath" | "vaultPath" | "model" | "tasks">): string {
   const hash = createHash("sha1")
   hash.update(options.workspacePath)
   hash.update(options.vaultPath)
   hash.update(options.model)
-  hash.update("zettelclaw-migrate-v2")
+  hash.update("zettelclaw-migrate-v3")
+  hash.update(String(options.tasks.length))
+
+  for (const task of options.tasks) {
+    hash.update(task.id)
+  }
+
   return hash.digest("hex")
 }
 
@@ -491,7 +421,7 @@ async function loadState(input: {
 
   const now = new Date().toISOString()
   return {
-    version: 1,
+    version: 2,
     runKey: input.runKey,
     workspacePath: input.workspacePath,
     vaultPath: input.vaultPath,
@@ -499,23 +429,7 @@ async function loadState(input: {
     createdAt: now,
     updatedAt: now,
     completed: {},
-    finalSynthesisCompleted: false,
-    cleanupCompleted: false,
   }
-}
-
-function resetState(state: MigrateRunState, runKey: string, options: MigratePipelineOptions): void {
-  const now = new Date().toISOString()
-  state.runKey = runKey
-  state.workspacePath = options.workspacePath
-  state.vaultPath = options.vaultPath
-  state.model = options.model
-  state.createdAt = now
-  state.updatedAt = now
-  state.completed = {}
-  state.finalSynthesisCompleted = false
-  state.finalSynthesisSummary = undefined
-  state.cleanupCompleted = false
 }
 
 async function saveState(statePath: string, state: MigrateRunState): Promise<void> {
@@ -529,7 +443,7 @@ function parseState(value: unknown): MigrateRunState | null {
   }
 
   const record = value as Record<string, unknown>
-  if (record.version !== 1) {
+  if (record.version !== 2 && record.version !== 1) {
     return null
   }
 
@@ -539,9 +453,7 @@ function parseState(value: unknown): MigrateRunState | null {
     typeof record.vaultPath !== "string" ||
     typeof record.model !== "string" ||
     typeof record.createdAt !== "string" ||
-    typeof record.updatedAt !== "string" ||
-    typeof record.finalSynthesisCompleted !== "boolean" ||
-    typeof record.cleanupCompleted !== "boolean"
+    typeof record.updatedAt !== "string"
   ) {
     return null
   }
@@ -559,8 +471,8 @@ function parseState(value: unknown): MigrateRunState | null {
     }
   }
 
-  const state: MigrateRunState = {
-    version: 1,
+  return {
+    version: 2,
     runKey: record.runKey,
     workspacePath: record.workspacePath,
     vaultPath: record.vaultPath,
@@ -568,15 +480,7 @@ function parseState(value: unknown): MigrateRunState | null {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     completed,
-    finalSynthesisCompleted: record.finalSynthesisCompleted,
-    cleanupCompleted: record.cleanupCompleted,
   }
-
-  if (typeof record.finalSynthesisSummary === "string") {
-    state.finalSynthesisSummary = record.finalSynthesisSummary
-  }
-
-  return state
 }
 
 function parseStoredResult(value: unknown): StoredMigrateTaskResult | null {
@@ -612,30 +516,28 @@ function parseExtraction(value: unknown): MigrateSubagentExtraction | null {
   }
 
   const record = value as Record<string, unknown>
-  if (
-    typeof record.sourceFile !== "string" ||
-    typeof record.summary !== "string" ||
-    typeof record.deletedSource !== "boolean"
-  ) {
+  if (typeof record.summary !== "string") {
     return null
   }
 
-  const statusValue = record.status === "error" ? "error" : "ok"
-  const createdWikilinks = asStringArray(record.createdWikilinks)
-  const createdNotes = asStringArray(record.createdNotes)
-  const updatedNotes = asStringArray(record.updatedNotes)
-  const journalDaysTouched = asStringArray(record.journalDaysTouched)
-
   return {
-    sourceFile: record.sourceFile,
-    status: statusValue,
     summary: record.summary,
-    createdWikilinks,
-    createdNotes,
-    updatedNotes,
-    journalDaysTouched,
-    deletedSource: record.deletedSource,
   }
+}
+
+async function clearMemoryDirectory(memoryPath: string): Promise<void> {
+  await mkdir(memoryPath, { recursive: true })
+  const entries = await readdir(memoryPath, { withFileTypes: true })
+  await Promise.all(entries.map((entry) => rm(join(memoryPath, entry.name), { recursive: true, force: true })))
+
+  const remaining = await readdir(memoryPath)
+  if (remaining.length > 0) {
+    throw new Error(`Could not fully clear memory directory: ${memoryPath}`)
+  }
+}
+
+async function loadWikilinkIndex(notesPath: string): Promise<string[]> {
+  return await listMarkdownTitles(notesPath)
 }
 
 async function listMarkdownTitles(rootPath: string): Promise<string[]> {

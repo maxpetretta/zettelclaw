@@ -255,28 +255,13 @@ describe("waitForCronSummary", () => {
     expect(debugMessages.some((message) => message.includes("finished with status=ok"))).toBe(true)
   })
 
-  it("emits queued/running runtime state from cron list when entries are not yet finished", async () => {
+  it("continues polling until a finished entry is available", async () => {
     const debugMessages: string[] = []
     spawnSyncMock
       .mockReturnValueOnce({
         status: 0,
         stdout: JSON.stringify({
           entries: [],
-        }),
-        stderr: "",
-      })
-      .mockReturnValueOnce({
-        status: 0,
-        stdout: JSON.stringify({
-          jobs: [
-            {
-              id: "job-state",
-              name: "zettelclaw-migrate-subagent",
-              state: {
-                runningAtMs: Date.now() - 2_500,
-              },
-            },
-          ],
         }),
         stderr: "",
       })
@@ -303,7 +288,8 @@ describe("waitForCronSummary", () => {
     })
 
     expect(summary).toBe("done")
-    expect(debugMessages.some((message) => message.includes("runtime: state=running"))).toBe(true)
+    expect(debugMessages.some((message) => message.includes("poll 1"))).toBe(true)
+    expect(debugMessages.some((message) => message.includes("finished with status=ok"))).toBe(true)
   })
 })
 

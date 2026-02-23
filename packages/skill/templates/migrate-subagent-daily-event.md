@@ -42,17 +42,10 @@ Do not delegate. Do not process any file except the one listed here.
 Return ONLY valid JSON (no prose, no markdown fences):
 
 {
-  "sourceFile": "{{SOURCE_RELATIVE_PATH}}",
-  "status": "ok",
-  "summary": "One concise paragraph of what you created/updated.",
-  "createdWikilinks": ["[[Link One]]", "[[Link Two]]"],
-  "createdNotes": ["Note Name.md"],
-  "updatedNotes": ["Existing Note.md"],
-  "journalDaysTouched": ["{{DAY}}"],
-  "deletedSource": true
+  "summary": "One concise paragraph of what you changed. Include failures here if any action could not be completed."
 }
 
-If you cannot complete the task, still return JSON with:
-- `"status": "error"`
-- `"summary"` containing the failure reason
-- `"deletedSource": false` when deletion did not happen
+Contract rules:
+- JSON must contain exactly one key: `summary`.
+- Never include additional keys.
+- Always return valid JSON, even on failure.

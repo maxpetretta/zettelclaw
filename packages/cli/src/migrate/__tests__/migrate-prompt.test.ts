@@ -1,12 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { MigrateTask, StoredMigrateTaskResult } from "../contracts"
-import {
-  buildMainSynthesisPrompt,
-  buildSubagentPrompt,
-  normalizeWikilinkToken,
-  parseSubagentExtraction,
-  wikilinkTitleFromToken,
-} from "../prompt"
+import { buildMainSynthesisPrompt, buildSubagentPrompt, parseSubagentExtraction } from "../prompt"
 
 function createTask(overrides: Partial<MigrateTask> = {}): MigrateTask {
   return {
@@ -25,14 +19,7 @@ function createResult(relativePath: string, summary: string): StoredMigrateTaskR
     relativePath,
     completedAt: "2026-02-20T00:00:00.000Z",
     extraction: {
-      sourceFile: relativePath,
-      status: "ok",
       summary,
-      createdWikilinks: ["[[Alpha]]"],
-      createdNotes: ["01 Notes/Alpha.md"],
-      updatedNotes: [],
-      journalDaysTouched: ["2026-02-20"],
-      deletedSource: true,
     },
   }
 }
@@ -56,7 +43,6 @@ describe("prompt builders", () => {
     expect(prompt).toContain("- [[Alpha]]")
     expect(prompt).toContain("- [[Beta]]")
 
-    // Hit cached template branch in loadTemplate.
     const prompt2 = await buildSubagentPrompt({
       task,
       workspacePath: "/workspace",
@@ -123,95 +109,34 @@ describe("prompt builders", () => {
 })
 
 describe("parseSubagentExtraction", () => {
-  it("parses fenced JSON output", () => {
-    const summary = [
-      "analysis",
-      "```json",
-      JSON.stringify({
-        source_file: "2026-02-20.md",
-        status: "ok",
-        summary: "  Added   useful  notes ",
-        created_wikilinks: ["[[Alpha]]", "[[alpha]]", "[[Beta|Alias]]"],
-        created_notes: ["01 Notes\\Alpha.md", "01 Notes\\Alpha.md"],
-        updated_notes: "01 Notes/Beta.md,01 Notes/Beta.md",
-        journal_days_touched: ["2026-02-20", "invalid"],
-        deleted_source: true,
-      }),
-      "```",
-    ].join("\n")
-
-    const parsed = parseSubagentExtraction(summary, createTask())
-
-    expect(parsed.sourceFile).toBe("2026-02-20.md")
-    expect(parsed.status).toBe("ok")
-    expect(parsed.summary).toBe("Added useful notes")
-    expect(parsed.createdWikilinks).toEqual(["[[Alpha]]", "[[Beta]]"])
-    expect(parsed.createdNotes).toEqual(["01 Notes/Alpha.md"])
-    expect(parsed.updatedNotes).toEqual(["01 Notes/Beta.md"])
-    expect(parsed.journalDaysTouched).toEqual(["2026-02-20"])
-    expect(parsed.deletedSource).toBe(true)
+  it("parses strict JSON output", () => {
+    const parsed = parseSubagentExtraction('{"summary":"  Added   useful  notes "}', createTask())
+    expect(parsed).toEqual({ summary: "Added useful notes" })
   })
 
-  it("parses section-style output when JSON is unavailable", () => {
-    const summary = [
-      "Summary: Captured key decisions",
-      "Created Wikilinks: [[Alpha]], [[Beta]]",
-      "- [[Gamma]]",
-      "[[Delta]]",
-    ].join("\n")
-
-    const parsed = parseSubagentExtraction(summary, createTask({ relativePath: "other.md" }))
-
-    expect(parsed.sourceFile).toBe("other.md")
-    expect(parsed.summary).toBe("Captured key decisions")
-    expect(parsed.createdWikilinks).toEqual(["[[Alpha]]", "[[Beta]]", "[[Gamma]]", "[[Delta]]"])
+  it("parses fenced strict JSON output", () => {
+    const parsed = parseSubagentExtraction(
+      ["analysis", "```json", '{"summary":"Captured decisions"}', "```"].join("\n"),
+      createTask(),
+    )
+    expect(parsed).toEqual({ summary: "Captured decisions" })
   })
 
-  it("falls back to normalized plain text output", () => {
-    const parsed = parseSubagentExtraction("  some   plain\n text  ", createTask({ relativePath: "x.md" }))
-
-    expect(parsed.sourceFile).toBe("x.md")
-    expect(parsed.summary).toBe("some plain text")
-    expect(parsed.createdWikilinks).toEqual([])
-    expect(parsed.deletedSource).toBe(false)
-  })
-
-  it("falls back to normalized raw candidate when JSON object is empty", () => {
-    const parsed = parseSubagentExtraction("{}", createTask({ relativePath: "empty-object.md" }))
-    expect(parsed.sourceFile).toBe("empty-object.md")
-    expect(parsed.summary).toBe("{}")
-  })
-
-  it("handles minimal JSON objects with missing string fields", () => {
-    const parsed = parseSubagentExtraction('{"foo":"bar"}', createTask({ relativePath: "minimal.md" }))
-    expect(parsed.sourceFile).toBe("minimal.md")
-    expect(parsed.summary).toBe("")
-    expect(parsed.createdWikilinks).toEqual([])
-    expect(parsed.createdNotes).toEqual([])
-    expect(parsed.updatedNotes).toEqual([])
-  })
-
-  it("stops parsing created wikilinks when the section ends", () => {
-    const summary = ["Summary: done", "Created Wikilinks:", "- [[Alpha]]", "Not a link anymore"].join("\n")
-    const parsed = parseSubagentExtraction(summary, createTask({ relativePath: "section.md" }))
-    expect(parsed.createdWikilinks).toEqual(["[[Alpha]]"])
-  })
-
-  it("throws when extraction output is empty", () => {
-    expect(() => parseSubagentExtraction("  \n  ", createTask({ relativePath: "empty.md" }))).toThrow(
-      "Could not parse migration sub-agent output for empty.md",
+  it("rejects JSON with extra keys", () => {
+    expect(() => parseSubagentExtraction('{"summary":"ok","status":"ok"}', createTask())).toThrow(
+      "Could not parse strict migration sub-agent output",
     )
   })
-})
 
-describe("wikilink normalization", () => {
-  it("extracts wikilink titles from different token formats", () => {
-    expect(wikilinkTitleFromToken("[[Folder/Alpha.md|Alias]]")).toBe("Alpha")
-    expect(wikilinkTitleFromToken("[[Beta#Heading]]")).toBe("Beta")
-    expect(wikilinkTitleFromToken("Gamma.md")).toBe("Gamma")
-    expect(wikilinkTitleFromToken("   ")).toBeUndefined()
+  it("rejects non-JSON output", () => {
+    expect(() => parseSubagentExtraction("plain text", createTask())).toThrow(
+      "Could not parse strict migration sub-agent output",
+    )
+  })
 
-    expect(normalizeWikilinkToken("Folder/Delta.md")).toBe("[[Delta]]")
-    expect(normalizeWikilinkToken("   ")).toBeUndefined()
+  it("rejects empty summary", () => {
+    expect(() => parseSubagentExtraction('{"summary":"   "}', createTask())).toThrow(
+      "Could not parse strict migration sub-agent output",
+    )
   })
 })

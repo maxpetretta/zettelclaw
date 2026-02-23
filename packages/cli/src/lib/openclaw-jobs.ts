@@ -12,8 +12,8 @@ interface OpenClawCommandResult {
 }
 
 const CRON_RUNS_FETCH_LIMIT = "20"
-const CRON_RUNS_POLL_INTERVAL_MS = 2_000
-const CRON_RUNS_TIMEOUT_MS = 12_000
+const CRON_RUNS_POLL_INTERVAL_MS = 3_000
+const CRON_RUNS_TIMEOUT_MS = 30_000
 
 interface RetryOptions {
   attempts?: number
@@ -36,10 +36,6 @@ interface CronListResponse {
 interface CronListJobEntry {
   id?: string
   name?: string
-  state?: {
-    runningAtMs?: number
-    nextRunAtMs?: number
-  }
 }
 
 interface CronRunEntry {
@@ -175,9 +171,7 @@ export async function scheduleAgentCronJob(params: ScheduleAgentCronJobParams): 
     }
   }
 
-  params.onDebug?.(
-    `Compatibility cron scheduling failed; retrying with legacy +0s mode (${compatibleResult.status}).`,
-  )
+  params.onDebug?.(`Compatibility cron scheduling failed; retrying with legacy +0s mode (${compatibleResult.status}).`)
 
   const legacyResult = await runOpenClawWithRetries(buildCronAddArgs("+0s"), {
     allowFailure: true,
@@ -208,9 +202,7 @@ export async function removeCronJobsByName(
   names: readonly string[],
   options: { onDebug?: (message: string) => void } = {},
 ): Promise<RemoveCronJobsByNameResult> {
-  const normalizedNames = new Set(
-    names.map((value) => value.trim().toLowerCase()).filter((value) => value.length > 0),
-  )
+  const normalizedNames = new Set(names.map((value) => value.trim().toLowerCase()).filter((value) => value.length > 0))
 
   if (normalizedNames.size === 0) {
     return {
@@ -365,26 +357,15 @@ export async function waitForCronSummary(
     const entries = Array.isArray(parsed.value.entries) ? parsed.value.entries : []
     const finishedCount = entries.filter((entry) => entry.action === "finished").length
     if (pollCount === 1 || pollCount % 5 === 0 || finishedCount > 0) {
-      options.onDebug?.(
-        `cron ${jobId} poll ${pollCount}: entries=${entries.length}, finishedEntries=${finishedCount}`,
-      )
+      options.onDebug?.(`cron ${jobId} poll ${pollCount}: entries=${entries.length}, finishedEntries=${finishedCount}`)
     }
     const finishedEntry = entries
       .filter((entry) => entry.action === "finished")
       .sort((left, right) => (right.ts ?? 0) - (left.ts ?? 0))[0]
 
-    if (!finishedEntry && options.onDebug && (pollCount === 1 || pollCount % 5 === 0)) {
-      const runtimeState = readCronRuntimeState(jobId)
-      if (runtimeState) {
-        options.onDebug(`cron ${jobId} runtime: ${runtimeState}`)
-      }
-    }
-
     if (finishedEntry) {
       options.onDebug?.(
-        `cron ${jobId} finished with status=${finishedEntry.status ?? "unknown"} after ${
-          Date.now() - startedAt
-        }ms`,
+        `cron ${jobId} finished with status=${finishedEntry.status ?? "unknown"} after ${Date.now() - startedAt}ms`,
       )
       if (finishedEntry.status && finishedEntry.status !== "ok") {
         const errorText =
@@ -511,45 +492,6 @@ function toOpenClawJobError(value: unknown): OpenClawJobError {
 
   const message = value instanceof Error ? value.message : String(value)
   return new OpenClawJobError("COMMAND_FAILED", "Unknown OpenClaw error.", message)
-}
-
-function readCronRuntimeState(jobId: string): string | undefined {
-  let listed: OpenClawCommandResult
-  try {
-    listed = runOpenClaw(["cron", "list", "--json"], { allowFailure: true, timeoutMs: 12_000 })
-  } catch {
-    return undefined
-  }
-  if (listed.status !== 0) {
-    return undefined
-  }
-
-  const parsed = parseJson<CronListResponse>(listed.stdout)
-  if (!parsed.value) {
-    return undefined
-  }
-
-  const jobs = Array.isArray(parsed.value.jobs) ? parsed.value.jobs : []
-  const target = jobs.find((job) => typeof job.id === "string" && job.id === jobId)
-  if (!target) {
-    return "state=missing"
-  }
-
-  const state = target.state
-  const runningAtMs = typeof state?.runningAtMs === "number" ? state.runningAtMs : undefined
-  const nextRunAtMs = typeof state?.nextRunAtMs === "number" ? state.nextRunAtMs : undefined
-  const now = Date.now()
-
-  if (typeof runningAtMs === "number" && runningAtMs > 0) {
-    return `state=running for ${Math.max(0, Math.round((now - runningAtMs) / 1000))}s`
-  }
-
-  if (typeof nextRunAtMs === "number") {
-    const seconds = Math.max(0, Math.round((nextRunAtMs - now) / 1000))
-    return `state=queued nextRunIn=${seconds}s`
-  }
-
-  return "state=idle"
 }
 
 function sleep(ms: number): Promise<void> {

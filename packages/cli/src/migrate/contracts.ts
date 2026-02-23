@@ -9,14 +9,7 @@ export interface MigrateTask {
 }
 
 export interface MigrateSubagentExtraction {
-  sourceFile: string
-  status: "ok" | "error"
   summary: string
-  createdWikilinks: string[]
-  createdNotes: string[]
-  updatedNotes: string[]
-  journalDaysTouched: string[]
-  deletedSource: boolean
 }
 
 export interface StoredMigrateTaskResult {
@@ -27,7 +20,7 @@ export interface StoredMigrateTaskResult {
 }
 
 export interface MigrateRunState {
-  version: 1
+  version: 2
   runKey: string
   workspacePath: string
   vaultPath: string
@@ -35,9 +28,6 @@ export interface MigrateRunState {
   createdAt: string
   updatedAt: string
   completed: Record<string, StoredMigrateTaskResult>
-  finalSynthesisCompleted: boolean
-  finalSynthesisSummary?: string | undefined
-  cleanupCompleted: boolean
 }
 
 export interface MigratePipelineOptions {
@@ -62,6 +52,6 @@ export interface MigratePipelineResult {
   failedTaskErrors: string[]
   finalSynthesisSummary: string
   statePath: string
-  cleanupCompleted: boolean
+  cleanupPerformed: boolean
   completedResults: StoredMigrateTaskResult[]
 }

@@ -437,7 +437,9 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
 
   const memoryBackup = await chooseDirectoryBackupPath(workspacePath, "memory")
   const memorySourcePath = join(workspacePath, "memory")
-  verboseLog(`Backing up memory directory from ${toTildePath(memorySourcePath)} to ${toTildePath(memoryBackup.backupPath)}`)
+  verboseLog(
+    `Backing up memory directory from ${toTildePath(memorySourcePath)} to ${toTildePath(memoryBackup.backupPath)}`,
+  )
   try {
     await cp(memorySourcePath, memoryBackup.backupPath, { recursive: true })
   } catch (error) {
@@ -510,7 +512,7 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   let result: Awaited<ReturnType<typeof runMigratePipeline>>
   const pipelineStartedAt = Date.now()
   try {
-    result = await runMigratePipeline({
+    const pipelineOptions = {
       workspacePath,
       memoryPath,
       vaultPath,
@@ -520,19 +522,22 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
       statePath,
       tasks,
       parallelJobs,
-      onProgress: (message) => {
+      onProgress: (message: string) => {
         if (message === lastProgressMessage) {
           return
         }
         lastProgressMessage = message
         progressSpinner.message(message)
       },
-      onDebug: verboseEnabled
-        ? (message) => {
-            verboseLog(message)
+      ...(verboseEnabled
+        ? {
+            onDebug: (message: string) => {
+              verboseLog(message)
+            },
           }
-        : undefined,
-    })
+        : {}),
+    }
+    result = await runMigratePipeline(pipelineOptions)
   } catch (error) {
     progressSpinner.stop("Migration failed")
     verboseLog(`Pipeline failed after ${formatVerboseElapsedMs(Date.now() - pipelineStartedAt)}`)
@@ -546,12 +551,12 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
 
   if (result.failedTasks > 0) {
     const failurePreview = result.failedTaskErrors
-      .slice(0, 5)
+      .slice(0, 8)
       .map((entry) => `- ${entry}`)
       .join("\n")
-    throw new Error(
-      `Migration failed for ${result.failedTasks} files.\n${failurePreview}${
-        result.failedTaskErrors.length > 5 ? "\n- ... additional failures omitted" : ""
+    log.warn(
+      `Migration failed for ${result.failedTasks} file(s), but completed tasks were preserved and final synthesis ran.\n${failurePreview}${
+        result.failedTaskErrors.length > 8 ? "\n- ... additional failures omitted" : ""
       }`,
     )
   }
@@ -560,15 +565,19 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
     log.warn(`Skipped ${result.skippedTasks} file(s) because source files were unavailable during migration.`)
   }
 
-  if (!result.cleanupCompleted) {
-    throw new Error("Migration finished but workspace memory cleanup did not complete.")
+  if (!result.cleanupPerformed) {
+    log.warn("Workspace memory cleanup was skipped because one or more files failed migration.")
   }
 
   if (result.finalSynthesisSummary.trim().length > 0) {
     log.message(`Final synthesis summary:\n${result.finalSynthesisSummary.trim()}`)
   }
 
-  log.success("Migration finished. Workspace memory files were migrated and cleared.")
+  if (result.failedTasks > 0) {
+    log.success("Migration finished with partial failures. Re-run migrate after reviewing failed files.")
+  } else {
+    log.success("Migration finished. Workspace memory files were migrated and cleared.")
+  }
   log.message(`State file: ${toTildePath(result.statePath)}`)
   verboseLog("Migration command completed successfully.")
 }

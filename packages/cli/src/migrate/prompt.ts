@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises"
 
-import { asRecord } from "../lib/json"
 import { resolveSkillPath } from "../lib/skill"
 import { substituteTemplate } from "../lib/template"
 import type { MigrateSubagentExtraction, MigrateTask, StoredMigrateTaskResult } from "./contracts"
@@ -71,198 +70,53 @@ export async function buildMainSynthesisPrompt(options: BuildMainSynthesisPrompt
 }
 
 export function parseSubagentExtraction(summary: string, task: MigrateTask): MigrateSubagentExtraction {
-  const jsonCandidates = collectJsonCandidates(summary)
-  for (const candidate of jsonCandidates) {
+  const candidates = collectJsonCandidates(summary)
+  for (const candidate of candidates) {
     try {
-      const parsedValue = JSON.parse(candidate) as unknown
-      const parsed = parseExtractionObject(parsedValue, task.relativePath)
-      if (parsed) {
-        return parsed
+      const parsed = JSON.parse(candidate) as unknown
+      const extraction = parseStrictSummaryObject(parsed)
+      if (extraction) {
+        return extraction
       }
     } catch {
       // Keep trying other candidates.
     }
   }
 
-  const sectionStyle = parseSectionStyleSummary(summary, task.relativePath)
-  if (sectionStyle) {
-    return sectionStyle
-  }
-
-  const normalized = summary.replaceAll(/\s+/gu, " ").trim()
-  if (normalized.length > 0) {
-    return {
-      sourceFile: task.relativePath,
-      status: "ok",
-      summary: normalized,
-      createdWikilinks: [],
-      createdNotes: [],
-      updatedNotes: [],
-      journalDaysTouched: [],
-      deletedSource: false,
-    }
-  }
-
-  throw new Error(`Could not parse migration sub-agent output for ${task.relativePath}.`)
+  throw new Error(
+    `Could not parse strict migration sub-agent output for ${task.relativePath}. Expected JSON exactly like {"summary":"..."}.`,
+  )
 }
 
-export function wikilinkTitleFromToken(value: string): string | undefined {
-  const trimmed = value.trim()
-  if (trimmed.length === 0) {
+export function normalizeAndSortWikilinkTitles(titles: string[]): string[] {
+  return uniqueStrings(titles.map((title) => title.trim()).filter((title) => title.length > 0)).sort((a, b) =>
+    a.localeCompare(b),
+  )
+}
+
+function parseStrictSummaryObject(value: unknown): MigrateSubagentExtraction | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined
   }
 
-  const innerMatch = trimmed.match(/\[\[([^[\]]+)\]\]/u)
-  const candidate = innerMatch?.[1] ?? trimmed
-  const [beforeAlias] = candidate.split("|")
-  const [beforeHeading] = (beforeAlias ?? "").split("#")
-  const withoutPath = (beforeHeading ?? "").split("/").at(-1)?.trim() ?? ""
-  const withoutExtension = withoutPath.replace(/\.md$/iu, "").trim()
-
-  return withoutExtension.length > 0 ? withoutExtension : undefined
-}
-
-export function normalizeWikilinkToken(value: string): string | undefined {
-  const title = wikilinkTitleFromToken(value)
-  return title ? `[[${title}]]` : undefined
-}
-
-function parseExtractionObject(value: unknown, fallbackSourceFile: string): MigrateSubagentExtraction | undefined {
-  const record = asRecord(value)
-  if (Object.keys(record).length === 0) {
+  const record = value as Record<string, unknown>
+  const keys = Object.keys(record)
+  if (keys.length !== 1 || keys[0] !== "summary") {
     return undefined
   }
 
-  const sourceFileValue = readString(record, ["sourceFile", "source_file", "file"])
-  const sourceFile = sourceFileValue?.trim().length ? sourceFileValue.trim() : fallbackSourceFile
-
-  const statusValue = (readString(record, ["status"]) ?? "ok").trim().toLowerCase()
-  const status = statusValue === "error" ? "error" : "ok"
-
-  const summary = (readString(record, ["summary", "Summary"]) ?? "").replaceAll(/\s+/gu, " ").trim()
-  const createdWikilinks = uniqueStrings(
-    parseStringList(record, ["createdWikilinks", "created_wikilinks", "Created Wikilinks"])
-      .map((entry) => normalizeWikilinkToken(entry))
-      .filter((entry): entry is string => typeof entry === "string"),
-  )
-  const createdNotes = uniqueStrings(
-    parseStringList(record, ["createdNotes", "created_notes", "Created Notes"]).map((entry) =>
-      normalizePathValue(entry),
-    ),
-  )
-  const updatedNotes = uniqueStrings(
-    parseStringList(record, ["updatedNotes", "updated_notes", "Updated Notes"]).map((entry) =>
-      normalizePathValue(entry),
-    ),
-  )
-  const journalDaysTouched = uniqueStrings(
-    parseStringList(record, ["journalDaysTouched", "journal_days_touched", "Journal Days Touched"])
-      .map((entry) => entry.trim())
-      .filter((entry) => /^\d{4}-\d{2}-\d{2}$/u.test(entry)),
-  )
-
-  const deletedSource = record.deletedSource === true || record.deleted_source === true
-
-  return {
-    sourceFile,
-    status,
-    summary,
-    createdWikilinks,
-    createdNotes,
-    updatedNotes,
-    journalDaysTouched,
-    deletedSource,
-  }
-}
-
-function parseSectionStyleSummary(summary: string, sourceFile: string): MigrateSubagentExtraction | undefined {
-  const lines = summary.replaceAll("\r\n", "\n").split("\n")
-  let summaryLine = ""
-  const createdWikilinks: string[] = []
-  let inCreatedWikilinks = false
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim()
-    if (line.length === 0) {
-      continue
-    }
-
-    if (line.toLowerCase().startsWith("summary:")) {
-      summaryLine = line.slice("summary:".length).trim()
-      inCreatedWikilinks = false
-      continue
-    }
-
-    if (line.toLowerCase().startsWith("created wikilinks:")) {
-      const remainder = line.slice("created wikilinks:".length).trim()
-      if (remainder.length > 0) {
-        createdWikilinks.push(...splitLooseList(remainder))
-      }
-      inCreatedWikilinks = true
-      continue
-    }
-
-    if (inCreatedWikilinks) {
-      if (line.startsWith("- ")) {
-        createdWikilinks.push(line.slice(2).trim())
-        continue
-      }
-
-      if (line.includes("[[")) {
-        createdWikilinks.push(...splitLooseList(line))
-        continue
-      }
-
-      inCreatedWikilinks = false
-    }
+  if (typeof record.summary !== "string") {
+    return undefined
   }
 
-  const normalizedLinks = uniqueStrings(
-    createdWikilinks
-      .map((entry) => normalizeWikilinkToken(entry))
-      .filter((entry): entry is string => typeof entry === "string"),
-  )
-  const normalizedSummary = summaryLine.replaceAll(/\s+/gu, " ").trim()
-
-  if (normalizedSummary.length === 0 && normalizedLinks.length === 0) {
+  const normalizedSummary = record.summary.replaceAll(/\s+/gu, " ").trim()
+  if (normalizedSummary.length === 0) {
     return undefined
   }
 
   return {
-    sourceFile,
-    status: "ok",
     summary: normalizedSummary,
-    createdWikilinks: normalizedLinks,
-    createdNotes: [],
-    updatedNotes: [],
-    journalDaysTouched: [],
-    deletedSource: false,
   }
-}
-
-function parseStringList(record: Record<string, unknown>, keys: readonly string[]): string[] {
-  for (const key of keys) {
-    const value = record[key]
-    if (Array.isArray(value)) {
-      return value
-        .filter((entry): entry is string => typeof entry === "string")
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0)
-    }
-
-    if (typeof value === "string") {
-      return splitLooseList(value)
-    }
-  }
-
-  return []
-}
-
-function splitLooseList(value: string): string[] {
-  return value
-    .split(/\r?\n|,/u)
-    .map((entry) => entry.replace(/^-\s*/u, "").trim())
-    .filter((entry) => entry.length > 0)
 }
 
 function collectJsonCandidates(summary: string): string[] {
@@ -292,17 +146,6 @@ function collectJsonCandidates(summary: string): string[] {
   return uniqueStrings(candidates)
 }
 
-function readString(record: Record<string, unknown>, keys: readonly string[]): string | undefined {
-  for (const key of keys) {
-    const value = record[key]
-    if (typeof value === "string") {
-      return value
-    }
-  }
-
-  return undefined
-}
-
 async function loadTemplate(path: string): Promise<string> {
   const cached = templateCache.get(path)
   if (cached) {
@@ -321,12 +164,6 @@ function formatWikilinkIndex(titles: string[]): string {
   }
 
   return uniqueTitles.map((title) => `- [[${title}]]`).join("\n")
-}
-
-export function normalizeAndSortWikilinkTitles(titles: string[]): string[] {
-  return uniqueStrings(titles.map((title) => title.trim()).filter((title) => title.length > 0)).sort((a, b) =>
-    a.localeCompare(b),
-  )
 }
 
 function selectWikilinksForTask(
@@ -377,10 +214,7 @@ function serializeSubagentSummaries(results: StoredMigrateTaskResult[], maxChars
 
   for (const result of sorted) {
     const summaryText = result.extraction.summary.replaceAll(/\s+/gu, " ").trim() || "n/a"
-    const links = result.extraction.createdWikilinks.length > 0 ? result.extraction.createdWikilinks.join(", ") : "n/a"
-    const created = result.extraction.createdNotes.length > 0 ? result.extraction.createdNotes.join(", ") : "n/a"
-    const updated = result.extraction.updatedNotes.length > 0 ? result.extraction.updatedNotes.join(", ") : "n/a"
-    const line = `- ${result.relativePath} | summary: ${summaryText} | links: ${links} | created: ${created} | updated: ${updated}`
+    const line = `- ${result.relativePath} | summary: ${summaryText}`
 
     if (consumed + line.length + 1 > maxChars) {
       lines.push(`- ... truncated after ${lines.length} files to stay within prompt budget.`)
@@ -418,8 +252,4 @@ function uniqueStrings(values: string[]): string[] {
   }
 
   return output
-}
-
-function normalizePathValue(value: string): string {
-  return value.trim().replaceAll("\\", "/")
 }
