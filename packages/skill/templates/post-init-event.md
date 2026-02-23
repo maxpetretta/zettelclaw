@@ -9,7 +9,7 @@ You need to update one workspace file to reflect this change. Pre-written conten
 Replace the `## Memory` section (and its subsections: `🧠 MEMORY.md`, `📝 Write It Down`, `🔄 Memory Maintenance`) with the content from:
 `{{SKILL_PACKAGE_PATH}}/templates/agents-memory.md`
 
-Substitute `{{VAULT_PATH}}` with `{{VAULT_PATH}}` and perform the replacement. Keep all other AGENTS.md content unchanged.
+Perform the replacement, keeping all other AGENTS.md content unchanged. Keep all other AGENTS.md content unchanged.
 
 ## 2. Confirm
 

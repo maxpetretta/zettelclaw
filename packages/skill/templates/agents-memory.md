@@ -62,4 +62,4 @@ Use the `zettelclaw` skill for full details. Quick reference:
 - Add `[[wikilinks]]` during supervised note writing and nightly maintenance (not in hook output).
 - Use `obsidian` CLI when available (preferred), fall back to file tools.
 - Do NOT create new directories or subfolders — EVER — unless the user explicitly asks. The vault structure is fixed.
-- Do NOT add `status` to notes/journals/contacts/writings.
+- Do NOT add `status` except on `project` and `research` notes.
