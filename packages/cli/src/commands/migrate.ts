@@ -8,10 +8,6 @@ import { chooseDirectoryBackupPath, chooseFileBackupPath } from "../lib/backups"
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
 import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES } from "../lib/folders"
 import { asRecord, asStringArray } from "../lib/json"
-import { runOpenClawCommand } from "../lib/openclaw-command"
-import { ensureMigrateConcurrencyConfig } from "../lib/openclaw"
-import { removeCronJobsByName } from "../lib/openclaw-jobs"
-import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { detectExistingFolder, detectVaultFromOpenClawConfig } from "../lib/vault-detect"
 import { isDirectory, pathExists } from "../lib/vault-fs"
@@ -21,8 +17,6 @@ import { runMigratePipeline } from "../migrate/pipeline"
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
 const DEFAULT_MIGRATE_STATE_PATH = ".zettelclaw/migrate-state.json"
 const DEFAULT_PARALLEL_JOBS = 8
-const PROGRESS_TICKER_FRAMES = ["", ".", "..", "..."] as const
-const STALE_MIGRATE_CRON_NAMES = ["zettelclaw-migrate-subagent", "zettelclaw-migrate-synthesis"] as const
 
 export interface MigrateOptions {
   yes: boolean
@@ -340,84 +334,6 @@ function resolveParallelJobs(options: MigrateOptions): number {
   return normalized
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
-async function waitForGatewayHealthy(maxWaitMs = 60_000, pollIntervalMs = 2_000): Promise<string | null> {
-  const deadline = Date.now() + maxWaitMs
-  let lastError = "Gateway did not report a healthy state."
-
-  while (Date.now() < deadline) {
-    const health = runOpenClawCommand(["gateway", "health", "--json", "--timeout", "5000"], { timeoutMs: 10_000 })
-
-    if (health.ok) {
-      try {
-        const parsed = asRecord(JSON.parse(health.stdout) as unknown)
-        if (parsed.ok === true) {
-          return null
-        }
-
-        const reason = typeof parsed.message === "string" ? parsed.message.trim() : ""
-        lastError = reason.length > 0 ? reason : "Gateway health check returned ok=false."
-      } catch {
-        const trimmed = health.stdout.trim()
-        lastError =
-          trimmed.length > 0 ? `Could not parse gateway health JSON: ${trimmed}` : "Malformed gateway health JSON."
-      }
-    } else {
-      lastError = health.message ?? "Gateway health check failed."
-    }
-
-    await sleep(pollIntervalMs)
-  }
-
-  return `Gateway restart timed out after ${Math.round(maxWaitMs / 1000)}s. Last check: ${lastError}`
-}
-
-async function restartGatewayAndWait(): Promise<string | null> {
-  const restart = runOpenClawCommand(["gateway", "restart", "--json"], { timeoutMs: 20_000 })
-  if (!restart.ok) {
-    return `Could not restart OpenClaw gateway: ${restart.message ?? "unknown error"}`
-  }
-
-  return await waitForGatewayHealthy()
-}
-
-function startProgressTicker(progressSpinner: ReturnType<typeof spinner>): {
-  setMessage: (message: string) => void
-  stop: (message: string) => void
-} {
-  let baseMessage = "Migration in progress"
-  let frameIndex = 0
-
-  progressSpinner.start(baseMessage)
-
-  const interval = setInterval(() => {
-    frameIndex = (frameIndex + 1) % PROGRESS_TICKER_FRAMES.length
-    progressSpinner.message(`${baseMessage}${PROGRESS_TICKER_FRAMES[frameIndex]}`)
-  }, 150)
-  interval.unref?.()
-
-  return {
-    setMessage(message: string): void {
-      const trimmed = message.trim()
-      if (trimmed.length === 0) {
-        return
-      }
-
-      baseMessage = trimmed
-      progressSpinner.message(`${baseMessage}${PROGRESS_TICKER_FRAMES[frameIndex]}`)
-    },
-    stop(message: string): void {
-      clearInterval(interval)
-      progressSpinner.stop(message)
-    },
-  }
-}
-
 function formatVerboseElapsedMs(value: number): string {
   if (!Number.isFinite(value) || value < 0) {
     return "0ms"
@@ -490,9 +406,7 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   const layout = await detectVaultLayout(vaultPath)
   verboseLog(`Detected vault layout: notes='${layout.notesFolder}', journal='${layout.journalFolder}'`)
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
-  const openclawEnv = configureOpenClawEnvForWorkspace(workspacePath)
   verboseLog(`Resolved workspace path: ${toTildePath(workspacePath)}`)
-  verboseLog(`Resolved OpenClaw config path: ${toTildePath(openclawEnv.configPath)}`)
   const memoryPath = join(workspacePath, "memory")
   const statePath = resolveMigrateStatePath(options, workspacePath)
   verboseLog(`State path: ${toTildePath(statePath)}`)
@@ -520,34 +434,6 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
       `Other notes: ${summary.otherFiles.length}`,
     ].join("\n"),
   )
-
-  const concurrencySpinner = spinner()
-  concurrencySpinner.start(`Configuring OpenClaw migrate concurrency (target ${parallelJobs})`)
-  const concurrencyResult = await ensureMigrateConcurrencyConfig(openclawEnv.stateDir, parallelJobs)
-  if (concurrencyResult.message) {
-    concurrencySpinner.stop("Could not configure OpenClaw migrate concurrency")
-    log.warn(concurrencyResult.message)
-  } else if (concurrencyResult.changed) {
-    const configuredCron = concurrencyResult.cronMaxConcurrentRuns ?? parallelJobs
-    const configuredAgent = concurrencyResult.agentMaxConcurrent ?? parallelJobs
-    verboseLog(
-      `Updated OpenClaw concurrency caps: cron.maxConcurrentRuns=${configuredCron}, agents.defaults.maxConcurrent=${configuredAgent}`,
-    )
-    concurrencySpinner.message("Restarting OpenClaw gateway to apply concurrency settings")
-    const restartError = await restartGatewayAndWait()
-    if (restartError) {
-      concurrencySpinner.stop("OpenClaw concurrency updated; gateway restart check failed")
-      log.warn(restartError)
-    } else {
-      concurrencySpinner.stop(
-        `OpenClaw migrate concurrency ready (cron=${configuredCron}, maxConcurrent=${configuredAgent})`,
-      )
-    }
-  } else {
-    concurrencySpinner.stop(
-      `OpenClaw concurrency already sufficient (cron=${concurrencyResult.cronMaxConcurrentRuns}, maxConcurrent=${concurrencyResult.agentMaxConcurrent})`,
-    )
-  }
 
   const memoryBackup = await chooseDirectoryBackupPath(workspacePath, "memory")
   const memorySourcePath = join(workspacePath, "memory")
@@ -617,30 +503,8 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
   const tasks = buildMigrateTasks(summary.files)
   verboseLog(`Prepared ${tasks.length} task(s) with parallelJobs=${parallelJobs}`)
 
-  const staleCleanupStartedAt = Date.now()
-  try {
-    const staleCleanup = await removeCronJobsByName(STALE_MIGRATE_CRON_NAMES, {
-      onDebug: (message) => verboseLog(message),
-    })
-    verboseLog(
-      `Stale cron cleanup finished in ${formatVerboseElapsedMs(Date.now() - staleCleanupStartedAt)} ` +
-        `(scanned=${staleCleanup.scannedJobs}, matched=${staleCleanup.matchedJobs}, removed=${staleCleanup.removedJobs}, failed=${staleCleanup.failedJobIds.length})`,
-    )
-    if (staleCleanup.removedJobs > 0) {
-      log.warn(`Removed ${staleCleanup.removedJobs} stale migrate cron job(s) before starting.`)
-    }
-    if (staleCleanup.failedJobIds.length > 0) {
-      log.warn(
-        `Could not remove ${staleCleanup.failedJobIds.length} stale migrate cron job(s): ${staleCleanup.failedJobIds.join(", ")}`,
-      )
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    log.warn(`Could not inspect/remove stale migrate cron jobs: ${message}`)
-  }
-
   const progressSpinner = spinner()
-  const progressTicker = startProgressTicker(progressSpinner)
+  progressSpinner.start("Running migration pipeline")
   let lastProgressMessage = ""
 
   let result: Awaited<ReturnType<typeof runMigratePipeline>>
@@ -661,18 +525,22 @@ export async function runMigrate(options: MigrateOptions): Promise<void> {
           return
         }
         lastProgressMessage = message
-        progressTicker.setMessage(message)
+        progressSpinner.message(message)
       },
-      onDebug: (message) => verboseLog(message),
+      onDebug: verboseEnabled
+        ? (message) => {
+            verboseLog(message)
+          }
+        : undefined,
     })
   } catch (error) {
-    progressTicker.stop("Migration failed")
+    progressSpinner.stop("Migration failed")
     verboseLog(`Pipeline failed after ${formatVerboseElapsedMs(Date.now() - pipelineStartedAt)}`)
     throw error
   }
   verboseLog(`Pipeline finished in ${formatVerboseElapsedMs(Date.now() - pipelineStartedAt)}`)
 
-  progressTicker.stop(
+  progressSpinner.stop(
     `Migration complete (${result.processedTasks + result.skippedTasks}/${result.totalTasks} files processed)`,
   )
 

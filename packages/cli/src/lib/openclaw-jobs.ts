@@ -11,7 +11,7 @@ interface OpenClawCommandResult {
   stderr: string
 }
 
-const CRON_RUNS_FETCH_LIMIT = "5"
+const CRON_RUNS_FETCH_LIMIT = "20"
 const CRON_RUNS_POLL_INTERVAL_MS = 2_000
 const CRON_RUNS_TIMEOUT_MS = 12_000
 

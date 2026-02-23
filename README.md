@@ -1,6 +1,6 @@
 # Zettelclaw 🦞
 
-**Your agent's second brain, built together.**
+> Your agent's second brain, built together.
 
 A PKM methodology for humans and AI agents to co-build a shared knowledge base, powered by Obsidian and OpenClaw.
 

@@ -184,7 +184,7 @@ describe("waitForCronSummary", () => {
     const summary = await waitForCronSummary("job-123", 500)
     expect(summary).toBe("migration complete")
     const args = spawnSyncMock.mock.calls[0]?.[1] ?? []
-    expect(args).toEqual(expect.arrayContaining(["cron", "runs", "--id", "job-123", "--limit", "5"]))
+    expect(args).toEqual(expect.arrayContaining(["cron", "runs", "--id", "job-123", "--limit", "20"]))
   })
 
   it("returns summary for delivery-target failures when summary exists", async () => {
