@@ -43,7 +43,7 @@ const OPTION_SPEC_BY_LONG_NAME = new Map(OPTION_SPECS.map((spec) => [spec.longNa
 
 function usage(): string {
   return [
-    "zettelclaw — Shared human + agent memory",
+    "🦞 Zettelclaw - Your agent's second brain, built together",
     "",
     "Usage:",
     "  zettelclaw init [options]     Set up a new Zettelclaw vault",

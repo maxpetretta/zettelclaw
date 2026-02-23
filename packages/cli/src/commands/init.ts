@@ -469,7 +469,7 @@ async function maybeNotifyAgentUpdate(
 }
 
 export async function runInit(options: InitOptions): Promise<void> {
-  intro("🦞 Zettelclaw - Shared human + agent memory")
+  intro("🦞 Zettelclaw - Your agent's second brain, built together")
 
   const defaultVaultPath = resolveUserPath(DEFAULT_VAULT_PATH)
   const rawVaultPath = options.vaultPath ?? (options.yes ? defaultVaultPath : await promptVaultPath(defaultVaultPath))

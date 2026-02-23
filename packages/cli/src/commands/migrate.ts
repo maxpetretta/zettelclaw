@@ -396,7 +396,7 @@ function formatConjoinedList(items: readonly string[]): string {
 }
 
 export async function runMigrate(options: MigrateOptions): Promise<void> {
-  intro("🦞 Zettelclaw - Shared human + agent memory")
+  intro("🦞 Zettelclaw - Migrate memories")
 
   const vaultPath = await detectVaultPath(options)
   if (!(vaultPath && (await isDirectory(vaultPath)))) {
