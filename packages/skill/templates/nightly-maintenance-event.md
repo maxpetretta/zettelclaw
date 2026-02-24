@@ -13,8 +13,6 @@ Scope: review the past 24 hours of journal daily sections (`Done`, `Decisions`, 
 - `source`: where the knowledge came from
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
-- Do NOT add `status` except on `project` and `research` notes.
-
 ### What Makes a Good Note
 - A good note makes a **claim**, not a **topic**. The title is a statement, not a category.
 - The body is 1-3 short paragraphs, not a wiki article or reference doc.

@@ -21,8 +21,6 @@ Do not delegate. Do not process any file except the one listed here.
 - `summary`: one-sentence description
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
-- Do NOT add `status` except on `project` and `research` notes.
-
 ### What Makes a Good Note
 A good note makes a **claim**, not a **topic**. The title is a statement you can learn from just by reading it in a backlinks list. The body is 1-3 short paragraphs arguing or explaining that claim, with links to related ideas.
 

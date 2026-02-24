@@ -1,6 +1,5 @@
 ---
 type: research
-status: active
 tags: []
 summary: ""
 source: ""

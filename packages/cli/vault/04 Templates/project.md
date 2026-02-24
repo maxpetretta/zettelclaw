@@ -1,6 +1,5 @@
 ---
 type: project
-status: active
 tags: []
 aliases: []
 summary: ""

@@ -48,8 +48,6 @@ Use `memory_search` first — it indexes both the workspace and vault.
 rg -l 'type: project' "<vault>/01 Notes/"
 
 # Active projects
-rg -l 'status: active' "<vault>/01 Notes/" | xargs rg -l 'type: project'
-
 # Notes tagged "ai"
 rg -l 'tags:.*ai' "<vault>/01 Notes/"
 
@@ -96,8 +94,7 @@ Every evergreen note title should be a **statement you can learn from** — not 
 - **Writing:** frontmatter only (body is the writing)
 
 Do NOT invent custom section headers. Use the structures above.
-- `project` status values: `active` / `paused` / `archived` (append dated entries to `## Log`).
-- `research` status values: `active` / `archived`.
+- `project` notes append dated entries to `## Log`.
 - `contact` must include `contacts` in tags; use `aliases` for nicknames.
 - `writing` uses `published` for URL when posted (empty = draft).
 
@@ -108,9 +105,6 @@ Do NOT invent custom section headers. Use the structures above.
 - A person → `contact`
 - Something for external publication → `writing`
 - Don't overthink it — `evergreen` is the default
-
-### Status field
-ONLY `project` and `research` have `status`. Never add status to notes, journals, contacts, or writings.
 
 ## Updating Existing Notes
 
@@ -216,7 +210,7 @@ done
 ## What NOT To Do
 
 - Do NOT create new directories or subfolders — EVER — unless the user explicitly asks. The vault structure is fixed.
-- Do NOT add `status` to evergreen notes, journals, contacts, or writings
+- Do NOT add `status` to notes
 - Do NOT use singular tags (`project` → use `projects`)
 - Do NOT create notes without frontmatter
 - Do NOT create net-new nightly synthesis notes directly in `01 Notes/` (use `00 Inbox/`)
