@@ -26,9 +26,9 @@ Do not delegate. Do not process any file except the one listed here.
 ### What Makes a Good Note
 A good note makes a **claim**, not a **topic**. The title is a statement you can learn from just by reading it in a backlinks list. The body is 1-3 short paragraphs arguing or explaining that claim, with links to related ideas.
 
-**Good titles:** "Whisper.cpp Small.en Matches Cloud STT Accuracy Locally", "Fish Abbreviations Don't Expand in Tmux"
-**Bad titles:** "STT Benchmark Results", "Tmux Configuration" (topics, not claims)
-**Exception:** Project and contact notes are containers — `Bracky Project` is fine.
+**Good titles:** "Local STT Matches Cloud Accuracy At Zero Latency Cost", "Shell Abbreviations Don't Expand in Automated Contexts"
+**Bad titles:** "Benchmark Results", "Shell Configuration" (topics, not claims)
+**Exception:** Project and contact notes are containers — `My App Project` is fine.
 
 ### Atomicity
 - **One claim per note.** If you can't state the idea in one sentence, it's too broad.

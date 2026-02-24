@@ -28,16 +28,16 @@ Do not delegate. Do not process any file except the one listed here.
 A good note makes a **claim**, not a **topic**. The title is a statement you can learn from just by reading it in a backlinks list. The body is 1-3 short paragraphs arguing or explaining that claim, with links to related ideas.
 
 **Good titles (statements):**
-- "Bun Native TS Execution Eliminates Build Steps"
-- "Whisper.cpp Small.en Matches Cloud STT Accuracy Locally"
-- "AirClaw Uses Existing AirPods Instead of New Hardware"
+- "SQLite Outperforms Postgres For Single-Server Workloads"
+- "Local STT Matches Cloud Accuracy At Zero Latency Cost"
+- "Monorepo Tooling Eliminates Cross-Package Version Drift"
 
 **Bad titles (topics):**
-- "Bracky Tech Stack" (a dependency list, not an idea)
-- "AirClaw Architecture" (a reference doc, not a claim)
-- "Speech-to-Text Benchmark Results" (data dump, not insight)
+- "Tech Stack" (a dependency list, not an idea)
+- "App Architecture" (a reference doc, not a claim)
+- "Benchmark Results" (data dump, not insight)
 
-**Exception: project and contact notes** are containers, not claims. `Bracky Project` and `Max Petretta` are fine as titles.
+**Exception: project and contact notes** are containers, not claims. `My App Project` and `Jane Smith` are fine as titles.
 
 ### Atomicity
 - **One claim per note.** If you can't state the idea in one sentence, it's too broad.
@@ -57,12 +57,12 @@ Do NOT invent custom section headers. Use the template sections above.
 
 ### Naming
 - Filenames are Title Case.
-- Evergreen note filenames should be **statements** ("Bun Eliminates Build Steps", not "Bun Tech Stack").
+- Evergreen note filenames should be **statements** ("SQLite Outperforms Postgres For Single-Server Workloads", not "Database Comparison").
 - Project note filenames MUST end with `Project`.
 - Research note filenames MUST end with `Research`.
 
 ### Content Quality
-- **Write claims, not inventories.** "Selected Drizzle ORM because it generates typed queries from schema" is a note. A list of every dependency version is not.
+- **Write claims, not inventories.** "Selected SQLite because it eliminates connection pooling complexity" is a note. A list of every dependency version is not.
 - **Write conclusions, not transcripts.** Summarize what was decided/learned, not the process.
 - **Keep notes short.** A good evergreen note is 2-5 sentences. A good research note's Findings section is 2-3 short paragraphs.
 - Research notes MUST state a clear question and conclusion. If the source doesn't have a conclusion, state what's still open.

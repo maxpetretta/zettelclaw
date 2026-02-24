@@ -21,7 +21,7 @@ Do not delegate.
 
 ### 1. Audit migrated notes for quality
 Scan notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}` and fix any that violate these rules:
-- **Titles must be claims, not topics.** "Bun Eliminates Build Steps" is good. "Tech Stack" is bad. Rename notes whose titles are topics rather than statements. Exception: project notes (`<Name> Project`) and contact notes are containers.
+- **Titles must be claims, not topics.** "SQLite Outperforms Postgres For Single-Server Workloads" is good. "Tech Stack" is bad. Rename notes whose titles are topics rather than statements. Exception: project notes (`<Name> Project`) and contact notes are containers.
 - **Notes must be short.** A good evergreen note is 2-5 sentences arguing its claim. A good research Findings section is 2-3 short paragraphs. Flag and trim notes that read like wiki articles, reference docs, or dependency lists.
 - **Template structure:** Project notes must use only `## Goal` / `## Log` (no custom sections like `## Roadmap`, `## Tech Stack`). Research notes must use `## Question` / `## Findings` / `## Conclusion` / `## Sources`. Contact notes must use `## Context` / `## Notes`. No custom section headers.
 - **Frontmatter:** Every note must have `type`, `tags` (pluralized), `summary`, `created`, `updated`. No `status` except on `project` and `research` notes.

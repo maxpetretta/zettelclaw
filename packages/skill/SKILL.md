@@ -71,14 +71,14 @@ Curated durable notes live in `01 Notes/` — flat, no subfolders.
 Before writing any note, ask: **"Would I need to know this person to know this?"** If a general-purpose LLM could produce the content without user context, it doesn't belong in the vault. No textbook definitions, no general tech explanations, no encyclopedia entries, no dependency lists, no version inventories. Keep only user-specific decisions, preferences, project details, and relationships.
 
 ### Notes Are Claims, Not Topics
-Every evergreen note title should be a **statement you can learn from** — not a category label. "Bun Native TS Execution Eliminates Build Steps" is a note. "Tech Stack" is a wiki page. The body argues the claim in 1-3 short paragraphs. Exception: project and contact notes are containers.
+Every evergreen note title should be a **statement you can learn from** — not a category label. "SQLite Outperforms Postgres For Single-Server Workloads" is a note. "Tech Stack" is a wiki page. The body argues the claim in 1-3 short paragraphs. Exception: project and contact notes are containers.
 
 ### Frontmatter Rules
 - Every note MUST have YAML frontmatter with at least `type`, `created`, `updated`
 - Tags are ALWAYS pluralized (`projects` not `project`)
 - Dates are ALWAYS `YYYY-MM-DD`
 - Filenames are Title Case (`React Virtual DOM Trades Memory For Speed.md`)
-- For new `project` notes, the filename/title ends with `Project` (`OpenClaw Gateway Project.md`)
+- For new `project` notes, the filename/title ends with `Project` (`My App Project.md`)
 - For new `research` notes, the filename/title ends with `Research` (`Local First Sync Research.md`)
 - One idea per note (evergreen) — the title captures the idea
 
@@ -123,9 +123,9 @@ ONLY `project` and `research` have `status`. Never add status to notes, journals
 Example — appending to a project log:
 ```markdown
 ### 2026-02-19
-- Decided on hook-based architecture using OpenClaw's lifecycle events
-- Registered npm package `safeshell`
-- See [[OpenClaw Plugin Hooks]] for API details
+- Decided on hook-based architecture using lifecycle events
+- Registered npm package
+- See [[Plugin Hooks]] for API details
 ```
 
 ## Journal Entries
@@ -160,7 +160,7 @@ Link aggressively. Always `[[wikilink]]` the first mention of any concept, perso
 Exception: hook-generated journal capture stays link-free. Add links later during nightly maintenance processing, and make them two-way between journal sections and related typed notes.
 
 ```markdown
-Discussed [[SafeShell]] architecture with [[Max Petretta]]. The approach mirrors
+Discussed [[My Project]] architecture with [[Alice]]. The approach mirrors
 [[Event-Driven Architecture]] — hooks intercept at well-defined lifecycle points.
 ```
 
@@ -198,7 +198,7 @@ obsidian unresolved
 obsidian orphans
 
 # Find what links to a specific note
-obsidian backlinks path="01 Notes/SafeShell.md"
+obsidian backlinks path="01 Notes/My Project.md"
 
 # Index-powered search with match context
 obsidian search query="hook architecture" format=json matches
