@@ -19,8 +19,8 @@ Do not delegate. Do not process any file except the one listed here.
 - `type`: one of `project`, `research`, `evergreen`, `contact`
 - `tags`: YAML list syntax, ALWAYS pluralized: `tags: [projects, tools]`
 - `summary`: adds context beyond the title — don't restate it. If the title is "X Beats Y", the summary explains *when* or *why*.
-- `created`: `YYYY-MM-DD`
-- `updated`: `YYYY-MM-DD`
+- `created`: `YYYY-MM-DD` — the **original date** the knowledge was captured or the event occurred, not the migration date. Use the source file's date or conversation timestamp.
+- `updated`: `YYYY-MM-DD` — the date of the last edit.
 
 ### What Makes a Good Note
 A good note makes a **claim**, not a **topic**. The title is a statement you can learn from just by reading it in a backlinks list. The body is 1-3 short paragraphs arguing or explaining that claim, with links to related ideas.
@@ -45,10 +45,10 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 - Prefer updating existing notes over creating new ones.
 
 ### Template Structures (must follow)
-- **Project:** frontmatter → `## Goal` → `## Log`. Exactly two sections. Goal is **2-3 sentences** stating what the project is and why. Everything else — architecture, context, milestones — goes as dated entries in Log. No other `##` headings.
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings capture **what was learned**, not what to do about it. No implementation plans, file paths, or TODOs.
-- **Evergreen:** frontmatter only (body is 1-3 paragraphs, **under 150 words**). No `#` headers in the body — Obsidian uses the filename as the title.
-- **Contact:** frontmatter → `## Context` → `## Notes`
+- **Project:** frontmatter → `## Goal` → `## Log`. Exactly two sections. Goal is **2-3 sentences** stating what the project is and why. Everything else goes as dated entries in Log. Log dates should reflect **when events actually happened**, not the migration date. No other `##` headings.
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings capture **what was learned**, not what to do about it. No implementation plans, file paths, or TODOs. Use `research` only when the question required **investigation with multiple findings**. If the answer is one sentence, it's an evergreen note.
+- **Evergreen:** frontmatter only (body is 1-3 paragraphs, **under 150 words**). No `#` headers in the body — Obsidian uses the filename as the title. Evergreen notes must be **portable** — no file paths, config snippets, or environment-specific details.
+- **Contact:** frontmatter → `## Context` → `## Notes`. Focus on **working context**: role, current projects, communication preferences. Not gear lists, hobbies, or personality trivia.
 
 Do NOT invent custom section headers.
 
@@ -62,6 +62,8 @@ Do NOT invent custom section headers.
 - Keep only information specific to the user or their projects.
 - If a general-purpose LLM could produce this content without user context, do NOT include it.
 - No dependency lists, version numbers, or configuration dumps unless they represent a decision.
+- No file paths or environment-specific config in evergreen notes — those belong in project notes or TOOLS.md.
+- Link to other notes only when the link **adds navigation value** you wouldn't get from tags or search. Don't create circular link clusters.
 
 ## Required Actions
 1. Read `{{SOURCE_PATH}}`.

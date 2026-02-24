@@ -19,8 +19,8 @@ Do not delegate. Do not process any file except the one listed here.
 - `type`: one of `journal`, `project`, `research`, `evergreen`, `contact`
 - `tags`: YAML list syntax, ALWAYS pluralized: `tags: [projects, tools]`
 - `summary`: adds context beyond the title — don't restate it.
-- `created`: `YYYY-MM-DD`
-- `updated`: `YYYY-MM-DD`
+- `created`: `YYYY-MM-DD` — original date of the knowledge/event, not the migration date.
+- `updated`: `YYYY-MM-DD` — date of last edit.
 
 ### What Makes a Good Note
 A good note makes a **claim**, not a **topic**. The title is a statement you can learn from just by reading it in a backlinks list. The body is 1-3 short paragraphs.
@@ -36,8 +36,8 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 ### Template Structures (must follow)
 - **Journal:** frontmatter with `type: journal`, `tags: [journals]` → `## Log` → `## Todo` → `---` → `## Sessions`
 - **Project:** frontmatter → `## Goal` (2-3 sentences) → `## Log` (dated entries). No other `##` headings.
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings = what was learned, not TODOs.
-- **Evergreen:** frontmatter only (body under 150 words, no `#` headers — Obsidian uses the filename as title).
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings = what was learned, not TODOs. Only use `research` when the question required investigation with multiple findings — if the answer is one sentence, use evergreen.
+- **Evergreen:** frontmatter only (body under 150 words, no `#` headers, no file paths or config — Obsidian uses the filename as title).
 - **Contact:** frontmatter → `## Context` → `## Notes`
 
 Do NOT invent custom section headers.

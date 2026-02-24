@@ -23,9 +23,10 @@ Do not delegate.
 Scan notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}` and fix any that violate these rules:
 - **Titles must be claims, not topics.** "SQLite Outperforms Postgres For Single-Server Workloads" is good. "Tech Stack" is bad. Rename notes whose titles are topics. Exception: project notes (`<Name> Project`) and contact notes are containers.
 - **Notes must be short.** Evergreen: 2-5 sentences. Research Findings: 2-3 short paragraphs. Trim wiki-style articles, dependency lists, and reference docs.
-- **Template structure:** Project notes: `## Goal` (2-3 sentences) / `## Log` (dated entries, no other headings). Research Findings = insights, not implementation plans. Evergreen body under 150 words, no `#` headers in body. Contact: `## Context` / `## Notes`.
-- **Frontmatter:** Every note must have `type`, `tags` (YAML list, pluralized), `summary` (adds context beyond title, not a restatement), `created`, `updated`. No `status`, no `source`, no `aliases`.
-- **Hard filter:** Remove general knowledge, dependency lists, version inventories. Keep only user-specific decisions, preferences, and relationships.
+- **Template structure:** Project `## Goal` (2-3 sentences) / `## Log` (dated entries using original event dates, no other headings). Research Findings = insights, not implementation plans; demote to evergreen if answer is one sentence. Evergreen body under 150 words, no `#` headers, no file paths. Contact = working context only (role, projects, preferences), not gear/trivia.
+- **Frontmatter:** Every note must have `type`, `tags` (YAML list, pluralized), `summary` (adds context beyond title), `created` (original event date, not migration date), `updated`. No `status`, no `source`, no `aliases`.
+- **Hard filter:** Remove general knowledge, dependency lists, version inventories, file paths in evergreen notes, gear/trivia in contact notes. Keep only user-specific decisions, preferences, and relationships.
+- **Links:** Remove circular link clusters where every note in a group links to every other. Links should add navigation value.
 - Keep fixes surgical — don't rewrite notes that are already good.
 
 ### 2. Audit journal entries

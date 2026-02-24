@@ -61,6 +61,7 @@ All note types have `summary` — adds context beyond the title, not a restateme
 
 Do NOT add `status`, `source`, or `aliases`.
 Do NOT put `#` headers in note bodies — Obsidian uses the filename as the title.
+`created` should reflect the **original date** of the knowledge/event, not the migration date.
 
 ## Naming
 
@@ -99,7 +100,7 @@ updated: YYYY-MM-DD
 
 ## Linking
 
-Link aggressively with `[[wikilinks]]`. Even to notes that don't exist yet — unresolved links are breadcrumbs.
+Link with `[[wikilinks]]` when the link **adds navigation value** you wouldn't get from tags or search. Even to notes that don't exist yet — unresolved links are breadcrumbs. Don't create circular link clusters where every note in a group links to every other.
 
 Exception: hook-generated journal capture stays link-free. Links are added during nightly maintenance.
 

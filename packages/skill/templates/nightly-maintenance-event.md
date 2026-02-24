@@ -24,8 +24,8 @@ Scope: review the past 24 hours of journal `Log` and `Todo` sections plus `Sessi
 
 ### Template Structures (must follow)
 - **Project:** frontmatter → `## Goal` (2-3 sentences) → `## Log` (dated entries). No other `##` headings.
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings = what was learned, not TODOs.
-- **Evergreen:** frontmatter only (body under 150 words, no `#` headers — Obsidian uses the filename as title).
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings = what was learned, not TODOs. Only use `research` when the question required investigation — if the answer is one sentence, use evergreen.
+- **Evergreen:** frontmatter only (body under 150 words, no `#` headers, no file paths or config).
 - **Contact:** frontmatter → `## Context` → `## Notes`
 
 Do NOT invent custom section headers.
