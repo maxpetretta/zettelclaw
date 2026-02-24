@@ -17,8 +17,8 @@ Do not delegate. Do not process any file except the one listed here.
 
 ### Frontmatter
 - `type`: one of `project`, `research`, `evergreen`, `contact`
-- `tags`: ALWAYS pluralized (`projects` not `project`, `tools` not `tool`)
-- `summary`: one-sentence description
+- `tags`: YAML list syntax, ALWAYS pluralized: `tags: [projects, tools]`
+- `summary`: adds context beyond the title — don't restate it. If the title is "X Beats Y", the summary explains *when* or *why*.
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
 
@@ -45,9 +45,9 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 - Prefer updating existing notes over creating new ones.
 
 ### Template Structures (must follow)
-- **Project:** frontmatter → `## Goal` → `## Log` (dated entries only, no custom sections)
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources` (keep Findings concise)
-- **Evergreen:** frontmatter only (body is 1-3 paragraphs arguing the claim)
+- **Project:** frontmatter → `## Goal` → `## Log`. **Exactly two sections.** Architecture, context, tech stack, roadmap — all go as prose in Goal or dated entries in Log. No other `##` headings.
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings capture **what was learned**, not what to do about it. Implementation plans, file paths, and TODOs belong in project notes.
+- **Evergreen:** frontmatter only (body is 1-3 paragraphs, **under 150 words**). If you need more, it's a research note.
 - **Contact:** frontmatter → `## Context` → `## Notes`
 
 Do NOT invent custom section headers.

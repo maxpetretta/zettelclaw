@@ -23,8 +23,8 @@ Do not delegate.
 Scan notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}` and fix any that violate these rules:
 - **Titles must be claims, not topics.** "SQLite Outperforms Postgres For Single-Server Workloads" is good. "Tech Stack" is bad. Rename notes whose titles are topics. Exception: project notes (`<Name> Project`) and contact notes are containers.
 - **Notes must be short.** Evergreen: 2-5 sentences. Research Findings: 2-3 short paragraphs. Trim wiki-style articles, dependency lists, and reference docs.
-- **Template structure:** Project notes: `## Goal` / `## Log` only. Research notes: `## Question` / `## Findings` / `## Conclusion` / `## Sources`. Contact notes: `## Context` / `## Notes`. No custom section headers.
-- **Frontmatter:** Every note must have `type`, `tags` (pluralized), `created`, `updated`. All types need `summary`. No `status`, no `source`, no `aliases`.
+- **Template structure:** Project notes: exactly `## Goal` / `## Log` (no other headings). Research notes: `## Question` / `## Findings` / `## Conclusion` / `## Sources` (Findings = insights, not implementation plans). Contact notes: `## Context` / `## Notes`. Evergreen body under 150 words.
+- **Frontmatter:** Every note must have `type`, `tags` (YAML list, pluralized), `summary` (adds context beyond title, not a restatement), `created`, `updated`. No `status`, no `source`, no `aliases`.
 - **Hard filter:** Remove general knowledge, dependency lists, version inventories. Keep only user-specific decisions, preferences, and relationships.
 - Keep fixes surgical — don't rewrite notes that are already good.
 

@@ -8,8 +8,8 @@ Scope: review the past 24 hours of journal `Log` and `Todo` sections plus `Sessi
 
 ### Frontmatter
 - `type`: one of `project`, `research`, `evergreen`, `contact`
-- `tags`: ALWAYS pluralized
-- `summary`: one-sentence description
+- `tags`: YAML list syntax, ALWAYS pluralized: `tags: [projects, tools]`
+- `summary`: adds context beyond the title — don't restate it.
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
 
@@ -23,9 +23,9 @@ Scope: review the past 24 hours of journal `Log` and `Todo` sections plus `Sessi
 - Project notes are the exception — they're containers with Goal + Log.
 
 ### Template Structures (must follow)
-- **Project:** frontmatter → `## Goal` → `## Log` (dated entries only, no custom sections)
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`
-- **Evergreen:** frontmatter only (body is 1-3 paragraphs arguing the claim)
+- **Project:** frontmatter → `## Goal` → `## Log`. Exactly two sections, no other `##` headings.
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings = what was learned, not what to do about it.
+- **Evergreen:** frontmatter only (body is 1-3 paragraphs, **under 150 words**).
 - **Contact:** frontmatter → `## Context` → `## Notes`
 
 Do NOT invent custom section headers.

@@ -37,8 +37,8 @@ Four types. When in doubt, use `evergreen`.
 | Type | Title style | Sections |
 |---|---|---|
 | **evergreen** | Statement/claim | Freeform prose (1-3 paragraphs) |
-| **project** | `<Name> Project` | `## Goal` → `## Log` |
-| **research** | `<Topic> Research` | `## Question` → `## Findings` → `## Conclusion` → `## Sources` |
+| **project** | `<Name> Project` | `## Goal` → `## Log` (exactly two sections) |
+| **research** | `<Topic> Research` | `## Question` → `## Findings` → `## Conclusion` → `## Sources` (findings = insights, not TODOs) |
 | **contact** | Person's name | `## Context` → `## Notes` |
 
 ### Notes Are Claims, Not Topics
@@ -53,11 +53,11 @@ Before writing any note, ask: **"Would I need to know this person to know this?"
 
 Every note MUST have:
 - `type`: `evergreen`, `project`, `research`, or `contact`
-- `tags`: ALWAYS pluralized (`projects` not `project`)
+- `tags`: YAML list syntax, ALWAYS pluralized: `tags: [projects, tools]`
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
 
-All note types have `summary` (one-sentence description).
+All note types have `summary` — adds context beyond the title, not a restatement.
 
 Do NOT add `status`, `source`, or `aliases`.
 
