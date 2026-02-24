@@ -23,16 +23,23 @@ Do not delegate. Do not process any file except the one listed here.
 - `updated`: `YYYY-MM-DD`
 - Do NOT add `status` except on `project` and `research` notes.
 
+### What Makes a Good Note
+A good note makes a **claim**, not a **topic**. The title is a statement you can learn from just by reading it in a backlinks list. The body is 1-3 short paragraphs arguing or explaining that claim, with links to related ideas.
+
+**Good titles:** "Whisper.cpp Small.en Matches Cloud STT Accuracy Locally", "Fish Abbreviations Don't Expand in Tmux"
+**Bad titles:** "STT Benchmark Results", "Tmux Configuration" (topics, not claims)
+**Exception:** Project and contact notes are containers — `Bracky Project` is fine.
+
 ### Atomicity
-- **One core idea per note.** The title should capture the idea.
-- A good note can be understood without reading any other note.
-- **But don't over-fragment.** Related details belong as sections in one note, not separate notes. Split only when topics are genuinely independent and reusable on their own.
+- **One claim per note.** If you can't state the idea in one sentence, it's too broad.
+- A good note is a **paragraph or two** — not a reference document or wiki page.
+- Prefer updating existing notes over creating new ones.
 
 ### Template Structures (must follow)
 - **Journal:** frontmatter with `type: journal`, `tags: [journals]` → `## Done` → `## Decisions` → `## Facts` → `## Open` → `---` → `## Sessions`
-- **Project:** frontmatter → `## Goal` → `## Log` (append dated entries)
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`
-- **Evergreen:** frontmatter only (body is freeform prose)
+- **Project:** frontmatter → `## Goal` → `## Log` (append dated entries). No custom sections.
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings should be concise.
+- **Evergreen:** frontmatter only (body is 1-3 paragraphs of freeform prose arguing the claim)
 - **Contact:** frontmatter → `## Context` → `## Notes`
 - **Writing:** frontmatter only (body is the writing)
 
@@ -40,12 +47,14 @@ Do NOT invent custom section headers. Use the template sections above.
 
 ### Naming
 - Filenames are Title Case.
+- Evergreen note filenames should be **statements**, not topics.
 - Project note filenames MUST end with `Project`.
 - Research note filenames MUST end with `Research`.
 
 ### Content Quality
-- High-signal durable knowledge only. No transient details.
-- Write conclusions, not transcripts. Summarize what was decided/learned, not the process.
+- **Write claims, not inventories.** Extract decisions and insights, not lists.
+- **Write conclusions, not transcripts.** Summarize what was decided/learned, not the process.
+- **Keep notes short.** A good evergreen note is 2-5 sentences.
 - Use `[[wikilinks]]` where they materially improve navigation.
 
 ## Required Actions

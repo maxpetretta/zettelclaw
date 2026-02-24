@@ -68,7 +68,10 @@ Curated durable notes live in `01 Notes/` — flat, no subfolders.
 - If the agent is alone in nightly maintenance, it may update existing `project`/`research`/`contact` notes in `01 Notes/` when journals provide clear evidence. Net-new synthesis notes still go to `00 Inbox/` for human promotion.
 
 ### Content Filter
-Before writing any note, ask: **"Would I need to know this person to know this?"** If a general-purpose LLM could produce the content without user context, it doesn't belong in the vault. No textbook definitions, no general tech explanations, no encyclopedia entries. Keep only user-specific decisions, preferences, project details, and relationships.
+Before writing any note, ask: **"Would I need to know this person to know this?"** If a general-purpose LLM could produce the content without user context, it doesn't belong in the vault. No textbook definitions, no general tech explanations, no encyclopedia entries, no dependency lists, no version inventories. Keep only user-specific decisions, preferences, project details, and relationships.
+
+### Notes Are Claims, Not Topics
+Every evergreen note title should be a **statement you can learn from** — not a category label. "Bun Native TS Execution Eliminates Build Steps" is a note. "Tech Stack" is a wiki page. The body argues the claim in 1-3 short paragraphs. Exception: project and contact notes are containers.
 
 ### Frontmatter Rules
 - Every note MUST have YAML frontmatter with at least `type`, `created`, `updated`

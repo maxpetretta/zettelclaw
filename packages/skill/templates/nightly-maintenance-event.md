@@ -15,11 +15,14 @@ Scope: review the past 24 hours of journal daily sections (`Done`, `Decisions`, 
 - `updated`: `YYYY-MM-DD`
 - Do NOT add `status` except on `project` and `research` notes.
 
+### What Makes a Good Note
+- A good note makes a **claim**, not a **topic**. The title is a statement, not a category.
+- The body is 1-3 short paragraphs, not a wiki article or reference doc.
+- **Don't write inventories.** Dependency lists, version numbers, and config dumps are not notes — decisions and insights are.
+
 ### Atomicity
-- **One core idea per note.** The title should capture the idea.
-- A good note can be understood without reading any other note.
-- **But don't over-fragment.** Related details belong as sections in one note, not separate notes. Split only when topics are genuinely independent and reusable on their own.
-- Prefer updating existing notes over creating new ones.
+- **One claim per note.** Prefer updating existing notes over creating new ones.
+- Project notes are the exception — they're containers with Goal + Log.
 
 ### Template Structures (must follow)
 - **Project:** frontmatter → `## Goal` → `## Log` (append dated entries)
