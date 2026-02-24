@@ -25,9 +25,8 @@ Do not delegate. Do not process any file except the one listed here.
 
 ### Atomicity
 - **One core idea per note.** The title should capture the idea.
-- If the source material covers 5 topics, write 5 small notes — not 1 mega-note.
 - A good note can be understood without reading any other note.
-- Prefer more small notes over fewer large ones.
+- **But don't over-fragment.** Related details belong as sections in one note, not separate notes. Split only when topics are genuinely independent and reusable on their own.
 
 ### Template Structures (must follow)
 - **Journal:** frontmatter with `type: journal`, `tags: [journals]` → `## Done` → `## Decisions` → `## Facts` → `## Open` → `---` → `## Sessions`

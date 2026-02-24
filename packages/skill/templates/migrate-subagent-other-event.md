@@ -26,9 +26,9 @@ Do not delegate. Do not process any file except the one listed here.
 
 ### Atomicity
 - **One core idea per note.** The title should capture the idea.
-- If the source material covers 5 topics, write 5 small notes — not 1 mega-note.
 - A good note can be understood without reading any other note.
-- Prefer more small notes over fewer large ones.
+- **But don't over-fragment.** A project's tech stack, database schema, and queue system are sections in one note — not 3 separate notes. Split only when topics are genuinely independent and reusable on their own.
+- Prefer updating existing notes over creating new ones.
 
 ### Template Structures (must follow)
 - **Project:** frontmatter → `## Goal` → `## Log` (append dated entries)
@@ -62,7 +62,7 @@ Do NOT invent custom section headers. Use the template sections above.
    - Prefer updating existing notes (append-only, preserve structure, update `updated` date).
    - Create new typed notes only when no suitable existing note exists.
    - Follow the template structure for each note type (see above).
-   - No cap on note count — create as many atomic notes as the content warrants, but don't force notes from thin content.
+   - Create at most 3-4 typed notes per source file. Prefer fewer, richer notes over many thin ones. If a topic only warrants a section in an existing note, add it there.
 4. Add `[[wikilinks]]` where they materially improve navigation.
 5. When content maps to a migrated journal day, enforce two-way links:
    - Typed note links to the day `[[YYYY-MM-DD]]`.

@@ -17,8 +17,9 @@ Scope: review the past 24 hours of journal daily sections (`Done`, `Decisions`, 
 
 ### Atomicity
 - **One core idea per note.** The title should capture the idea.
-- If journal evidence covers multiple unrelated topics, update multiple notes — don't cram into one.
 - A good note can be understood without reading any other note.
+- **But don't over-fragment.** Related details belong as sections in one note, not separate notes. Split only when topics are genuinely independent and reusable on their own.
+- Prefer updating existing notes over creating new ones.
 
 ### Template Structures (must follow)
 - **Project:** frontmatter → `## Goal` → `## Log` (append dated entries)
