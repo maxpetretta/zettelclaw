@@ -3,7 +3,7 @@
 This is your knowledge base. Here's how it's organized:
 
 - **00 Inbox/** — quick captures and agent synthesis drafts (triage these)
-- **01 Notes/** — typed notes: ideas, projects, research, contacts, writing
+- **01 Notes/** — typed notes: ideas, projects, research, contacts
 - **02 Agent/** — OpenClaw symlinks (only when integration is enabled)
 - **03 Journal/** — daily journals (one per day, auto-populated by session hooks)
 - **04 Templates/** — note templates (used automatically when creating new notes)

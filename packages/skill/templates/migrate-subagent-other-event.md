@@ -15,13 +15,13 @@ Do not delegate. Do not process any file except the one listed here.
 
 ## Note Quality Rules
 
-### Frontmatter (required on every note)
-- `type`: one of `project`, `research`, `evergreen`, `contact`, `writing`
+### Frontmatter
+- `type`: one of `project`, `research`, `evergreen`, `contact`
 - `tags`: ALWAYS pluralized (`projects` not `project`, `tools` not `tool`)
-- `summary`: one-sentence description
-- `source`: where the knowledge came from
+- `summary`: required on `project` and `contact` only
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
+
 ### What Makes a Good Note
 A good note makes a **claim**, not a **topic**. The title is a statement you can learn from just by reading it in a backlinks list. The body is 1-3 short paragraphs arguing or explaining that claim, with links to related ideas.
 
@@ -40,55 +40,43 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 ### Atomicity
 - **One claim per note.** If you can't state the idea in one sentence, it's too broad.
 - A good note is a **paragraph or two** — not a reference document.
-- **Don't write wikis.** A tech stack list, a comparison table, or a full spec is not a note. Extract the *decisions* and *insights* from that information and write those as notes.
-- **Don't over-fragment.** Related supporting details belong as sentences in one note's body, not as separate notes.
+- **Don't write wikis.** Extract the *decisions* and *insights*, not inventories or specs.
+- **Don't over-fragment.** Related supporting details belong in one note's body, not as separate notes.
 - Prefer updating existing notes over creating new ones.
 
 ### Template Structures (must follow)
-- **Project:** frontmatter → `## Goal` → `## Log` (append dated entries). Projects are the one type that's a container — Goal is a brief statement, Log is dated entries. Do NOT add custom sections (no `## Roadmap`, `## Tech Stack`, `## Architecture`).
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings should be concise — a few paragraphs, not an essay with nested subsections.
-- **Evergreen:** frontmatter only (body is 1-3 paragraphs of freeform prose arguing the claim in the title)
+- **Project:** frontmatter → `## Goal` → `## Log` (dated entries only, no custom sections)
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources` (keep Findings concise)
+- **Evergreen:** frontmatter only (body is 1-3 paragraphs arguing the claim)
 - **Contact:** frontmatter → `## Context` → `## Notes`
-- **Writing:** frontmatter only (body is the writing)
 
-Do NOT invent custom section headers. Use the template sections above.
+Do NOT invent custom section headers.
 
 ### Naming
 - Filenames are Title Case.
-- Evergreen note filenames should be **statements** ("SQLite Outperforms Postgres For Single-Server Workloads", not "Database Comparison").
-- Project note filenames MUST end with `Project`.
-- Research note filenames MUST end with `Research`.
+- Evergreen titles should be **statements**, not topics.
+- Project filenames MUST end with `Project`.
+- Research filenames MUST end with `Research`.
 
-### Content Quality
-- **Write claims, not inventories.** "Selected SQLite because it eliminates connection pooling complexity" is a note. A list of every dependency version is not.
-- **Write conclusions, not transcripts.** Summarize what was decided/learned, not the process.
-- **Keep notes short.** A good evergreen note is 2-5 sentences. A good research note's Findings section is 2-3 short paragraphs.
-- Research notes MUST state a clear question and conclusion. If the source doesn't have a conclusion, state what's still open.
-- Use `[[wikilinks]]` where they materially improve navigation.
-
-### Hard Filter (apply to every line)
+### Hard Filter
 - Keep only information specific to the user or their projects.
 - If a general-purpose LLM could produce this content without user context, do NOT include it.
-- No textbook definitions, no general tech explanations, no encyclopedia entries.
 - No dependency lists, version numbers, or configuration dumps unless they represent a decision.
 
 ## Required Actions
 1. Read `{{SOURCE_PATH}}`.
-2. Determine note type(s): evergreen, project, research, contact, or writing.
+2. Determine note type(s): evergreen, project, research, or contact.
 3. Write notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}`:
    - Prefer updating existing notes (append-only, preserve structure, update `updated` date).
    - Create new typed notes only when no suitable existing note exists.
-   - Follow the template structure for each note type (see above).
-   - Create at most 3-4 typed notes per source file. Prefer fewer, richer notes over many thin ones. If a topic only warrants a section in an existing note, add it there.
+   - Follow the template structure for each note type.
+   - Create at most 3-4 typed notes per source file. Prefer fewer, richer notes over many thin ones.
 4. Add `[[wikilinks]]` where they materially improve navigation.
-5. When content maps to a migrated journal day, enforce two-way links:
-   - Typed note links to the day `[[YYYY-MM-DD]]`.
-   - Journal day links back to the typed note when relevant.
+5. When content maps to a migrated journal day, enforce two-way links.
 6. Delete the source file `{{SOURCE_PATH}}`.
 7. Tool usage constraints:
    - Use exact file paths with spaces as-is (do NOT escape spaces with backslashes).
    - Read/edit files only (do not try to read directories).
-   - Avoid broad refactors or exhaustive rewrites.
 
 ## Output Format
 Return ONLY valid JSON (no prose, no markdown fences):

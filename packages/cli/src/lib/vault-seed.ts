@@ -74,7 +74,7 @@ function buildStarterEvergreenNote(dateStamp: string): string {
     "4. Maintenance layer: a nightly isolated pass reviews recent journals, updates existing notes, creates net-new inbox synthesis when needed, and enforces reciprocal links.",
     "",
     "## What `init` configures",
-    "- A vault with templates for journal, evergreen, project, research, contact, and writing notes.",
+    "- A vault with templates for journal, evergreen, project, research, and contact notes.",
     "- Plugin setup (Templater, Linter, and Obsidian Git when Git sync is enabled).",
     "- OpenClaw integration when a workspace is detected (hooks, config patch, cron jobs, and agent symlinks).",
     "",

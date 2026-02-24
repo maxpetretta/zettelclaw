@@ -26,7 +26,7 @@ npx zettelclaw migrate
 
 ## What It Does
 
-- Creates an Obsidian vault with 6 note templates (journal, evergreen, project, research, contact, writing)
+- Creates an Obsidian vault with 5 note templates (journal, evergreen, project, research, contact)
 - Configures community plugins (Templater, Linter, Obsidian Git)
 - Auto-detects OpenClaw and wires up `02 Agent/` symlinks, workspace injection, and cron jobs
 - Seeds starter content: an evergreen note, an inbox note, today's journal, and the OpenClaw logo
@@ -47,7 +47,7 @@ All content passes a hard filter: only user-specific knowledge enters the vault.
 
 ```
 00 Inbox/        — quick captures, agent synthesis drafts (triage these)
-01 Notes/        — typed notes: evergreen, project, research, contact, writing
+01 Notes/        — typed notes: evergreen, project, research, contact
 02 Agent/        — OpenClaw symlinks (when integration is enabled)
 03 Journal/      — YYYY-MM-DD.md daily journals
 04 Templates/    — Templater note templates
