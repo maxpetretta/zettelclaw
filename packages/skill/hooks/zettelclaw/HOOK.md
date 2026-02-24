@@ -12,7 +12,7 @@ metadata:
 
 # Zettelclaw Hook
 
-Dispatches a journal-capture task on `/new` or `/reset`. The hook appends structured bullets to today's day-level journal sections (`Done`, `Decisions`, `Facts`, `Open`) and records source entries in `Sessions` (no typed note creation), ensures today's journal exists from the vault template at `04 Templates/journal.md` (fallback: `Templates/journal.md`), and performs idempotent transcript sweeps to backfill missed sessions. Nightly maintenance is handled separately by the `zettelclaw-nightly` cron job.
+Dispatches a journal-capture task on `/new` or `/reset`. The hook appends structured bullets to today's day-level journal sections (`Log`, `Todo`) and records source entries in `Sessions` (no typed note creation), ensures today's journal exists from the vault template at `04 Templates/journal.md` (fallback: `Templates/journal.md`), and performs idempotent transcript sweeps to backfill missed sessions. Nightly maintenance is handled separately by the `zettelclaw-nightly` cron job.
 
 ## Config
 
