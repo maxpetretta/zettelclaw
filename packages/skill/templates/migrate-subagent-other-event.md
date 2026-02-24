@@ -45,9 +45,9 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 - Prefer updating existing notes over creating new ones.
 
 ### Template Structures (must follow)
-- **Project:** frontmatter → `## Goal` → `## Log`. **Exactly two sections.** Architecture, context, tech stack, roadmap — all go as prose in Goal or dated entries in Log. No other `##` headings.
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings capture **what was learned**, not what to do about it. Implementation plans, file paths, and TODOs belong in project notes.
-- **Evergreen:** frontmatter only (body is 1-3 paragraphs, **under 150 words**). If you need more, it's a research note.
+- **Project:** frontmatter → `## Goal` → `## Log`. Exactly two sections. Goal is **2-3 sentences** stating what the project is and why. Everything else — architecture, context, milestones — goes as dated entries in Log. No other `##` headings.
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings capture **what was learned**, not what to do about it. No implementation plans, file paths, or TODOs.
+- **Evergreen:** frontmatter only (body is 1-3 paragraphs, **under 150 words**). No `#` headers in the body — Obsidian uses the filename as the title.
 - **Contact:** frontmatter → `## Context` → `## Notes`
 
 Do NOT invent custom section headers.

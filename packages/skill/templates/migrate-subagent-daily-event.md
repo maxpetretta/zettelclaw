@@ -35,9 +35,9 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 
 ### Template Structures (must follow)
 - **Journal:** frontmatter with `type: journal`, `tags: [journals]` → `## Log` → `## Todo` → `---` → `## Sessions`
-- **Project:** frontmatter → `## Goal` → `## Log`. Exactly two sections, no other `##` headings.
-- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings = what was learned, not what to do about it.
-- **Evergreen:** frontmatter only (body is 1-3 paragraphs, **under 150 words**).
+- **Project:** frontmatter → `## Goal` (2-3 sentences) → `## Log` (dated entries). No other `##` headings.
+- **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings = what was learned, not TODOs.
+- **Evergreen:** frontmatter only (body under 150 words, no `#` headers — Obsidian uses the filename as title).
 - **Contact:** frontmatter → `## Context` → `## Notes`
 
 Do NOT invent custom section headers.

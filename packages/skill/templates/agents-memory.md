@@ -46,6 +46,6 @@ Use the `zettelclaw` skill for full details. Quick reference:
 - **Note types:** `evergreen`, `project`, `research`, `contact`
 - **Frontmatter:** `type`, `tags: [pluralized, list]`, `summary` (context beyond the title), `created`, `updated`.
 - **Naming:** Title Case. Projects end with `Project`. Research ends with `Research`. Evergreen titles are statements, not topics.
-- **Templates:** Project = Goal + Log (exactly two sections). Research = Question + Findings + Conclusion + Sources. Contact = Context + Notes. Evergreen = freeform prose (under 150 words).
+- **Templates:** Project = Goal (2-3 sentences) + Log (dated entries). Research = Question + Findings + Conclusion + Sources. Contact = Context + Notes. Evergreen = freeform prose (under 150 words, no `#` headers).
 - Add `[[wikilinks]]` during supervised note writing and nightly maintenance (not in hook output).
 - Do NOT create new directories. Do NOT add `status` to notes.

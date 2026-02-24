@@ -37,8 +37,8 @@ Four types. When in doubt, use `evergreen`.
 | Type | Title style | Sections |
 |---|---|---|
 | **evergreen** | Statement/claim | Freeform prose (1-3 paragraphs) |
-| **project** | `<Name> Project` | `## Goal` → `## Log` (exactly two sections) |
-| **research** | `<Topic> Research` | `## Question` → `## Findings` → `## Conclusion` → `## Sources` (findings = insights, not TODOs) |
+| **project** | `<Name> Project` | `## Goal` (2-3 sentences) → `## Log` (dated entries only) |
+| **research** | `<Topic> Research` | `## Question` → `## Findings` → `## Conclusion` → `## Sources` |
 | **contact** | Person's name | `## Context` → `## Notes` |
 
 ### Notes Are Claims, Not Topics
@@ -60,6 +60,7 @@ Every note MUST have:
 All note types have `summary` — adds context beyond the title, not a restatement.
 
 Do NOT add `status`, `source`, or `aliases`.
+Do NOT put `#` headers in note bodies — Obsidian uses the filename as the title.
 
 ## Naming
 
