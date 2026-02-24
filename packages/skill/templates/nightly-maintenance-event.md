@@ -2,14 +2,14 @@ Run the scheduled Zettelclaw nightly maintenance pass for vault `{{VAULT_PATH}}`
 
 Use the Zettelclaw skill at `{{SKILL_PACKAGE_PATH}}/SKILL.md`.
 
-Scope: review the past 24 hours of journal `Log` and `Open` sections plus `Sessions`, then maintain the vault.
+Scope: review the past 24 hours of journal `Log` and `Todo` sections plus `Sessions`, then maintain the vault.
 
 ## Note Quality Rules
 
 ### Frontmatter
 - `type`: one of `project`, `research`, `evergreen`, `contact`
 - `tags`: ALWAYS pluralized
-- `summary`: required on `project` and `contact` only
+- `summary`: one-sentence description
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
 

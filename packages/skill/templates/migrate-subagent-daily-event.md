@@ -18,7 +18,7 @@ Do not delegate. Do not process any file except the one listed here.
 ### Frontmatter
 - `type`: one of `journal`, `project`, `research`, `evergreen`, `contact`
 - `tags`: ALWAYS pluralized (`projects` not `project`, `tools` not `tool`)
-- `summary`: required on `project` and `contact` only
+- `summary`: one-sentence description
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
 
@@ -34,7 +34,7 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 - Prefer updating existing notes over creating new ones.
 
 ### Template Structures (must follow)
-- **Journal:** frontmatter with `type: journal`, `tags: [journals]` → `## Log` → `## Open` → `---` → `## Sessions`
+- **Journal:** frontmatter with `type: journal`, `tags: [journals]` → `## Log` → `## Todo` → `---` → `## Sessions`
 - **Project:** frontmatter → `## Goal` → `## Log` (dated entries only, no custom sections)
 - **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`
 - **Evergreen:** frontmatter only (body is 1-3 paragraphs arguing the claim)
@@ -53,7 +53,7 @@ Do NOT invent custom section headers.
 2. Create or update `{{VAULT_PATH}}/{{JOURNAL_FOLDER}}/{{FILE_BASENAME}}` using date `{{DAY}}`.
    - Follow the Journal template structure exactly.
    - Do not insert a blank line between frontmatter and first content line.
-   - Distill source content into `## Log` (what happened, decisions made, facts learned) and `## Open` (unresolved items).
+   - Distill source content into `## Log` (what happened, decisions made, facts learned) and `## Todo` (unresolved items).
    - Use concise bullet points. Link to typed notes with `[[wikilinks]]`.
 3. From this file's content, extract durable knowledge into typed notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}`:
    - Prefer updating existing notes (append-only, preserve structure, update `updated` date).

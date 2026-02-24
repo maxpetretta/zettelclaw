@@ -6,7 +6,7 @@ updated: <% tp.date.now("YYYY-MM-DD") %>
 ---
 ## Log
 
-## Open
+## Todo
 
 ---
 ## Sessions

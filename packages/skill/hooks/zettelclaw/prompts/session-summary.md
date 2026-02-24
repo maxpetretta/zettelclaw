@@ -16,7 +16,7 @@ Maintain this structure in the journal:
 - [What was accomplished, decided, or learned during the session]
 - [Each bullet is a standalone fact or decision]
 
-## Open
+## Todo
 - [Unresolved questions, next steps, or things to follow up on]
 
 ---
@@ -29,13 +29,13 @@ Replace HH:MM with the session time (from the timestamp provided) and SESSION_ID
 ## Rules
 - **Journal ONLY** — do NOT read, create, or modify any other file in the vault.
 - **Append, don't overwrite** — add bullets only; do not remove existing bullets.
-- **Keep day-level sections** — use exactly one top-level `## Log` and `## Open` for the day.
+- **Keep day-level sections** — use exactly one top-level `## Log` and `## Todo` for the day.
 - **Create missing headings if needed** — if any required heading is missing, add it.
 - **No wikilinks** — do not add [[links]]. Those are added during nightly maintenance.
 - **Bullet points only** — no prose paragraphs. Each bullet is a standalone fact.
-- **Skip empty sections** — if there were no open items, do not append a bullet to `## Open`.
+- **Skip empty sections** — if there were no todo items, do not append a bullet to `## Todo`.
 - **Session footer format** — ensure there is a `---` divider followed by `## Sessions`, then append `- SESSION_ID — HH:MM`.
 - **Idempotency** — if `SESSION_ID` already appears in `## Sessions`, do NOT add duplicate bullets or sources. Return a message saying the session was already captured.
 - **Journal bootstrap is hook-managed** — the hook creates missing daily journal files from the vault template before this step. Your job is append-only.
 
-After appending, return a short summary: which journal file was updated and how many log/open items were captured.
+After appending, return a short summary: which journal file was updated and how many log/todo items were captured.

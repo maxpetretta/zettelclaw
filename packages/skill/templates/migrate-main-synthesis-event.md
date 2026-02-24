@@ -24,13 +24,13 @@ Scan notes in `{{VAULT_PATH}}/{{NOTES_FOLDER}}` and fix any that violate these r
 - **Titles must be claims, not topics.** "SQLite Outperforms Postgres For Single-Server Workloads" is good. "Tech Stack" is bad. Rename notes whose titles are topics. Exception: project notes (`<Name> Project`) and contact notes are containers.
 - **Notes must be short.** Evergreen: 2-5 sentences. Research Findings: 2-3 short paragraphs. Trim wiki-style articles, dependency lists, and reference docs.
 - **Template structure:** Project notes: `## Goal` / `## Log` only. Research notes: `## Question` / `## Findings` / `## Conclusion` / `## Sources`. Contact notes: `## Context` / `## Notes`. No custom section headers.
-- **Frontmatter:** Every note must have `type`, `tags` (pluralized), `created`, `updated`. Only `project` and `contact` need `summary`. No `status`, no `source`, no `aliases`.
+- **Frontmatter:** Every note must have `type`, `tags` (pluralized), `created`, `updated`. All types need `summary`. No `status`, no `source`, no `aliases`.
 - **Hard filter:** Remove general knowledge, dependency lists, version inventories. Keep only user-specific decisions, preferences, and relationships.
 - Keep fixes surgical — don't rewrite notes that are already good.
 
 ### 2. Audit journal entries
 Spot-check journals in `{{VAULT_PATH}}/{{JOURNAL_FOLDER}}`:
-- Must follow structure: frontmatter → `## Log` → `## Open` → `---` → `## Sessions`
+- Must follow structure: frontmatter → `## Log` → `## Todo` → `---` → `## Sessions`
 - Must have `tags: [journals]`
 - Must have `[[wikilinks]]` to relevant typed notes
 

@@ -18,7 +18,7 @@ Do not delegate. Do not process any file except the one listed here.
 ### Frontmatter
 - `type`: one of `project`, `research`, `evergreen`, `contact`
 - `tags`: ALWAYS pluralized (`projects` not `project`, `tools` not `tool`)
-- `summary`: required on `project` and `contact` only
+- `summary`: one-sentence description
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
 

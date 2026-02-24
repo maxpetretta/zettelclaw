@@ -9,7 +9,7 @@ The vault is indexed via `memory_search` alongside the workspace, so semantic se
 
 ### How Memory Works
 
-- **Layer 1 - Hook -> Journal (automatic on `/new` or `/reset`):** The hook appends bullets to `## Log` and `## Open` in `03 Journal/YYYY-MM-DD.md`, then records provenance in `## Sessions` as `SESSION_ID — HH:MM`. Journal-only raw capture: no wikilinks, no note creation.
+- **Layer 1 - Hook -> Journal (automatic on `/new` or `/reset`):** The hook appends bullets to `## Log` and `## Todo` in `03 Journal/YYYY-MM-DD.md`, then records provenance in `## Sessions` as `SESSION_ID — HH:MM`. Journal-only raw capture: no wikilinks, no note creation.
 - **Layer 2 - Agent + Human -> Notes (during sessions):** When meaningful work happens with the human, update the relevant project/research notes directly in `01 Notes/`.
 - **Layer 3 - Nightly Cron -> Maintenance (agent-only):** A dedicated isolated cron session runs nightly to review the past day of journals, update existing notes in `01 Notes/`, and put net-new concepts in `00 Inbox/` for human review.
 
@@ -42,9 +42,9 @@ Let the journal capture stand on its own for casual conversation or small decisi
 
 Use the `zettelclaw` skill for full details. Quick reference:
 
-- **Journal entries** use `## Log` / `## Open` / `---` / `## Sessions`
+- **Journal entries** use `## Log` / `## Todo` / `---` / `## Sessions`
 - **Note types:** `evergreen`, `project`, `research`, `contact`
-- **Frontmatter:** `type`, `tags` (pluralized), `created`, `updated`. Add `summary` on project/contact only.
+- **Frontmatter:** `type`, `tags` (pluralized), `created`, `updated`. Add `summary` (one-sentence description) on all types.
 - **Naming:** Title Case. Projects end with `Project`. Research ends with `Research`. Evergreen titles are statements, not topics.
 - **Templates:** Project = Goal + Log. Research = Question + Findings + Conclusion + Sources. Contact = Context + Notes. Evergreen = freeform prose.
 - Add `[[wikilinks]]` during supervised note writing and nightly maintenance (not in hook output).

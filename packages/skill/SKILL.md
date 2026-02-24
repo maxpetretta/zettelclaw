@@ -34,12 +34,12 @@ Zettelclaw is your knowledge system — an Obsidian vault where you and your hum
 
 Four types. When in doubt, use `evergreen`.
 
-| Type | Title style | Sections | `summary`? |
-|---|---|---|---|
-| **evergreen** | Statement/claim | Freeform prose (1-3 paragraphs) | No |
-| **project** | `<Name> Project` | `## Goal` → `## Log` | Yes |
-| **research** | `<Topic> Research` | `## Question` → `## Findings` → `## Conclusion` → `## Sources` | No |
-| **contact** | Person's name | `## Context` → `## Notes` | Yes |
+| Type | Title style | Sections |
+|---|---|---|
+| **evergreen** | Statement/claim | Freeform prose (1-3 paragraphs) |
+| **project** | `<Name> Project` | `## Goal` → `## Log` |
+| **research** | `<Topic> Research` | `## Question` → `## Findings` → `## Conclusion` → `## Sources` |
+| **contact** | Person's name | `## Context` → `## Notes` |
 
 ### Notes Are Claims, Not Topics
 Every evergreen title should be a **statement you can learn from** — not a category label. "SQLite Outperforms Postgres For Single-Server Workloads" is a note. "Tech Stack" is a wiki page. The body argues the claim in 1-3 short paragraphs.
@@ -57,7 +57,7 @@ Every note MUST have:
 - `created`: `YYYY-MM-DD`
 - `updated`: `YYYY-MM-DD`
 
-Project and contact notes also have `summary`.
+All note types have `summary` (one-sentence description).
 
 Do NOT add `status`, `source`, or `aliases`.
 
@@ -82,7 +82,7 @@ updated: YYYY-MM-DD
 ## Log
 - What happened, decisions made, facts learned
 
-## Open
+## Todo
 - Unresolved items
 
 ---
@@ -90,7 +90,7 @@ updated: YYYY-MM-DD
 - SESSION_ID — HH:MM
 ```
 
-**Hook capture** appends bullets to `## Log` and `## Open`, then adds session provenance to `## Sessions`. Hook output is link-free, journal-only, append-only.
+**Hook capture** appends bullets to `## Log` and `## Todo`, then adds session provenance to `## Sessions`. Hook output is link-free, journal-only, append-only.
 
 **During supervised sessions**, update typed notes directly when meaningful work happens — don't wait for nightly synthesis.
 
