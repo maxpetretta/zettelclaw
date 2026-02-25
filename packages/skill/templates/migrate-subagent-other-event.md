@@ -13,6 +13,15 @@ Do not delegate. Do not process any file except the one listed here.
 ## Existing wikilink index
 {{WIKILINK_INDEX}}
 
+## Priority Order (strict)
+When rules conflict, obey this order:
+1. **Schema + template correctness**
+2. **Two-way journal ↔ note links**
+3. **Concision + atomicity**
+4. **Coverage/comprehensiveness**
+
+Never violate a higher-priority rule to satisfy a lower-priority one.
+
 ## Note Quality Rules
 
 ### Frontmatter
@@ -47,10 +56,39 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 ### Template Structures (must follow)
 - **Project:** frontmatter → `## Goal` → `## Log`. Exactly two sections. Goal is **2-3 sentences** stating what the project is and why. Everything else goes as dated entries in Log. Log dates should reflect **when events actually happened**, not the migration date. No other `##` headings.
 - **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings capture **what was learned**, not what to do about it. No implementation plans, file paths, or TODOs. Use `research` only when the question required **investigation with multiple findings**. If the answer is one sentence, it's an evergreen note.
-- **Evergreen:** frontmatter only (body is 1-3 paragraphs, **under 150 words**). No `#` headers in the body — Obsidian uses the filename as the title. Evergreen notes must be **portable** — no file paths, config snippets, or environment-specific details.
+- **Evergreen:** frontmatter only (body is **60-120 words**, max **2 paragraphs**, hard max **150 words**). No `#`/`##` headers in the body — Obsidian uses the filename as the title. Do NOT create a `## Related` section; use a single trailing line like `Related: [[Astra Project]], [[2026-01-14]]` when useful. Evergreen notes must be **portable** — no file paths, config snippets, or environment-specific details.
 - **Contact:** frontmatter → `## Context` → `## Notes`. Focus on **working context**: role, current projects, communication preferences. Not gear lists, hobbies, or personality trivia.
 
 Do NOT invent custom section headers.
+
+### Invalid Patterns (must fix if encountered)
+**Invalid tags syntax (not YAML list):**
+```yaml
+tags: research, tools
+```
+
+**Invalid evergreen body headings:**
+```markdown
+# Beacon Voice Is Best
+...
+## Related
+- [[2026-01-14]]
+```
+
+**Invalid project structure (extra section):**
+```markdown
+## Goal
+...
+## Architecture
+...
+## Log
+```
+
+**Invalid created date defaulting to migration day:**
+```yaml
+created: 2026-02-23
+```
+Use the original event/source date whenever possible.
 
 ### Naming
 - Filenames are Title Case.
@@ -79,6 +117,16 @@ Do NOT invent custom section headers.
 7. Tool usage constraints:
    - Use exact file paths with spaces as-is (do NOT escape spaces with backslashes).
    - Read/edit files only (do not try to read directories).
+
+## Mandatory QA Gate (must pass before return)
+Do not return until every item is true:
+- `tags` uses bracket list syntax (`tags: [projects, tools]`)
+- Evergreen notes have no `#`/`##` headers in the body
+- Evergreen body length is ≤150 words (target 60-120)
+- Project notes contain exactly `## Goal` and `## Log`
+- Research notes contain `## Question`, `## Findings`, `## Conclusion`, `## Sources`
+- If a journal links to a typed note, that typed note links back to the journal
+- `created` reflects event/source date and is not the migration date unless the source date is unknown
 
 ## Output Format
 Return ONLY valid JSON (no prose, no markdown fences):

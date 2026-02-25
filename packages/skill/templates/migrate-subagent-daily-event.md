@@ -13,14 +13,25 @@ Do not delegate. Do not process any file except the one listed here.
 ## Existing wikilink index
 {{WIKILINK_INDEX}}
 
+## Priority Order (strict)
+When rules conflict, obey this order:
+1. **Schema + template correctness**
+2. **Two-way journal ↔ note links**
+3. **Concision + atomicity**
+4. **Coverage/comprehensiveness**
+
+Never violate a higher-priority rule to satisfy a lower-priority one.
+
 ## Note Quality Rules
 
 ### Frontmatter
-- `type`: one of `journal`, `project`, `research`, `evergreen`, `contact`
-- `tags`: YAML list syntax, ALWAYS pluralized: `tags: [projects, tools]`
-- `summary`: adds context beyond the title — don't restate it.
-- `created`: `YYYY-MM-DD` — original date of the knowledge/event, not the migration date.
-- `updated`: `YYYY-MM-DD` — date of last edit.
+- For **journal** files, frontmatter must contain exactly: `type`, `tags`, `created`, `updated`. Do NOT add `summary`.
+- For **typed notes** (`project`, `research`, `evergreen`, `contact`):
+  - `type`: one of `project`, `research`, `evergreen`, `contact`
+  - `tags`: YAML list syntax, ALWAYS pluralized: `tags: [projects, tools]`
+  - `summary`: adds context beyond the title — don't restate it.
+  - `created`: `YYYY-MM-DD` — original date of the knowledge/event, not the migration date.
+  - `updated`: `YYYY-MM-DD` — date of last edit.
 
 ### What Makes a Good Note
 A good note makes a **claim**, not a **topic**. The title is a statement you can learn from just by reading it in a backlinks list. The body is 1-3 short paragraphs.
@@ -37,7 +48,7 @@ A good note makes a **claim**, not a **topic**. The title is a statement you can
 - **Journal:** frontmatter with `type: journal`, `tags: [journals]` → `## Log` → `## Todo` → `---` → `## Sessions`
 - **Project:** frontmatter → `## Goal` (2-3 sentences) → `## Log` (dated entries). No other `##` headings.
 - **Research:** frontmatter → `## Question` → `## Findings` → `## Conclusion` → `## Sources`. Findings = what was learned, not TODOs. Only use `research` when the question required investigation with multiple findings — if the answer is one sentence, use evergreen.
-- **Evergreen:** frontmatter only (body under 150 words, no `#` headers, no file paths or config — Obsidian uses the filename as title).
+- **Evergreen:** frontmatter only (body is **60-120 words**, max **2 paragraphs**, hard max **150 words**). No `#`/`##` headers in body — Obsidian uses filename as title. Do NOT create a `## Related` section; use a single trailing line like `Related: [[Astra Project]], [[2026-01-14]]` when useful. No file paths or config.
 - **Contact:** frontmatter → `## Context` → `## Notes`
 
 Do NOT invent custom section headers.
@@ -64,6 +75,17 @@ Do NOT invent custom section headers.
 6. Tool usage constraints:
    - Use exact file paths with spaces as-is (do NOT escape spaces with backslashes).
    - Read/edit files only (do not try to read directories).
+
+## Mandatory QA Gate (must pass before return)
+Do not return until every item is true:
+- Journal frontmatter keys are exactly `type`, `tags`, `created`, `updated` (no `summary`)
+- `tags` uses bracket list syntax (`tags: [projects, tools]`)
+- Evergreen notes have no `#`/`##` headers in the body
+- Evergreen body length is ≤150 words (target 60-120)
+- Project notes contain exactly `## Goal` and `## Log`
+- Research notes contain `## Question`, `## Findings`, `## Conclusion`, `## Sources`
+- If a journal links to a typed note, that typed note links back to the journal
+- `created` reflects event/source date and is not the migration date unless the source date is unknown
 
 ## Output Format
 Return ONLY valid JSON (no prose, no markdown fences):
