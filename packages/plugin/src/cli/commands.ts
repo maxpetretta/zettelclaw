@@ -208,6 +208,68 @@ export async function runInit(config: PluginConfig, workspaceDir?: string): Prom
   return paths;
 }
 
+export async function revertOpenClawConfig(configPath: string): Promise<void> {
+  let raw: string;
+  try {
+    raw = await readFile(configPath, "utf8");
+  } catch {
+    return;
+  }
+
+  const root = toObject(JSON.parse(raw) as unknown);
+  const plugins = toObject(root.plugins);
+  const slots = toObject(plugins.slots);
+  delete slots.memory;
+  if (Object.keys(slots).length === 0) delete plugins.slots;
+  else plugins.slots = slots;
+  if (Object.keys(plugins).length === 0) delete root.plugins;
+  else root.plugins = plugins;
+
+  const agents = toObject(root.agents);
+  const defaults = toObject(agents.defaults);
+  const compaction = toObject(defaults.compaction);
+  delete compaction.memoryFlush;
+  if (Object.keys(compaction).length === 0) delete defaults.compaction;
+  else defaults.compaction = compaction;
+  if (Object.keys(defaults).length === 0) delete agents.defaults;
+  else agents.defaults = defaults;
+  if (Object.keys(agents).length === 0) delete root.agents;
+  else root.agents = agents;
+
+  await writeFile(configPath, `${JSON.stringify(root, null, 2)}\n`, "utf8");
+}
+
+export async function removeMemoryMarkers(memoryMdPath: string): Promise<void> {
+  let content: string;
+  try {
+    content = await readFile(memoryMdPath, "utf8");
+  } catch {
+    return;
+  }
+
+  const beginIndex = content.indexOf(BRIEFING_BEGIN_MARKER);
+  const endIndex = content.indexOf(BRIEFING_END_MARKER);
+
+  if (beginIndex < 0 || endIndex < 0 || endIndex <= beginIndex) {
+    return;
+  }
+
+  const before = content.slice(0, beginIndex).trimEnd();
+  const after = content.slice(endIndex + BRIEFING_END_MARKER.length).trimStart();
+  const result = after ? `${before}\n\n${after}` : before ? `${before}\n` : "";
+
+  await writeFile(memoryMdPath, result, "utf8");
+}
+
+export async function runUninit(config: PluginConfig, workspaceDir?: string): Promise<InitPaths> {
+  const paths = resolvePaths(config, workspaceDir);
+
+  await revertOpenClawConfig(paths.openClawConfigPath);
+  await removeMemoryMarkers(paths.memoryMdPath);
+
+  return paths;
+}
+
 function printEntries(entries: LogEntry[]): void {
   if (entries.length === 0) {
     console.log("No entries.");
@@ -237,6 +299,17 @@ export function registerZettelclawCli(
       console.log(`Log directory: ${paths.logDir}`);
       console.log(`Config updated: ${paths.openClawConfigPath}`);
       console.log(`MEMORY.md markers ensured: ${paths.memoryMdPath}`);
+    });
+
+  zettelclaw
+    .command("uninit")
+    .description("Disconnect zettelclaw from OpenClaw config (preserves log data)")
+    .action(async () => {
+      const paths = await runUninit(config, workspaceDir);
+      console.log("Zettelclaw disconnected.");
+      console.log(`Config reverted: ${paths.openClawConfigPath}`);
+      console.log(`MEMORY.md markers removed: ${paths.memoryMdPath}`);
+      console.log(`Log data preserved at: ${paths.logDir}`);
     });
 
   zettelclaw
