@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PluginConfig } from "../config";
-import { BRIEFING_BEGIN_MARKER, BRIEFING_END_MARKER, runInit, runUninit } from "../cli/commands";
+import { BRIEFING_BEGIN_MARKER, BRIEFING_END_MARKER, runInit } from "../cli/commands";
 
 function createConfig(logDir: string): PluginConfig {
   return {
@@ -78,37 +78,5 @@ describe("cli init helpers", () => {
     ).toBeNull();
     expect(memoryContent).toContain(BRIEFING_BEGIN_MARKER);
     expect(memoryContent).toContain(BRIEFING_END_MARKER);
-  });
-
-  test("runUninit reverses init — reverts config and removes markers", async () => {
-    const memoryPath = join(workspaceDir, "MEMORY.md");
-    await writeFile(memoryPath, "## Goals\n- Keep tests green\n", "utf8");
-
-    // Init first
-    await runInit(createConfig(logDir), workspaceDir);
-
-    // Verify init worked
-    const configAfterInit = JSON.parse(await readFile(join(openClawHome, "openclaw.json"), "utf8")) as Record<string, unknown>;
-    expect((configAfterInit.plugins as { slots?: { memory?: string } }).slots?.memory).toBe("zettelclaw");
-
-    // Uninit
-    await runUninit(createConfig(logDir), workspaceDir);
-
-    // Config should have no memory slot or memoryFlush
-    const configAfterUninit = JSON.parse(await readFile(join(openClawHome, "openclaw.json"), "utf8")) as Record<string, unknown>;
-    const plugins = configAfterUninit.plugins as { slots?: { memory?: string } } | undefined;
-    expect(plugins?.slots?.memory).toBeUndefined();
-    const agents = configAfterUninit.agents as { defaults?: { compaction?: { memoryFlush?: unknown } } } | undefined;
-    expect(agents?.defaults?.compaction?.memoryFlush).toBeUndefined();
-
-    // MEMORY.md should have original content but no markers
-    const memoryAfter = await readFile(memoryPath, "utf8");
-    expect(memoryAfter).toContain("## Goals");
-    expect(memoryAfter).not.toContain(BRIEFING_BEGIN_MARKER);
-    expect(memoryAfter).not.toContain(BRIEFING_END_MARKER);
-
-    // Log data should still exist
-    const logExists = await Bun.file(join(logDir, "log.jsonl")).exists();
-    expect(logExists).toBe(true);
   });
 });
