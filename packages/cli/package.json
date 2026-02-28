@@ -1,5 +1,5 @@
 {
-  "name": "zettelclaw",
+  "name": "@zettelclaw/cli",
   "version": "2026.2.23",
   "description": "CLI and vault template for Zettelclaw - your agent's second brain, built together",
   "repository": {

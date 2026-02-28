@@ -1,7 +1,7 @@
 {
   "name": "zettelclaw-workspace",
   "private": true,
-  "workspaces": ["packages/cli", "packages/skill", "packages/website"],
+  "workspaces": ["packages/cli", "packages/plugin", "packages/skill", "packages/website"],
   "scripts": {
     "clone": "./scripts/clone-openclaw-workspace.sh",
     "cli": "bun run --cwd packages/cli start",

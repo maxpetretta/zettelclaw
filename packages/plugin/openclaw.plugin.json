@@ -1,0 +1,40 @@
+{
+  "id": "zettelclaw",
+  "name": "Zettelclaw",
+  "kind": "memory",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "logDir": { "type": "string", "default": "~/.openclaw/zettelclaw" },
+      "extraction": {
+        "type": "object",
+        "properties": {
+          "model": { "type": "string", "default": "anthropic/claude-sonnet-4-6" },
+          "skipSessionTypes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": ["cron:", "sub:", "hook:"]
+          }
+        }
+      },
+      "briefing": {
+        "type": "object",
+        "properties": {
+          "model": { "type": "string", "default": "anthropic/claude-sonnet-4-6" },
+          "activeWindow": { "type": "number", "default": 14 },
+          "decisionWindow": { "type": "number", "default": 7 },
+          "staleThreshold": { "type": "number", "default": 30 },
+          "maxLines": { "type": "number", "default": 80 }
+        }
+      },
+      "cron": {
+        "type": "object",
+        "properties": {
+          "schedule": { "type": "string", "default": "0 3 * * *" },
+          "timezone": { "type": "string" }
+        }
+      }
+    }
+  }
+}

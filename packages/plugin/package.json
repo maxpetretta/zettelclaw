@@ -1,0 +1,15 @@
+{
+  "name": "zettelclaw",
+  "version": "3.0.0",
+  "type": "module",
+  "main": "src/plugin.ts",
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "dependencies": {
+    "nanoid": "^5.1.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

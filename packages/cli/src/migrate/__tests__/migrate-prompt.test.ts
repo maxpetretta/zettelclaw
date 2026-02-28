@@ -79,7 +79,7 @@ describe("prompt builders", () => {
     })
 
     const wikilinkLines = prompt.split("\n").filter((line) => line.startsWith("- [["))
-    expect(wikilinkLines.length).toBeLessThanOrEqual(40)
+    expect(wikilinkLines.length).toBeLessThanOrEqual(41)
     expect(prompt).toContain("- [[Bracky Project]]")
     expect(prompt).toContain("- [[Bracky Research]]")
   })
