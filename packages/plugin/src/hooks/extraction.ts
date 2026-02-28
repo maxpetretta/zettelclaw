@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
@@ -91,8 +91,14 @@ function parseSessionIdFromFileName(fileName: string): string | null {
   return null;
 }
 
-export async function listSessionCandidates(openClawHome = resolveOpenClawHome()): Promise<SessionCandidate[]> {
+const DEFAULT_SWEEP_MAX_AGE_MS = 48 * 60 * 60 * 1000; // 48 hours
+
+export async function listSessionCandidates(
+  openClawHome = resolveOpenClawHome(),
+  maxAgeMs = DEFAULT_SWEEP_MAX_AGE_MS,
+): Promise<SessionCandidate[]> {
   const agentsDir = join(openClawHome, "agents");
+  const cutoff = Date.now() - maxAgeMs;
 
   let agentDirs: string[];
   try {
@@ -116,6 +122,14 @@ export async function listSessionCandidates(openClawHome = resolveOpenClawHome()
     for (const fileName of files) {
       const sessionId = parseSessionIdFromFileName(fileName);
       if (!sessionId) {
+        continue;
+      }
+
+      // Skip old files — only sweep recent sessions
+      try {
+        const fileStat = await stat(join(sessionsDir, fileName));
+        if (fileStat.mtimeMs < cutoff) continue;
+      } catch {
         continue;
       }
 

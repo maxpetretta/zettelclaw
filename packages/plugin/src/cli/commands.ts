@@ -1,6 +1,10 @@
+import { exec } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { promisify } from "node:util";
+
+const execAsync = promisify(exec);
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import type { PluginConfig } from "../config";
 import { generateBriefing } from "../briefing/generate";
@@ -276,12 +280,59 @@ export async function removeGeneratedBriefingBlock(memoryMdPath: string): Promis
   await writeFile(memoryMdPath, next, "utf8");
 }
 
+const BRIEFING_CRON_NAME = "zettelclaw-briefing";
+
+async function ensureBriefingCron(config: PluginConfig): Promise<void> {
+  // Check if cron already exists
+  try {
+    const { stdout } = await execAsync("openclaw cron list --json");
+    const jobs = JSON.parse(stdout) as Array<{ name?: string }>;
+    if (jobs.some((j) => j.name === BRIEFING_CRON_NAME)) return;
+  } catch {
+    // cron list failed — gateway may not be running, skip silently
+    return;
+  }
+
+  const tz = config.cron.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const args = [
+    "openclaw cron add",
+    `--name ${BRIEFING_CRON_NAME}`,
+    `--cron "${config.cron.schedule}"`,
+    `--tz "${tz}"`,
+    "--exact",
+    "--session isolated",
+    `--message "Run: openclaw zettelclaw briefing generate"`,
+    "--timeout-seconds 300",
+    "--no-deliver",
+  ].join(" ");
+
+  try {
+    await execAsync(args);
+  } catch {
+    // Non-fatal — user can register cron manually
+  }
+}
+
+async function removeBriefingCron(): Promise<void> {
+  try {
+    const { stdout } = await execAsync("openclaw cron list --json");
+    const jobs = JSON.parse(stdout) as Array<{ name?: string; id?: string }>;
+    const match = jobs.find((j) => j.name === BRIEFING_CRON_NAME);
+    if (match?.id) {
+      await execAsync(`openclaw cron remove ${match.id}`);
+    }
+  } catch {
+    // Non-fatal
+  }
+}
+
 export async function runInit(config: PluginConfig, workspaceDir?: string): Promise<InitPaths> {
   const paths = resolvePaths(config, workspaceDir);
 
   await ensureLogStoreFiles(paths);
   await updateOpenClawConfigForInit(paths.openClawConfigPath);
   await ensureMemoryMarkers(paths.memoryMdPath);
+  await ensureBriefingCron(config);
 
   return paths;
 }
@@ -291,6 +342,7 @@ export async function runUninstall(config: PluginConfig, workspaceDir?: string):
 
   await updateOpenClawConfigForUninit(paths.openClawConfigPath);
   await removeGeneratedBriefingBlock(paths.memoryMdPath);
+  await removeBriefingCron();
 
   return paths;
 }
