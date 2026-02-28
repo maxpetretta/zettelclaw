@@ -150,6 +150,7 @@ export async function ensureLogStoreFiles(paths: InitPaths): Promise<void> {
     await writeState(paths.statePath, {
       extractedSessions: {},
       failedSessions: {},
+      importedConversations: {},
     });
   }
 }
@@ -305,7 +306,7 @@ function printEntries(entries: LogEntry[]): void {
   }
 }
 
-export function registerZettelclawCli(
+function registerZettelclawCliCommands(
   program: unknown,
   config: PluginConfig,
   api: OpenClawPluginApi,
@@ -480,6 +481,18 @@ export function registerZettelclawCli(
 
       console.log(`Briefing updated: ${paths.memoryMdPath}`);
     });
+}
+
+export function registerZettelclawCli(
+  api: OpenClawPluginApi,
+  config: PluginConfig,
+): void {
+  api.registerCli(
+    ({ program, workspaceDir }) => {
+      registerZettelclawCliCommands(program, config, api, workspaceDir);
+    },
+    { commands: ["zettelclaw"] },
+  );
 }
 
 export const __cliTestExports = {

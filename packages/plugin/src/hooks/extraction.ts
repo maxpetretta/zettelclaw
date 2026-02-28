@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import type { PluginConfig } from "../config";
-import { appendEntry, injectMeta, validateLlmOutput } from "../log/schema";
+import { appendEntry, finalizeEntry, validateLlmOutput } from "../log/schema";
 import { extractFromTranscript } from "../lib/llm";
 import {
   findTranscriptFile,
@@ -335,7 +335,7 @@ async function runExtractionPipeline(params: {
         continue;
       }
 
-      const entry = injectMeta(validation.entry, params.sessionId);
+      const entry = finalizeEntry(validation.entry, { sessionId: params.sessionId });
       if (entry.subject) {
         await ensureSubject(params.paths.subjectsPath, entry.subject);
       }

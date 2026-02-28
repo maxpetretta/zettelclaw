@@ -19,12 +19,7 @@ const zettelclawPlugin: OpenClawPluginDefinition = {
   register(api: OpenClawPluginApi) {
     const config = resolveConfig(api.pluginConfig, api.config);
 
-    api.registerCli(
-      ({ program, workspaceDir }) => {
-        registerZettelclawCli(program, config, api, workspaceDir);
-      },
-      { commands: ["zettelclaw"] },
-    );
+    registerZettelclawCli(api, config);
 
     api.registerTool(
       (ctx) => {

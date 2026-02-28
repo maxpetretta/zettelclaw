@@ -236,7 +236,20 @@ export function injectMeta(
   entry: Omit<LogEntry, "id" | "timestamp" | "session">,
   sessionId: string,
 ): LogEntry {
-  if (!isNonEmptyString(sessionId)) {
+  return finalizeEntry(entry, {
+    sessionId,
+  });
+}
+
+export function finalizeEntry(
+  entry: Omit<LogEntry, "id" | "timestamp" | "session">,
+  opts: {
+    sessionId: string;
+    timestamp?: string;
+    id?: string;
+  },
+): LogEntry {
+  if (!isNonEmptyString(opts.sessionId)) {
     throw new Error("sessionId must be a non-empty string");
   }
 
@@ -247,9 +260,12 @@ export function injectMeta(
 
   return {
     ...validation.entry,
-    id: generateId(),
-    timestamp: new Date().toISOString(),
-    session: sessionId,
+    id: opts.id && isNonEmptyString(opts.id) ? opts.id : generateId(),
+    timestamp:
+      opts.timestamp && isNonEmptyString(opts.timestamp) && isIsoTimestamp(opts.timestamp)
+        ? opts.timestamp
+        : new Date().toISOString(),
+    session: opts.sessionId,
   } as LogEntry;
 }
 
