@@ -149,7 +149,7 @@ export function isExtracted(state: ZettelclawState, sessionId: string): boolean 
 }
 
 export function shouldRetry(state: ZettelclawState, sessionId: string): boolean {
-  return (state.failedSessions[sessionId]?.retries ?? 0) < 1;
+  return (state.failedSessions[sessionId]?.retries ?? 0) < 2;
 }
 
 export async function pruneState(path: string, maxAgeDays = 30): Promise<void> {

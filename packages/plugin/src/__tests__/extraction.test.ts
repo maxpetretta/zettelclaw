@@ -176,13 +176,17 @@ describe("extraction hooks", () => {
       ],
     };
 
+    // First attempt: fails, retries=1, shouldRetry=true
     await handlers.before_reset?.(resetEvent, { sessionId: "session-fail", sessionKey: "agent:main" });
+    // Second attempt: retries (shouldRetry still true), fails again, retries=2, shouldRetry=false
+    await handlers.before_reset?.(resetEvent, { sessionId: "session-fail", sessionKey: "agent:main" });
+    // Third attempt: permanently failed, skipped
     await handlers.before_reset?.(resetEvent, { sessionId: "session-fail", sessionKey: "agent:main" });
 
     const state = await readState(join(logDir, "state.json"));
 
-    expect(llmCalls).toBe(1);
-    expect(state.failedSessions["session-fail"]?.retries).toBe(1);
+    expect(llmCalls).toBe(2);
+    expect(state.failedSessions["session-fail"]?.retries).toBe(2);
     expect(state.extractedSessions["session-fail"]).toBeUndefined();
   });
 });

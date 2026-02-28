@@ -50,11 +50,12 @@ describe("state", () => {
     state = await readState(statePath);
 
     expect(state.failedSessions["session-2"]?.retries).toBe(1);
-    expect(shouldRetry(state, "session-2")).toBe(false);
+    expect(shouldRetry(state, "session-2")).toBe(true);
 
     await markFailed(statePath, "session-2", "second error");
     state = await readState(statePath);
     expect(state.failedSessions["session-2"]?.retries).toBe(2);
+    expect(shouldRetry(state, "session-2")).toBe(false);
   });
 
   test("pruneState removes entries older than cutoff", async () => {
