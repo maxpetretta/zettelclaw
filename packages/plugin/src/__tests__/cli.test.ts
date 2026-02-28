@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PluginConfig } from "../config";
-import { BRIEFING_BEGIN_MARKER, BRIEFING_END_MARKER, runInit } from "../cli/commands";
+import { BRIEFING_BEGIN_MARKER, BRIEFING_END_MARKER, runInit, runUninstall } from "../cli/commands";
 
 function createConfig(logDir: string): PluginConfig {
   return {
@@ -78,5 +78,52 @@ describe("cli init helpers", () => {
     ).toBeNull();
     expect(memoryContent).toContain(BRIEFING_BEGIN_MARKER);
     expect(memoryContent).toContain(BRIEFING_END_MARKER);
+  });
+
+  test("runUninstall reverses init config and removes generated briefing block without deleting log data", async () => {
+    const memoryPath = join(workspaceDir, "MEMORY.md");
+    await writeFile(memoryPath, "## Goals\n- Keep tests green\n", "utf8");
+
+    await runInit(createConfig(logDir), workspaceDir);
+
+    await writeFile(
+      memoryPath,
+      [
+        "## Goals",
+        "- Keep tests green",
+        "",
+        BRIEFING_BEGIN_MARKER,
+        "## Active",
+        "- auth-migration — Queue retries enabled",
+        BRIEFING_END_MARKER,
+        "",
+        "## Notes",
+        "Still here",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await runUninstall(createConfig(logDir), workspaceDir);
+
+    const openClawConfig = JSON.parse(await readFile(join(openClawHome, "openclaw.json"), "utf8")) as {
+      plugins?: { slots?: Record<string, unknown> };
+      agents?: { defaults?: { compaction?: Record<string, unknown> } };
+    };
+    const memoryContent = await readFile(memoryPath, "utf8");
+    const logExists = await Bun.file(join(logDir, "log.jsonl")).exists();
+    const subjectsExists = await Bun.file(join(logDir, "subjects.json")).exists();
+    const stateExists = await Bun.file(join(logDir, "state.json")).exists();
+
+    expect(openClawConfig.plugins?.slots?.memory).toBeUndefined();
+    expect(openClawConfig.agents?.defaults?.compaction?.memoryFlush).toBeUndefined();
+
+    expect(memoryContent).not.toContain(BRIEFING_BEGIN_MARKER);
+    expect(memoryContent).not.toContain(BRIEFING_END_MARKER);
+    expect(memoryContent).toContain("## Goals");
+    expect(memoryContent).toContain("## Notes");
+
+    expect(logExists).toBe(true);
+    expect(subjectsExists).toBe(true);
+    expect(stateExists).toBe(true);
   });
 });

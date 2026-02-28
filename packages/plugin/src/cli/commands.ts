@@ -33,6 +33,15 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isEnoent(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "ENOENT"
+  );
+}
+
 function toObject(value: unknown): Record<string, unknown> {
   return isObject(value) ? value : {};
 }
@@ -174,6 +183,39 @@ export async function updateOpenClawConfigForInit(configPath: string): Promise<v
   await writeFile(configPath, `${JSON.stringify(root, null, 2)}\n`, "utf8");
 }
 
+export async function updateOpenClawConfigForUninit(configPath: string): Promise<void> {
+  let root: Record<string, unknown>;
+
+  try {
+    const raw = await readFile(configPath, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    root = toObject(parsed);
+  } catch (error) {
+    if (isEnoent(error)) {
+      return;
+    }
+
+    root = {};
+  }
+
+  const plugins = toObject(root.plugins);
+  const slots = toObject(plugins.slots);
+  delete slots.memory;
+  plugins.slots = slots;
+  root.plugins = plugins;
+
+  const agents = toObject(root.agents);
+  const defaults = toObject(agents.defaults);
+  const compaction = toObject(defaults.compaction);
+  delete compaction.memoryFlush;
+  defaults.compaction = compaction;
+  agents.defaults = defaults;
+  root.agents = agents;
+
+  await mkdir(dirname(configPath), { recursive: true });
+  await writeFile(configPath, `${JSON.stringify(root, null, 2)}\n`, "utf8");
+}
+
 export async function ensureMemoryMarkers(memoryMdPath: string): Promise<void> {
   let content = "";
 
@@ -198,12 +240,56 @@ export async function ensureMemoryMarkers(memoryMdPath: string): Promise<void> {
   await writeFile(memoryMdPath, next, "utf8");
 }
 
+export async function removeGeneratedBriefingBlock(memoryMdPath: string): Promise<void> {
+  let content = "";
+
+  try {
+    content = await readFile(memoryMdPath, "utf8");
+  } catch (error) {
+    if (isEnoent(error)) {
+      return;
+    }
+
+    throw error;
+  }
+
+  const start = content.indexOf(BRIEFING_BEGIN_MARKER);
+  const end = content.indexOf(BRIEFING_END_MARKER);
+  if (start < 0 || end < 0 || end <= start) {
+    return;
+  }
+
+  const before = content.slice(0, start).trimEnd();
+  const after = content.slice(end + BRIEFING_END_MARKER.length).trimStart();
+
+  let next = "";
+  if (before && after) {
+    next = `${before}\n\n${after}`;
+  } else if (before) {
+    next = `${before}\n`;
+  } else if (after) {
+    next = after;
+  }
+
+  await mkdir(dirname(memoryMdPath), { recursive: true });
+  await writeFile(memoryMdPath, next, "utf8");
+}
+
 export async function runInit(config: PluginConfig, workspaceDir?: string): Promise<InitPaths> {
   const paths = resolvePaths(config, workspaceDir);
 
   await ensureLogStoreFiles(paths);
   await updateOpenClawConfigForInit(paths.openClawConfigPath);
   await ensureMemoryMarkers(paths.memoryMdPath);
+
+  return paths;
+}
+
+export async function runUninstall(config: PluginConfig, workspaceDir?: string): Promise<InitPaths> {
+  const paths = resolvePaths(config, workspaceDir);
+
+  await updateOpenClawConfigForUninit(paths.openClawConfigPath);
+  await removeGeneratedBriefingBlock(paths.memoryMdPath);
 
   return paths;
 }
@@ -237,6 +323,17 @@ export function registerZettelclawCli(
       console.log(`Log directory: ${paths.logDir}`);
       console.log(`Config updated: ${paths.openClawConfigPath}`);
       console.log(`MEMORY.md markers ensured: ${paths.memoryMdPath}`);
+    });
+
+  zettelclaw
+    .command("uninstall")
+    .description("Reverse init config and remove generated briefing block")
+    .action(async () => {
+      const paths = await runUninstall(config, workspaceDir);
+      console.log("Zettelclaw uninstalled.");
+      console.log(`Config reverted: ${paths.openClawConfigPath}`);
+      console.log(`Generated briefing block removed: ${paths.memoryMdPath}`);
+      console.log(`Log data preserved in: ${paths.logDir}`);
     });
 
   zettelclaw
