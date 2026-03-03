@@ -1,0 +1,25 @@
+# dependencies
+node_modules
+
+# bun
+bun.lockb
+
+# build artifacts
+dist
+out
+coverage
+*.tgz
+*.tsbuildinfo
+.zettelclaw/migrate-state.json
+**/.zettelclaw/migrate-state.json
+
+# env
+.env
+.env.*
+
+# os/editor
+.DS_Store
+**/.DS_Store
+.idea
+.cache
+.eslintcache

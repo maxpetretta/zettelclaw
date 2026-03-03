@@ -1,0 +1,167 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.3/schema.json",
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off",
+        "noForEach": "error",
+        "noStaticOnlyClass": "error",
+        "noUselessTernary": "error",
+        "useOptionalChain": "error",
+        "useSimplifiedLogicExpression": "error"
+      },
+      "correctness": {
+        "useHookAtTopLevel": "error",
+        "noUnusedImports": "error",
+        "noUndeclaredVariables": "error",
+        "noUnusedVariables": {
+          "level": "error",
+          "options": {
+            "ignoreRestSiblings": true
+          }
+        },
+        "noConstantCondition": "error",
+        "noUnsafeOptionalChaining": "error",
+        "noSelfAssign": "error",
+        "noUnreachable": "error"
+      },
+      "performance": {
+        "noBarrelFile": "error",
+        "noReExportAll": "error",
+        "noAccumulatingSpread": "error",
+        "noDelete": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtmlWithChildren": "error",
+        "noGlobalEval": "error"
+      },
+      "style": {
+        "useCollapsedElseIf": "error",
+        "noNonNullAssertion": "error",
+        "noParameterAssign": "error",
+        "useConst": "error",
+        "useTemplate": "error",
+        "useExponentiationOperator": "error",
+        "useForOf": "error",
+        "useThrowOnlyError": "error",
+        "useImportType": "error",
+        "useExportType": "error",
+        "useAsConstAssertion": "error",
+        "useDefaultParameterLast": "error",
+        "useEnumInitializers": "error",
+        "useSelfClosingElements": "error",
+        "useSingleVarDeclarator": "error",
+        "noUnusedTemplateLiteral": "error",
+        "useNumberNamespace": "error",
+        "noInferrableTypes": "error",
+        "noUselessElse": "error"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "warn",
+        "noEmptyBlockStatements": "error",
+        "useAwait": "error",
+        "noDoubleEquals": "error",
+        "noDebugger": "error",
+        "noExplicitAny": "error",
+        "noConstEnum": "error",
+        "noFallthroughSwitchClause": "error",
+        "noSelfCompare": "error",
+        "noConstantBinaryExpressions": "error",
+        "noAsyncPromiseExecutor": "error",
+        "noMisleadingCharacterClass": "error",
+        "noUnsafeDeclarationMerging": "error",
+        "noAssignInExpressions": "error",
+        "noConfusingVoidType": "error",
+        "noRedeclare": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useConst": "off",
+            "useImportType": "off"
+          },
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/website/src/**/*.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": "off"
+          }
+        }
+      }
+    }
+  ],
+  "files": {
+    "includes": [
+      "packages/cli/src/**/*.ts",
+      "src/**/*.ts",
+      "packages/website/**/*.ts",
+      "packages/website/**/*.tsx",
+      "packages/website/**/*.mjs",
+      "packages/website/**/*.js",
+      "packages/website/**/*.json",
+      "packages/website/**/*.jsonc",
+      "packages/website/**/*.astro",
+      "packages/website/**/*.css",
+      "src/**/*.tsx",
+      "src/**/*.mjs",
+      "src/**/*.js",
+      "src/**/*.json",
+      "src/**/*.jsonc",
+      "src/**/*.astro",
+      "src/**/*.css",
+      "!**/.vercel",
+      "!**/node_modules",
+      "!**/.astro",
+      "!**/dist"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "indentStyle": "space",
+      "lineWidth": 120,
+      "semicolons": "asNeeded"
+    },
+    "globals": ["Bun"]
+  },
+  "json": {
+    "parser": {
+      "allowComments": true
+    },
+    "formatter": {
+      "indentStyle": "space",
+      "lineWidth": 120
+    }
+  },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    }
+  },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  }
+}

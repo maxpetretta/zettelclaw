@@ -1,0 +1,26 @@
+{
+  "name": "zettelclaw-workspace",
+  "private": true,
+  "workspaces": ["packages/cli", "packages/skill", "packages/website"],
+  "scripts": {
+    "cli": "bun run --cwd packages/cli start",
+    "cli:build": "bun run --cwd packages/cli build",
+    "cli:init": "bun run --cwd packages/cli init",
+    "cli:plugins": "bun run --cwd packages/cli plugins",
+    "cli:verify": "bun run --cwd packages/cli verify",
+    "cli:test": "bun run --cwd packages/cli test",
+    "init": "bun run cli:init",
+    "plugins": "bun run cli:plugins",
+    "verify": "bun run cli:verify",
+    "web": "bun run --cwd packages/website dev",
+    "web:dev": "bun run --cwd packages/website dev",
+    "web:build": "bun run --cwd packages/website build",
+    "web:preview": "bun run --cwd packages/website preview",
+    "lint": "bun run --cwd packages/cli lint && bun run --cwd packages/website lint",
+    "fix": "bun run --cwd packages/cli fix && bun run --cwd packages/website fix"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.3",
+    "@typescript/native-preview": "7.0.0-dev.20260219.1"
+  }
+}
