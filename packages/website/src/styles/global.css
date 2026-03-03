@@ -1,0 +1,242 @@
+:root {
+  --bg: #0f131d;
+  --bg-soft: #161c2a;
+  --card: #1c2436;
+  --text: #edf3ff;
+  --muted: #b3c0d9;
+  --line: rgba(255, 255, 255, 0.12);
+  --accent: #ff7a18;
+  --accent-soft: rgba(255, 122, 24, 0.22);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Sora Variable", "Avenir Next", "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(65% 45% at 12% 5%, rgba(255, 122, 24, 0.2) 0%, transparent 70%),
+    radial-gradient(50% 45% at 90% 8%, rgba(74, 153, 231, 0.16) 0%, transparent 70%),
+    linear-gradient(170deg, var(--bg-soft), var(--bg));
+}
+
+a {
+  color: inherit;
+}
+
+.page-shell {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 2rem 1.2rem 3.2rem;
+}
+
+.hero {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: clamp(1.4rem, 4vw, 3.2rem);
+  background:
+    linear-gradient(140deg, rgba(255, 122, 24, 0.08), transparent 35%),
+    linear-gradient(220deg, rgba(74, 153, 231, 0.08), transparent 32%), rgba(14, 20, 32, 0.75);
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.35);
+  animation: hero-rise 0.8s ease-out both;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffbf86;
+}
+
+h1,
+h2,
+h3 {
+  margin-top: 0;
+  line-height: 1.1;
+}
+
+.hero h1 {
+  margin-top: 0.65rem;
+  margin-bottom: 0.8rem;
+  font-size: clamp(2rem, 6vw, 4.3rem);
+  max-width: 15ch;
+}
+
+.lede {
+  margin: 0;
+  color: var(--muted);
+  max-width: 58ch;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.35rem;
+}
+
+.btn {
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0.62rem 1.08rem;
+  border: 1px solid transparent;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-solid {
+  background: var(--accent);
+  color: #111;
+}
+
+.btn-ghost {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.panel {
+  margin-top: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.1rem;
+  background: rgba(17, 24, 37, 0.72);
+  animation: panel-rise 0.7s ease both;
+  animation-delay: 80ms;
+}
+
+.panel h2 {
+  margin-bottom: 0.9rem;
+  font-size: clamp(1.25rem, 2.7vw, 2.1rem);
+}
+
+.grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card {
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  padding: 0.9rem;
+}
+
+.card h3 {
+  font-size: 1rem;
+  margin-bottom: 0.45rem;
+}
+
+.card p,
+.workflow-grid p,
+.workflow-grid li,
+.small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.workflow-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.workflow-grid article {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.9rem;
+  background: var(--card);
+}
+
+.workflow-grid ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+pre {
+  margin: 0;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #0c111b;
+  padding: 0.9rem;
+}
+
+code {
+  font-family: "JetBrains Mono", "IBM Plex Mono", monospace;
+  font-size: 0.91rem;
+}
+
+.small {
+  margin-top: 0.8rem;
+  margin-bottom: 0;
+}
+
+.footer {
+  margin-top: 1.3rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  color: var(--muted);
+}
+
+.footer div {
+  display: flex;
+  gap: 1rem;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panel-rise {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .page-shell {
+    padding: 1rem 0.75rem 2rem;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

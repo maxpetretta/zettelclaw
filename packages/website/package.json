@@ -1,0 +1,29 @@
+{
+  "name": "@zettelclaw/website",
+  "version": "2026.2.23",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "lint": "bun run lint:astro && bun run lint:biome && bun run lint:typecheck",
+    "lint:astro": "astro check",
+    "lint:biome": "biome check .",
+    "lint:typecheck": "tsgo --noEmit",
+    "fix": "biome check --write --unsafe ."
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "3.6.0",
+    "@astrojs/vercel": "8.0.4",
+    "@fontsource/sora": "5.2.8",
+    "@fontsource/jetbrains-mono": "5.2.8",
+    "astro": "5.1.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.6",
+    "@tailwindcss/vite": "4.1.18",
+    "tailwindcss": "4.1.18"
+  }
+}

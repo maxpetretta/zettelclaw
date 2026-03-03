@@ -1,0 +1,118 @@
+---
+import "@fontsource/sora/400.css"
+import "@fontsource/sora/700.css"
+import "@fontsource/jetbrains-mono/400.css"
+import "@fontsource/jetbrains-mono/600.css"
+import "@/styles/global.css"
+
+const title = "Zettelclaw | Obsidian Vault Template for OpenClaw"
+const description =
+  "Opinionated Obsidian vault template with CLI installer, note templates, clipper workflows, and OpenClaw memory-path integration."
+
+const pillars = [
+  {
+    title: "Opinionated Vault",
+    body: "Pre-configured Obsidian structure, plugin defaults, journal setup, and starter notes.",
+  },
+  {
+    title: "Template-First Notes",
+    body: "Typed templates for evergreen, projects, research, contacts, writing, and media queues.",
+  },
+  {
+    title: "CLI Install + Verify",
+    body: "Install vault files, plugin binaries, OpenClaw symlinks, and verify the setup programmatically.",
+  },
+  {
+    title: "Queue Workflows",
+    body: "Read-it-later, reading list, watch list, Twitter bookmark, and YouTube clipper templates plus Dataview tables.",
+  },
+]
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#111722" />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site ?? "https://zettelclaw.com")} />
+  </head>
+
+  <body>
+    <main class="page-shell">
+      <section class="hero">
+        <p class="eyebrow">Vault Template for OpenClaw + Obsidian</p>
+        <h1>Shared memory that stays useful after the chat window closes.</h1>
+        <p class="lede">
+          Zettelclaw bootstraps a practical second-brain vault: templates, plugins, web clipper workflows, and OpenClaw access
+          wired in.
+        </p>
+
+        <div class="actions">
+          <a class="btn btn-solid" href="https://github.com/maxpetretta/zettelclaw">View GitHub</a>
+          <a class="btn btn-ghost" href="#start">Get Started</a>
+        </div>
+      </section>
+
+      <section class="panel" id="included">
+        <h2>What ships in the repo</h2>
+        <div class="grid">
+          {
+            pillars.map((item) => (
+              <article class="card">
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Included workflows</h2>
+        <div class="workflow-grid">
+          <article>
+            <h3>Web clipper templates</h3>
+            <ul>
+              <li>`clipper-read-it-later.json` -> `00 Inbox/`</li>
+              <li>`clipper-reading-list.json` -> `01 Notes/`</li>
+              <li>`clipper-watch-list.json` -> `01 Notes/`</li>
+              <li>`clipper-twitter-bookmark.json` -> `00 Inbox/`</li>
+              <li>`clipper-youtube-watch.json` -> `01 Notes/`</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Dataview dashboard</h3>
+            <p>
+              `01 Notes/Media Queues Dashboard.md` includes Dataview tables for read-it-later, reading queue, and watch queue.
+            </p>
+          </article>
+          <article>
+            <h3>OpenClaw integration</h3>
+            <p>
+              The CLI symlinks key workspace files into `02 Agent/` and patches `memorySearch.extraPaths` so agents can search
+              the vault.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" id="start">
+        <h2>Start in two commands</h2>
+        <pre><code>npx zettelclaw init
+npx zettelclaw verify</code></pre>
+        <p class="small">Need to re-pull plugin binaries later? Run `npx zettelclaw plugins`.</p>
+      </section>
+
+      <footer class="footer">
+        <span>Zettelclaw</span>
+        <div>
+          <a href="https://github.com/maxpetretta/zettelclaw">GitHub</a>
+          <a href="https://www.npmjs.com/package/zettelclaw">npm</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>
