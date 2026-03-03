@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "Twitter Bookmark",
+  "behavior": "create",
+  "noteNameFormat": "Tweet {{date:YYYY-MM-DD}} {{title|safe_name}}",
+  "path": "00 Inbox",
+  "context": "{{selectorHtml:[data-testid='tweetText'],article,main,body|markdown|slice:0,5000|trim}}",
+  "properties": [
+    { "name": "type", "value": "read-it-later", "type": "text" },
+    { "name": "status", "value": "inbox", "type": "text" },
+    { "name": "source", "value": "{{url}}", "type": "text" },
+    { "name": "author", "value": "{{author}}", "type": "text" },
+    { "name": "tags", "value": "read-later,captures,twitter", "type": "multitext" },
+    { "name": "created", "value": "{{date}}", "type": "date" },
+    { "name": "updated", "value": "{{date}}", "type": "date" }
+  ],
+  "noteContentFormat": "## Why save this\n- \n\n## Tweet\n{{content}}\n\n## Next action\n- [ ] Decide whether to promote to a durable note.",
+  "triggers": [
+    "https://x.com/",
+    "https://twitter.com/"
+  ]
+}

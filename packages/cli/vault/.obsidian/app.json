@@ -1,0 +1,10 @@
+{
+  "livePreview": false,
+  "showFrontmatter": true,
+  "showInlineTitle": false,
+  "readableLineLength": true,
+  "openBehavior": "daily",
+  "attachmentFolderPath": "05 Attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "01 Notes"
+}

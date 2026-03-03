@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "Read It Later",
+  "behavior": "create",
+  "noteNameFormat": "{{date:YYYY-MM-DD}} {{title|safe_name}}",
+  "path": "00 Inbox",
+  "context": "{{selectorHtml:article,main,.post-content,.entry-content,#content|markdown|slice:0,12000|trim}}",
+  "properties": [
+    { "name": "type", "value": "read-it-later", "type": "text" },
+    { "name": "status", "value": "inbox", "type": "text" },
+    { "name": "source", "value": "{{url}}", "type": "text" },
+    { "name": "author", "value": "{{author}}", "type": "text" },
+    { "name": "tags", "value": "read-later,captures", "type": "text" },
+    { "name": "created", "value": "{{date:YYYY-MM-DD}}", "type": "text" },
+    { "name": "updated", "value": "{{date:YYYY-MM-DD}}", "type": "text" }
+  ],
+  "noteContentFormat": "## Why save this\n- \n\n## Key excerpts\n{{content}}\n\n## Next action\n- [ ] Read and promote if valuable."
+}

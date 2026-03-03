@@ -1,0 +1,11 @@
+{
+  "templates_folder": "04 Templates",
+  "trigger_on_file_creation": true,
+  "enable_folder_templates": true,
+  "folder_templates": [
+    {
+      "folder": "03 Journal",
+      "template": "04 Templates/journal.md"
+    }
+  ]
+}
