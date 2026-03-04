@@ -14,6 +14,9 @@
 - [Digital Gardens](#digital-gardens)
 - [Cornell Note-Taking](#cornell-note-taking)
 - [Johnny.Decimal](#johnnydecimal)
+- [Practitioner Spotlight: James Bedford's "Everyday Obsidian"](#practitioner-spotlight-james-bedfords-everyday-obsidian)
+- [Design Principle: Human Writes, Agent Reads](#design-principle-human-writes-agent-reads)
+- [Obsidian Primitives for Human-Write, Agent-Read Vaults](#obsidian-primitives-for-human-write-agent-read-vaults)
 - [Synthesis: What to Adopt for an AI-Native Vault](#synthesis-what-to-adopt-for-an-ai-native-vault)
 
 ---
@@ -408,6 +411,320 @@ The **AC.ID** notation (e.g., `23.07`): area 20–29, category 23, item 07.
 
 ---
 
+## Practitioner Spotlight: James Bedford's "Everyday Obsidian"
+
+James Bedford ([@jameesy](https://x.com/jameesy)) is an engineer at Zerion and creator of the [Everyday Obsidian](https://www.everydayobsidian.com/) course. His approach is notable for being specifically designed around Claude integration from the ground up, with a vault structure that balances simplicity with agent-navigability.
+
+### Vault Structure
+
+Five folders, each with a distinct purpose:
+
+| Folder | Purpose | Agent relevance |
+|---|---|---|
+| **Polaris** | North Star — goals, aspirations, values, "Top of Mind" document | Claude references this constantly as a guiding context. Updated every ~2 weeks. The biggest win for agent efficiency |
+| **Logs** | Daily notes, used as a scratchpad for on-the-fly writing | Temporal context — agent reads recent logs to understand current state |
+| **Commonplace** | The main vault — separate notes for individual thoughts, true to the commonplace book tradition | The knowledge base proper. Each note has tags as metadata |
+| **Outputs** | Written articles, social media posts, finished work | Agent writes here; clear separation of drafts from source thinking |
+| **Utilities** | Templates, prompts, commands specific to the user's workflow | Agent reads to understand available operations and conventions |
+
+### Key Concepts
+
+**The "Polaris" Document.** Bedford's most distinctive contribution. A dedicated note (or folder) containing:
+- What is currently top of mind
+- Active goals and aspirations
+- Personal values and priorities
+- Things to stay accountable to
+
+Claude references this as a guiding context for all interactions. Bedford reports it "holds him accountable for losing focus on things and chasing shiny objects" — the agent uses it to filter suggestions and prioritize recommendations.
+
+**Separation of Human and AI Content.** Bedford maintains a dedicated "Claude" folder *outside* the Obsidian vault for AI-generated content and working files (GitHub repos, meeting notes processed by Claude). This keeps the knowledge graph clean — AI-generated content doesn't pollute backlink and tag indexes unless explicitly promoted to the vault.
+
+**Tags as Metadata.** Bedford considers tags "one of the most criminally underutilised ways of navigating through an Obsidian vault." His approach:
+- Nested tags with parent/child relationships
+- Every commonplace note has tags as metadata at the top
+- Tags enable efficient filtering when Claude scans for relevant content
+- More structured than free-form text, more flexible than folders
+
+**The "Idea Report."** A Claude-generated output that cross-references the user's notes to produce:
+- Things to build
+- People to reach out to
+- Ideas to investigate
+- Connections between thoughts and written materials
+
+This is Bedford's showcase for agent-augmented knowledge work — the agent synthesizes across the vault and presents actionable suggestions aligned with the Polaris priorities.
+
+**Three Navigation Methods.** Bedford uses folders, tags, and backlinks together — each serves a different navigation mode:
+1. Folders for broad context (where am I working?)
+2. Tags for metadata filtering (what type of thing is this?)
+3. Backlinks for graph traversal (what connects to this?)
+
+### What to Incorporate
+
+Bedford's key innovations for an AI-native vault:
+
+| Concept | Why adopt it |
+|---|---|
+| **Polaris / "Top of Mind" document** | Gives the agent a persistent values/goals reference. Without this, the agent optimizes for the current task without awareness of broader priorities |
+| **Separation of AI and human content** | Prevents agent output from polluting the knowledge graph. Clean signal for backlinks and tags |
+| **Idea Reports as a skill** | Demonstrates the agent's highest-value mode: cross-vault synthesis producing actionable suggestions |
+| **Tags as first-class metadata** | More queryable than prose, more flexible than folders. Agent reads tag structure to understand the vault's ontology |
+
+---
+
+## Design Principle: Human Writes, Agent Reads
+
+The strongest pattern across the research is a division of labor: **the human is responsible for writing content in the vault; the agent primarily reads and searches to surface insights, connections, and suggestions.** The vault is the human's externalized thinking. The agent is a very fast, very thorough, never-forgets reader that can traverse the entire graph and notice things the human can't hold in working memory.
+
+This principle is not just a preference — it's grounded in the deepest claims of the methodologies themselves.
+
+### Methodological Foundations
+
+**Zettelkasten: The "Communication Partner."** Luhmann wrote every card himself but described his slip-box as a *"true interlocutor"* that surprised him through rediscovered forgotten ideas and unexpected connection patterns. The system didn't write — it *responded*. The human-writes/system-reads dynamic is the original design. An AI agent that reads the vault and surfaces surprises is doing exactly what Luhmann's slip-box did, just faster and across a larger graph.
+
+**Evergreen Notes: Writing *is* thinking.** Matuschak's foundational claim: "Better note-taking misses the point; what matters is better thinking." Notes must be in your own words and your own voice because the act of writing is the act of understanding. An agent that writes notes for you defeats the purpose — you haven't thought through the idea. But an agent that *reads* your notes and surfaces connections, flags contradictions, or suggests links is doing exactly what the dense-linking principle calls for.
+
+**LYT: The Relate gap.** Nick Milo's ARC framework identifies that most people spend 50%+ of their time Adding (capturing) and skip the Relate phase (contextualizing, connecting, challenging). An agent that reads the vault and suggests connections is the missing Relate engine. It doesn't create ideas — it relates the human's ideas to each other.
+
+**Digital Gardens: The author tends.** The epistemic status metadata (`confidence: likely`) is a *human judgment* about the author's own thinking. The maturity stages (seedling → evergreen) track the author's development of an idea. An agent can flag seedlings for promotion or identify stale trees, but the assessment of confidence and the writing of the note remain human acts.
+
+**Steph Ango: Emergent structure from human linking.** Ango deliberately avoids automating his "random revisit" sessions — browsing old notes to create connections — because maintaining personal understanding is the point. An agent that *suggests* rather than *imposes* structure fits his philosophy: "embrace chaos and laziness to create emergent structure."
+
+### Practitioner Evidence
+
+| Practitioner | How they express this principle |
+|---|---|
+| **James Bedford** | Separates AI-generated content from the vault entirely. Claude reads the Polaris doc and commonplace notes, produces Idea Reports with suggestions. The human decides what to act on |
+| **Kent de Bruin** | AI "fills gaps, surfaces connections, and deepens thinking **without replacing the author's voice**" |
+| **Eleanor Konik** | "Knowledge **utilization** over management." She writes and reads; Claude handles organizational maintenance. The note content stays hers |
+| **YouTube / Vin** | Custom commands are all *read* operations: "challenge" finds contradictions, "trace" tracks idea evolution, "emerge" surfaces conclusions. The vault is the "source of truth" maintained by the human |
+| **Teresa Torres** | Uses Claude as a "sparring partner" — she writes the actual prose herself. Claude reviews for clarity but doesn't generate the core content |
+
+### What the Agent *Does* Do
+
+The agent isn't passive. Within the "read and surface" model, the agent's active contributions are:
+
+**Navigation and retrieval:**
+- Search across the full vault (QMD, CLI, backlinks) to find relevant notes the human forgot about
+- Traverse the link graph to surface multi-hop connections
+- Read MOCs and the Home Note to orient itself in the vault's structure
+
+**Synthesis and surfacing:**
+- Generate Idea Reports that cross-reference notes and suggest actions (Bedford)
+- Identify contradictions between notes written months apart (challenge mode)
+- Track how a concept evolved over time across the vault (trace mode)
+- Surface conclusions latent in scattered premises the human hasn't connected (emerge mode)
+- Find orphan notes and suggest where they connect
+
+**Maintenance (with human review):**
+- Suggest links between unlinked notes — human approves
+- Flag notes that may need splitting (violate atomicity)
+- Identify seedlings that have grown enough to be promoted
+- Flag evergreen notes whose references are outdated
+- Validate frontmatter consistency and naming conventions
+- Submit changes via git PRs for human review (Konik's pattern)
+
+**What the agent does *not* do in this model:**
+- Write permanent/evergreen notes from scratch
+- Decide what the human thinks about a topic
+- Assign epistemic status or confidence levels
+- Create MOCs without the human's involvement
+- Move notes between maturity stages without signaling
+- Generate content that enters the knowledge graph without explicit promotion
+
+### The Boundary
+
+The dividing line: **the agent handles the cognitive overhead of the system so the human can focus on thinking.** The human's job is to write, read, reflect, and decide. The agent's job is to remember, search, connect, and surface. The vault is the shared medium — the human writes into it, the agent reads from it, and insights flow back to the human as suggestions rather than edits.
+
+This is the difference between an agent as a *ghostwriter* (writes for you) and an agent as a *research librarian* (knows every book in the collection and can find the three you need right now).
+
+---
+
+## Obsidian Primitives for Human-Write, Agent-Read Vaults
+
+How do the methodologies and practitioners actually use Obsidian's native building blocks? And which uses create the most signal for an agent that reads rather than writes?
+
+### Frontmatter Properties: The Agent's Primary Index
+
+Frontmatter is the single most important primitive for agent reading. The agent can parse the first 10 lines of YAML and know a note's type, status, confidence, parent MOC, and creation date — without reading the markdown body at all.
+
+**How practitioners use it:**
+
+| Field | Who uses it | What the agent gets |
+|---|---|---|
+| `type: concept` | Zettelkasten, LYT, Ango | Instant note classification — agent knows what structure to expect |
+| `status: seedling` | Digital Gardens, Bedford | Maturity signal — agent weighs evergreen notes over seedlings |
+| `confidence: likely` | Gwern, Digital Gardens | Trust calibration — agent avoids presenting speculative content as fact |
+| `up: "[[Parent MOC]]"` | LYT | Upward navigation — agent always knows the broader context |
+| `tags: [domain/ai, type/concept]` | Bedford, all | Filtering without reading body text |
+| `created` / `last-tended` | Ango, Matuschak | Temporal queries and staleness detection |
+| `related: ["[[Note A]]"]` | Zettelkasten | Explicit graph edges parseable from YAML, supplementing inline wikilinks |
+| `aliases: ["alt name"]` | Obsidian native | Agent finds notes by alternative names |
+| `summary-layer: 4` | Progressive Summarization | Processing priority — agent knows which notes are most distilled |
+
+**The design rule:** Use enum-constrained values (not free text) for fields the agent will filter on. `status: seedling` is deterministic; `status: "still working on this one"` is not.
+
+**Bases vs. Dataview:** Bases (`.base` files) are YAML-defined database views over frontmatter. They're trivially writable by agents (the obsidian-skills SKILL.md provides the full spec) and queryable via CLI (`obsidian base:query format=json`). Dataview uses a bespoke query language agents frequently get wrong. For an agent-read vault, **Bases are the better primitive** — and they support bidirectional editing (changing a cell updates the note's frontmatter).
+
+### Wikilinks: The Knowledge Graph
+
+Wikilinks (`[[Note Title]]`) are how the vault becomes a graph rather than a folder of files. For the human-writes/agent-reads model, they're the primary navigation layer the agent traverses.
+
+**How practitioners use them:**
+
+| Pattern | Who | Agent benefit |
+|---|---|---|
+| **Dense inline linking** | Zettelkasten, Matuschak, Ango | Agent follows 1–2 hops of links for context around any note |
+| **Unresolved links as breadcrumbs** | Ango | Placeholders for notes that don't exist yet — agent can surface these as "ideas to develop" |
+| **Annotated links in Related sections** | Zettelkasten | `[[Note A]] — why this connects` gives the agent the *reason* for the connection, not just the edge |
+| **MOCs as curated link lists** | LYT, de Bruin | Agent reads a MOC to understand an entire topic domain in one note |
+| **`up:` links in frontmatter** | LYT | Structured upward navigation — agent climbs from any note to its MOC to the Home Note |
+| **Embeds (`![[Note#section]]`)** | Obsidian native | Agent can read embedded content in-place without following the link |
+
+**The community consensus:** Tags for attributes, links for relationships. An agent uses tags to narrow the search space (what *kind* of notes?), then links to traverse within it (how do they *connect*?).
+
+### Tags: Classification Layer
+
+Tags serve as the machine-readable classification system the agent scans without reading note bodies.
+
+**The standout patterns:**
+
+**Multi-dimensional tag namespaces.** The most agent-friendly vaults use 3–5 orthogonal tag dimensions:
+
+```
+#type/concept          — what kind of note
+#status/budding        — how mature
+#domain/ai/agents      — what topic area
+#project/zettelclaw    — which project
+#source/article        — where the idea came from
+```
+
+Each dimension is independently queryable. The agent can intersect them: "find all budding concept notes in ai/agents for zettelclaw."
+
+**Tag-as-action markers.** Some practitioners use tags as workflow triggers an agent can scan for:
+
+```
+#process    — needs processing from inbox
+#split      — violates atomicity, needs breaking apart
+#stale      — content may be outdated
+#connect    — orphan that needs links
+#promote    — seedling ready for promotion
+```
+
+An agent scanning for `#process` gets an instant work queue without natural language parsing.
+
+**Inline tags for paragraph-level annotation.** Tags mid-paragraph let the agent extract tagged lines without reading full notes:
+
+```markdown
+- This contradicts what I wrote in [[Other Note]] #contradiction
+- Need to verify with primary sources #verify
+```
+
+**Bedford's approach:** Tags on every commonplace note, nested with parent/child relationships. Tags enable Claude to filter efficiently when scanning for relevant content. "One of the most criminally underutilised ways of navigating through an Obsidian vault."
+
+**The CLI unlock:** `obsidian tags sort=count counts` gives the agent the full tag taxonomy in one command — no file scanning needed.
+
+### Callouts: Semantic Sections Within Notes
+
+Callouts (`>[!type]`) create typed, delimited blocks within unstructured prose. For an agent reading notes, they're the most reliable way to extract specific *kinds* of content.
+
+**The callouts that matter most for agent reading:**
+
+| Callout | Agent use | Example |
+|---|---|---|
+| `>[!summary]` / `>[!abstract]` | Fast relevance assessment without reading full note | Every substantive note should have one |
+| `>[!question]` | Open threads the agent can help with or surface in reports | "What's the relationship between X and Y?" |
+| `>[!quote]` | Attributed source material — distinguishable from the author's own thinking | Supports source/thinking separation |
+| `>[!example]` | Concrete instances that ground abstract concepts | Agent uses to explain concepts back to the user |
+| `>[!warning]` | Caveats that constrain how information should be applied | Agent includes these when surfacing the note |
+| `>[!todo]` | Actionable items the agent can track | Complement to GTD-style task management |
+
+**Custom callouts for agent context:**
+
+```markdown
+> [!agent-context]
+> This section provides context specifically for AI agent consumption.
+> Not visible in most reading workflows but parseable by the agent.
+```
+
+**Hidden comments for agent instructions:** Obsidian's `%%...%%` syntax creates comments invisible in reading view but visible in raw markdown:
+
+```markdown
+%%agent: This note needs updating — the API changed in v3%%
+```
+
+An agent reading raw markdown sees these; a human in reading view doesn't.
+
+### Templates: Enforcing Parseable Structure
+
+Templates make notes consistently structured so the agent can predict what it will find.
+
+**The minimum viable template for an agent-read vault:**
+
+```markdown
+---
+type: concept
+status: seedling
+up: "[[Parent MOC]]"
+tags: []
+created: {{date}}
+---
+
+>[!summary]
+> One-sentence summary.
+
+# {{title}}
+
+Content in your own words.
+
+## Related
+- [[Note]] — why it connects
+```
+
+This gives the agent: type (frontmatter), maturity (status), navigation (up), fast relevance (summary callout), and graph edges (Related section) — all in a predictable structure.
+
+**Templater** extends this with dynamic generation: auto-populated dates, navigation links to previous/next daily notes, UIDs, and Dataview queries. The key capability is **folder templates** — auto-applying the right template when a note is created in a specific folder, so the human never has to think about structure.
+
+### Bases: Computed Views for Agent Querying
+
+Obsidian Bases (`.base` files) are YAML-defined database views over vault frontmatter. They stand out for the agent-read model because:
+
+1. **The agent can write `.base` files** to create custom views — the obsidian-skills SKILL.md provides the full specification
+2. **The CLI enables reading results** — `obsidian base:query format=json` returns structured data
+3. **Computed properties** — formulas like `days_until_due` or `is_overdue` produce derived data without the human calculating anything
+4. **Bidirectional editing** — changing a cell in a Base view updates the note's frontmatter
+
+**Practical use:** The agent creates a `.base` file that filters for `#status/stale` notes older than 6 months, queries it via CLI, and presents the results as a "vault health report." The human wrote all the notes; the agent computed the view.
+
+### Canvas: Spatial Thinking (Human Primitive)
+
+JSON Canvas (`.canvas` files) are spatial layouts of notes, images, and cards. These are primarily a *human* primitive — visual arrangement for thinking — but an agent can:
+
+- Read a canvas to understand how the human has spatially grouped ideas
+- Generate canvas files as visual summaries (ClawVault does this)
+- The obsidian-skills `json-canvas` SKILL.md teaches agents the node/edge/group format
+
+For the human-writes/agent-reads model, canvas is lower priority — the graph structure in links and MOCs is more traversable than spatial layout.
+
+### Primitive Ranking for Human-Write, Agent-Read
+
+Ordered by value to an agent that reads and surfaces:
+
+| Rank | Primitive | Agent value | Human effort to maintain |
+|---|---|---|---|
+| 1 | **Frontmatter properties** | Instant classification, filtering, structured queries | Low — templates auto-populate most fields |
+| 2 | **Wikilinks** | Graph traversal, multi-hop context, relationship discovery | Medium — requires linking discipline |
+| 3 | **`>[!summary]` callouts** | Fast relevance assessment across hundreds of notes | Low — one sentence per note |
+| 4 | **Tags (nested)** | Taxonomy scanning, dimension-based filtering | Low — applied at note creation |
+| 5 | **MOCs (via wikilinks)** | Topic orientation without full-vault search | Medium — emerges when clusters form |
+| 6 | **Bases** | Computed views, structured CLI queries, health reports | Low — agent can create these |
+| 7 | **Templates** | Structural consistency the agent can predict | One-time setup |
+| 8 | **`%%hidden comments%%`** | Agent-only instructions invisible to reading view | Low — occasional |
+| 9 | **Canvas** | Spatial context (secondary to graph context) | Variable — optional |
+
+The top 4 (frontmatter, wikilinks, summary callouts, tags) form a complete read interface for an agent. If a vault has these four primitives used consistently, the agent can navigate, filter, assess relevance, and traverse the knowledge graph without reading every note body.
+
+---
+
 ## Synthesis: What to Adopt for an AI-Native Vault
 
 ### Tier 1: Adopt Fully
@@ -426,6 +743,8 @@ These concepts translate directly into agent affordances and should be built int
 | **Inbox folder** | GTD, PARA | Universal write target. Agent captures here without classifying |
 | **Dense, contextual linking** | Zettelkasten, Evergreen | Links include *why* the connection exists. Agent traverses for multi-hop context |
 | **Source/thinking separation** | Zettelkasten | Reference notes (what others said) vs. permanent notes (what you think) |
+| **Polaris / "Top of Mind" doc** | Bedford | Persistent goals/values reference the agent consults for all suggestions |
+| **AI/human content separation** | Bedford | Agent output in a separate space; only promoted content enters the knowledge graph |
 
 ### Tier 2: Adopt Selectively
 
@@ -496,23 +815,26 @@ Content: one atomic concept in your own words (Zettelkasten)
 - [[Note B]] — how this contrasts
 ```
 
-### The Agent's Role Across Methodologies
+### The Agent's Role: Read, Search, Surface
 
-The AI assistant can absorb the maintenance overhead that makes these systems unsustainable for most people:
+Following the [design principle](#design-principle-human-writes-agent-reads), the agent operates as a reader and navigator — not a writer. It absorbs the *cognitive overhead* of maintaining the system so the human can focus on thinking and writing.
 
-| Human struggle | Agent solution | Methodology source |
-|---|---|---|
-| Writing atomic notes from raw captures | Agent converts fleeting notes to formatted Zettels | Zettelkasten |
-| Maintaining dense links | Agent suggests links between unlinked notes | Evergreen, Zettelkasten |
-| Creating and updating MOCs | Agent detects clusters, proposes MOCs, keeps them current | LYT |
-| Progressive summarization | Agent applies Layers 2–4 automatically | Progressive Summarization |
-| Weekly review | Agent audits projects for next actions, processes inbox | GTD |
-| Maturity promotion | Agent promotes seedlings when evidence strengthens, flags stale trees | Digital Gardens |
-| Orphan detection | Agent finds unlinked notes and suggests integration | Evergreen, LYT |
-| Consistency enforcement | Agent validates frontmatter, naming conventions, link formats | All |
-| Deduplication | Agent detects overlapping concepts across sources | Evergreen |
+| Human struggle | What the agent does | What it does *not* do | Source |
+|---|---|---|---|
+| Can't remember what you wrote | Searches vault, surfaces relevant notes | Write new notes for you | Zettelkasten |
+| Missing connections between notes | Suggests links between unlinked notes | Create links without approval | Evergreen, Zettelkasten |
+| Too many notes to hold in mind | Detects clusters, proposes MOC structure | Build MOCs unilaterally | LYT |
+| Notes pile up unprocessed | Flags inbox items needing attention, suggests where they connect | Decide what the human thinks about them | GTD |
+| Can't track idea evolution | Traces how a concept changed across months of notes | Assign meaning to the evolution | Zettelkasten |
+| Stale notes go unnoticed | Flags evergreen notes with outdated references, identifies seedlings ready for promotion | Promote or demote without signaling | Digital Gardens |
+| Orphan notes accumulate | Finds unlinked notes, suggests integration points | Delete or reorganize autonomously | Evergreen, LYT |
+| Inconsistent formatting | Validates frontmatter, naming conventions, link formats; reports violations | Silently rewrite content | All |
+| Overlapping concepts across sources | Detects duplicates, flags for human merge decision | Merge notes without approval | Evergreen |
+| Losing focus on priorities | Reads Polaris doc, filters suggestions through goals/values | Decide what matters | Bedford |
+| Hard to see the big picture | Generates Idea Reports: cross-vault synthesis with actionable suggestions | Act on the suggestions | Bedford |
+| No time for vault maintenance | Submits cleanup changes via git PRs for human review | Commit directly without review | Konik |
 
-This is the fundamental unlock: **methodologies that were too maintenance-heavy for humans become practical when an agent handles the upkeep.**
+The fundamental unlock: **methodologies that were too maintenance-heavy for humans become practical when an agent handles the overhead — while the human retains authority over what the vault says.**
 
 ---
 
