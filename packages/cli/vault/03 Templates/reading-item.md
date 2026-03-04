@@ -1,13 +1,14 @@
 ---
-type: watch
+type: reading
 status: queued
-tags: [watch]
+tags: [reading]
 source: ""
-platform: ""
-length: ""
+author: ""
+priority: medium
 created: <% tp.date.now("YYYY-MM-DD") %>
 updated: <% tp.date.now("YYYY-MM-DD") %>
 ---
+
 ## Why this is on the list
 
 ## Notes

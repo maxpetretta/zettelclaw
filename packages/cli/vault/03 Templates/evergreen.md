@@ -1,14 +1,14 @@
 ---
-type: writing
-tags: [writing]
+type: evergreen
+tags: []
 summary: ""
 source: ""
-published: ""
 created: <% tp.date.now("YYYY-MM-DD") %>
 updated: <% tp.date.now("YYYY-MM-DD") %>
 ---
-## Audience
 
-## Draft
+## Idea
 
-## Publication checklist
+## Why it matters
+
+## Linked notes

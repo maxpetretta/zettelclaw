@@ -48,6 +48,21 @@
             }
           },
           {
+            "id": "tags",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
             "id": "search",
             "type": "leaf",
             "state": {
@@ -101,21 +116,6 @@
               "icon": "lucide-list",
               "title": "Outline"
             }
-          },
-          {
-            "id": "tags",
-            "type": "leaf",
-            "state": {
-              "type": "tag",
-              "state": {
-                "sortOrder": "frequency",
-                "useHierarchy": true,
-                "showSearch": false,
-                "searchQuery": ""
-              },
-              "icon": "lucide-tags",
-              "title": "Tags"
-            }
           }
         ]
       }
@@ -139,8 +139,8 @@
   "lastOpenFiles": [
     "README.md",
     "01 Notes/Media Queues Dashboard.md",
-    "04 Templates/clipper-read-it-later.json",
-    "04 Templates/clipper-reading-list.json",
-    "04 Templates/clipper-watch-list.json"
+    "03 Templates/clipper-read-it-later.json",
+    "03 Templates/clipper-reading-list.json",
+    "03 Templates/clipper-watch-list.json"
   ]
 }

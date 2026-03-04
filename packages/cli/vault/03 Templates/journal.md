@@ -1,13 +1,14 @@
 ---
-type: evergreen
-tags: []
-summary: ""
-source: ""
+type: journal
+tags: [journals]
 created: <% tp.date.now("YYYY-MM-DD") %>
 updated: <% tp.date.now("YYYY-MM-DD") %>
 ---
-## Idea
 
-## Why it matters
+## Done
 
-## Linked notes
+## Decisions
+
+## Facts
+
+## Open

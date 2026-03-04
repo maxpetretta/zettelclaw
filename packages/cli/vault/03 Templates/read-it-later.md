@@ -1,15 +1,15 @@
 ---
-type: reading
-status: queued
-tags: [reading]
+type: read-it-later
+status: inbox
+tags: [read-later, captures]
 source: ""
 author: ""
-priority: medium
 created: <% tp.date.now("YYYY-MM-DD") %>
 updated: <% tp.date.now("YYYY-MM-DD") %>
 ---
-## Why this is on the list
 
-## Notes
+## Why save this
 
-## Completion
+## Key excerpts
+
+## Next action

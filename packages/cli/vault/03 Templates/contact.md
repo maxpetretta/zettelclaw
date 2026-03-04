@@ -1,13 +1,14 @@
 ---
-type: journal
-tags: [journals]
+type: contact
+tags: [contacts]
+aliases: []
+summary: ""
 created: <% tp.date.now("YYYY-MM-DD") %>
 updated: <% tp.date.now("YYYY-MM-DD") %>
 ---
-## Done
 
-## Decisions
+## Context
 
-## Facts
+## Notes
 
-## Open
+## Follow-ups
