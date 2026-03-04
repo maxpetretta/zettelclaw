@@ -6,20 +6,7 @@ export interface VaultFolders {
   attachments: string
 }
 
-export interface VaultFoldersWithAgent extends VaultFolders {
-  agent: string
-}
-
-export const FOLDERS_WITH_AGENT: VaultFoldersWithAgent = {
-  inbox: "00 Inbox",
-  notes: "01 Notes",
-  journal: "03 Journal",
-  agent: "02 Agent",
-  templates: "04 Templates",
-  attachments: "05 Attachments",
-}
-
-export const FOLDERS_WITHOUT_AGENT: VaultFolders = {
+export const FOLDERS: VaultFolders = {
   inbox: "00 Inbox",
   notes: "01 Notes",
   journal: "02 Journal",
@@ -35,21 +22,23 @@ export const LEGACY_FOLDERS: VaultFolders = {
   attachments: "Attachments",
 }
 
-export const LEGACY_AGENT_FOLDER = "Agent"
+export const LEGACY_AGENT_FOLDER_ALIASES = ["02 Agent", "03 Agent", "Agent"] as const
 
-export const NOTES_FOLDER_CANDIDATES = [FOLDERS_WITH_AGENT.notes, LEGACY_FOLDERS.notes] as const
+export const NOTES_FOLDER_CANDIDATES = [FOLDERS.notes, LEGACY_FOLDERS.notes] as const
 
 export const JOURNAL_FOLDER_ALIASES = [
-  FOLDERS_WITH_AGENT.journal,
-  FOLDERS_WITHOUT_AGENT.journal,
+  FOLDERS.journal,
+  "03 Journal",
   "02 Daily",
   "03 Daily",
   LEGACY_FOLDERS.journal,
   "Journal",
 ] as const
 
-export const AGENT_FOLDER_ALIASES = [FOLDERS_WITH_AGENT.agent, "03 Agent", LEGACY_AGENT_FOLDER] as const
+export const TEMPLATES_FOLDER_ALIASES = [FOLDERS.templates, "04 Templates", LEGACY_FOLDERS.templates] as const
 
-export function getVaultFolders(includeAgent: boolean): VaultFolders {
-  return includeAgent ? FOLDERS_WITH_AGENT : FOLDERS_WITHOUT_AGENT
+export const ATTACHMENTS_FOLDER_ALIASES = [FOLDERS.attachments, "05 Attachments", LEGACY_FOLDERS.attachments] as const
+
+export function getVaultFolders(): VaultFolders {
+  return FOLDERS
 }

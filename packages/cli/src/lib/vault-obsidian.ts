@@ -47,8 +47,8 @@ function rewriteTemplatePaths(value: unknown, templatesFolder: string): unknown 
   return value
 }
 
-export async function configureApp(pathToVault: string, includeAgent: boolean): Promise<void> {
-  const folders = getVaultFolders(includeAgent)
+export async function configureApp(pathToVault: string): Promise<void> {
+  const folders = getVaultFolders()
   const journalTemplatePath = `${folders.templates}/journal.md`
 
   const appPath = join(pathToVault, ".obsidian", "app.json")

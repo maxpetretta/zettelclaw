@@ -7,7 +7,8 @@ import { ensureOpenClawMemoryPath } from "../lib/openclaw"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { type DownloadResult, downloadPlugins } from "../lib/plugins"
-import { configureAgentFolder, createAgentSymlinks } from "../lib/vault-agent"
+import { ensureQmdCollections } from "../lib/qmd"
+import { configureVaultFolders } from "../lib/vault-folders"
 import { isDirectory, pathExists } from "../lib/vault-fs"
 import {
   configureApp,
@@ -130,7 +131,6 @@ export async function runInit(options: InitOptions): Promise<void> {
     throw new Error(`OpenClaw workspace not found at ${toTildePath(workspacePath)}`)
   }
 
-  const includeAgentFolder = workspaceDetected
   if (workspaceDetected) {
     configureOpenClawEnvForWorkspace(workspacePath)
   }
@@ -138,9 +138,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   const s = spinner()
 
   s.start("Configuring vault files")
-  await configureAgentFolder(vaultPath, includeAgentFolder)
-  await copyVaultSeed(vaultPath, { overwrite: false, includeAgent: includeAgentFolder })
-  await seedVaultStarterContent(vaultPath, includeAgentFolder)
+  await configureVaultFolders(vaultPath)
+  await copyVaultSeed(vaultPath, { overwrite: false })
+  await seedVaultStarterContent(vaultPath)
   await configureCoreSync(vaultPath, syncMethod)
   await configureCommunityPlugins(vaultPath, {
     enabled: true,
@@ -148,7 +148,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     includeMinimalThemeTools: minimal,
   })
   await configureMinimalTheme(vaultPath, minimal)
-  await configureApp(vaultPath, includeAgentFolder)
+  await configureApp(vaultPath)
   s.stop("Vault configured")
 
   s.start("Downloading plugins")
@@ -162,6 +162,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     includeMinimalThemeTools: minimal,
   })
   await configureMinimalTheme(vaultPath, minimal)
+
+  s.start("Configuring QMD collections")
+  const qmdResult = await ensureQmdCollections(vaultPath)
+  s.stop(qmdResult.skipped ? "QMD setup skipped" : "QMD collections configured")
 
   if (syncMethod === "git") {
     const gitDir = join(vaultPath, ".git")
@@ -178,18 +182,13 @@ export async function runInit(options: InitOptions): Promise<void> {
     summaryLines.push(`Plugins: ${pluginResult.downloaded.join(", ")}`)
   }
 
+  if (qmdResult.configured.length > 0) {
+    summaryLines.push(`QMD collections: ${qmdResult.configured.length} root folders`)
+  }
+
   if (workspaceDetected) {
-    const symlinkResult = await createAgentSymlinks(vaultPath, workspacePath)
     const openclawConfigPath = join(dirname(workspacePath), "openclaw.json")
     const openclawPatch = await ensureOpenClawMemoryPath(vaultPath, openclawConfigPath)
-
-    if (symlinkResult.added.length > 0) {
-      summaryLines.push(`Agent links: ${symlinkResult.added.length} created`)
-    }
-
-    if (symlinkResult.failed.length > 0) {
-      log.warn(`Could not create some symlinks:\n${symlinkResult.failed.map((line) => `- ${line}`).join("\n")}`)
-    }
 
     if (openclawPatch.changed) {
       summaryLines.push("OpenClaw config: memory path added")
@@ -199,15 +198,21 @@ export async function runInit(options: InitOptions): Promise<void> {
       log.warn(openclawPatch.message)
     }
   } else {
-    log.warn(
-      `OpenClaw workspace not found at ${toTildePath(workspacePath)}. Skipped agent symlinks and memory-path patch.`,
-    )
+    log.warn(`OpenClaw workspace not found at ${toTildePath(workspacePath)}. Skipped memory-path patch.`)
   }
 
   log.message(summaryLines.join("\n"))
 
   if (pluginResult.failed.length > 0) {
     log.warn(`Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
+  }
+
+  if (qmdResult.message) {
+    log.warn(qmdResult.message)
+  }
+
+  if (qmdResult.failed.length > 0) {
+    log.warn(`QMD collection failures:\n${qmdResult.failed.map((line) => `- ${line}`).join("\n")}`)
   }
 
   log.success("Done. Open your vault in Obsidian to start using the template.")

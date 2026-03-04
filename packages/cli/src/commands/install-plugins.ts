@@ -1,4 +1,3 @@
-import { join } from "node:path"
 import { intro, log, select, spinner, text } from "@clack/prompts"
 
 import { DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
@@ -91,7 +90,7 @@ export async function runInstallPlugins(options: InstallPluginsOptions): Promise
   })
   await configureMinimalTheme(vaultPath, options.minimal)
 
-  await configureApp(vaultPath, await isDirectory(join(vaultPath, "02 Agent")))
+  await configureApp(vaultPath)
 
   log.message(
     [`Vault path: ${toTildePath(vaultPath)}`, `Downloaded: ${pluginResult.downloaded.join(", ") || "none"}`].join("\n"),

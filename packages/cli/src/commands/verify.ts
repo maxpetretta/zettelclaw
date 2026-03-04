@@ -1,24 +1,19 @@
-import { lstat, readFile, readlink } from "node:fs/promises"
-import { dirname, join, resolve } from "node:path"
+import { readFile } from "node:fs/promises"
+import { dirname, join } from "node:path"
 import { intro, log, text } from "@clack/prompts"
 
 import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
-import {
-  FOLDERS_WITH_AGENT,
-  FOLDERS_WITHOUT_AGENT,
-  JOURNAL_FOLDER_ALIASES,
-  NOTES_FOLDER_CANDIDATES,
-} from "../lib/folders"
+import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES, TEMPLATES_FOLDER_ALIASES } from "../lib/folders"
 import { readOpenClawConfigFile, readOpenClawExtraPathsByScope } from "../lib/openclaw-config"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
+import { expectedQmdCollections, listQmdCollections } from "../lib/qmd"
 import { detectVaultFromOpenClawConfig, looksLikeZettelclawVault } from "../lib/vault-detect"
 import { isDirectory, pathExists } from "../lib/vault-fs"
 
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
-const TEMPLATE_FOLDER_CANDIDATES = [FOLDERS_WITH_AGENT.templates, FOLDERS_WITHOUT_AGENT.templates] as const
+const TEMPLATE_FOLDER_CANDIDATES = [...TEMPLATES_FOLDER_ALIASES]
 const REQUIRED_PLUGIN_IDS = ["templater-obsidian", "obsidian-linter", "dataview"] as const
-const AGENT_FILES = ["AGENTS.md", "SOUL.md", "IDENTITY.md", "USER.md", "TOOLS.md", "MEMORY.md"] as const
 
 export interface VerifyOptions {
   yes: boolean
@@ -190,6 +185,36 @@ async function buildDataviewCheck(vaultPath: string): Promise<VerifyCheck> {
   }
 }
 
+function buildQmdCheck(vaultPath: string): VerifyCheck {
+  const expected = expectedQmdCollections(vaultPath)
+  const listed = listQmdCollections()
+
+  if (!listed.ok) {
+    return {
+      name: "QMD collections",
+      status: "warn",
+      detail: listed.message ?? "qmd unavailable",
+    }
+  }
+
+  const names = new Set(listed.names)
+  const missing = expected.filter((collection) => !names.has(collection.name))
+
+  if (missing.length === 0) {
+    return {
+      name: "QMD collections",
+      status: "pass",
+      detail: `${expected.length} root-folder collections configured`,
+    }
+  }
+
+  return {
+    name: "QMD collections",
+    status: "warn",
+    detail: `missing ${missing.length}/${expected.length}: ${missing.map((collection) => collection.name).join(", ")}`,
+  }
+}
+
 async function buildOpenClawChecks(vaultPath: string, workspacePath: string): Promise<VerifyCheck[]> {
   const checks: VerifyCheck[] = []
   const openclawDir = dirname(workspacePath)
@@ -221,70 +246,6 @@ async function buildOpenClawChecks(vaultPath: string, workspacePath: string): Pr
       name: "OpenClaw memory extraPaths",
       status: "fail",
       detail: `vault path missing from extraPaths in ${toTildePath(openclawConfigPath)}`,
-    })
-  }
-
-  const agentFolderPath = join(vaultPath, "02 Agent")
-  if (!(await isDirectory(agentFolderPath))) {
-    checks.push({
-      name: "Agent symlink folder",
-      status: "warn",
-      detail: "02 Agent not found (likely installed without OpenClaw integration)",
-    })
-
-    return checks
-  }
-
-  let validCount = 0
-  let missingCount = 0
-  let mismatchedCount = 0
-
-  for (const file of AGENT_FILES) {
-    const linkPath = join(agentFolderPath, file)
-
-    if (!(await pathExists(linkPath))) {
-      missingCount += 1
-      continue
-    }
-
-    try {
-      const stats = await lstat(linkPath)
-      if (!stats.isSymbolicLink()) {
-        mismatchedCount += 1
-        continue
-      }
-
-      const linkTarget = await readlink(linkPath)
-      const resolvedTarget = resolve(dirname(linkPath), linkTarget)
-      const expectedTarget = resolve(workspacePath, file)
-
-      if (resolvedTarget === expectedTarget) {
-        validCount += 1
-      } else {
-        mismatchedCount += 1
-      }
-    } catch {
-      mismatchedCount += 1
-    }
-  }
-
-  if (mismatchedCount === 0 && missingCount === 0 && validCount === AGENT_FILES.length) {
-    checks.push({
-      name: "Agent symlinks",
-      status: "pass",
-      detail: `${validCount}/${AGENT_FILES.length} links point at workspace files`,
-    })
-  } else if (validCount > 0) {
-    checks.push({
-      name: "Agent symlinks",
-      status: "warn",
-      detail: `${validCount}/${AGENT_FILES.length} valid, ${missingCount} missing, ${mismatchedCount} mismatched`,
-    })
-  } else {
-    checks.push({
-      name: "Agent symlinks",
-      status: "fail",
-      detail: "No valid symlinks detected in 02 Agent",
     })
   }
 
@@ -321,6 +282,7 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
 
   checks.push(await buildPluginCheck(vaultPath))
   checks.push(await buildDataviewCheck(vaultPath))
+  checks.push(buildQmdCheck(vaultPath))
   checks.push(...(await buildTemplateChecks(vaultPath)))
 
   if (workspaceDetected) {

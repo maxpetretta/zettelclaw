@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { copyFile, mkdir } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 
-import { FOLDERS_WITH_AGENT, FOLDERS_WITHOUT_AGENT, getVaultFolders } from "./folders"
+import { FOLDERS, getVaultFolders } from "./folders"
 import { pathExists, walkFiles, writeFileIfMissing } from "./vault-fs"
 
 export interface CopyResult {
@@ -13,7 +13,6 @@ export interface CopyResult {
 
 export interface CopyVaultOptions {
   overwrite: boolean
-  includeAgent: boolean
 }
 
 const TEMPLATE_ROOT = (() => {
@@ -49,6 +48,7 @@ function buildStarterEvergreenNote(dateStamp: string): string {
     `created: ${dateStamp}`,
     `updated: ${dateStamp}`,
     "---",
+    "",
     "# Zettelclaw Vault Principles",
     "",
     "Zettelclaw gives you an opinionated Obsidian setup where agent and human context stay in one place.",
@@ -66,7 +66,6 @@ function buildStarterEvergreenNote(dateStamp: string): string {
     "- Treat `00 Inbox/` as transient and `01 Notes/` as durable.",
     "",
     "## OpenClaw integration",
-    "- `02 Agent/` exposes symlinks to key workspace files.",
     "- `memorySearch.extraPaths` in OpenClaw config points at this vault.",
     "",
     "## Related",
@@ -84,6 +83,7 @@ function buildStarterInboxNote(dateStamp: string): string {
     `created: ${dateStamp}`,
     `updated: ${dateStamp}`,
     "---",
+    "",
     "# Build A Capture Habit",
     "",
     "Start small:",
@@ -92,7 +92,7 @@ function buildStarterInboxNote(dateStamp: string): string {
     "- Promote only durable ideas into typed notes.",
     "",
     "## Next action",
-    "- [ ] Import Web Clipper templates from `04 Templates/`.",
+    "- [ ] Import Web Clipper templates from `03 Templates/`.",
     "",
   ].join("\n")
 }
@@ -105,6 +105,7 @@ function buildStarterJournalEntry(dateStamp: string): string {
     `created: ${dateStamp}`,
     `updated: ${dateStamp}`,
     "---",
+    "",
     "## Done",
     "- Installed and configured Zettelclaw.",
     "",
@@ -112,7 +113,7 @@ function buildStarterJournalEntry(dateStamp: string): string {
     "- This vault will be the shared long-term context between human and agent.",
     "",
     "## Facts",
-    "- Web clipper templates are stored in `04 Templates/`.",
+    "- Web clipper templates are stored in `03 Templates/`.",
     "",
     "## Open",
     "- Import clipper templates and test the first capture.",
@@ -124,7 +125,7 @@ function pathIsInsideFolder(relativePath: string, folder: string): boolean {
   return relativePath === folder || relativePath.startsWith(`${folder}/`)
 }
 
-function remapSeedPath(relativePath: string, options: CopyVaultOptions): string | null {
+function remapSeedPath(relativePath: string): string | null {
   let mapped = relativePath
 
   if (mapped === "gitignore") {
@@ -135,22 +136,20 @@ function remapSeedPath(relativePath: string, options: CopyVaultOptions): string 
     mapped = ".obsidian/workspace.json"
   }
 
-  if (!options.includeAgent) {
-    if (pathIsInsideFolder(mapped, FOLDERS_WITH_AGENT.agent)) {
-      return null
-    }
+  if (pathIsInsideFolder(mapped, "02 Agent")) {
+    return null
+  }
 
-    if (mapped.startsWith(`${FOLDERS_WITH_AGENT.journal}/`)) {
-      mapped = mapped.replace(`${FOLDERS_WITH_AGENT.journal}/`, `${FOLDERS_WITHOUT_AGENT.journal}/`)
-    }
+  if (mapped.startsWith("03 Journal/")) {
+    mapped = mapped.replace("03 Journal/", `${FOLDERS.journal}/`)
+  }
 
-    if (mapped.startsWith(`${FOLDERS_WITH_AGENT.templates}/`)) {
-      mapped = mapped.replace(`${FOLDERS_WITH_AGENT.templates}/`, `${FOLDERS_WITHOUT_AGENT.templates}/`)
-    }
+  if (mapped.startsWith("04 Templates/")) {
+    mapped = mapped.replace("04 Templates/", `${FOLDERS.templates}/`)
+  }
 
-    if (mapped.startsWith(`${FOLDERS_WITH_AGENT.attachments}/`)) {
-      mapped = mapped.replace(`${FOLDERS_WITH_AGENT.attachments}/`, `${FOLDERS_WITHOUT_AGENT.attachments}/`)
-    }
+  if (mapped.startsWith("05 Attachments/")) {
+    mapped = mapped.replace("05 Attachments/", `${FOLDERS.attachments}/`)
   }
 
   return mapped
@@ -167,7 +166,7 @@ export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions
   }
 
   for (const relativePath of files) {
-    const mappedRelativePath = remapSeedPath(relativePath, options)
+    const mappedRelativePath = remapSeedPath(relativePath)
 
     if (!mappedRelativePath) {
       continue
@@ -192,8 +191,8 @@ export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions
   return result
 }
 
-export async function seedVaultStarterContent(vaultPath: string, includeAgent: boolean): Promise<void> {
-  const folders = getVaultFolders(includeAgent)
+export async function seedVaultStarterContent(vaultPath: string): Promise<void> {
+  const folders = getVaultFolders()
   const now = new Date()
   const dateStamp = formatLocalDate(now)
 
