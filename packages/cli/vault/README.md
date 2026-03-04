@@ -4,12 +4,9 @@ This vault is tuned for human + agent collaboration with Obsidian and OpenClaw.
 
 - **00 Inbox/** - raw captures and read-it-later drops
 - **01 Notes/** - durable notes, projects, research, and queue items
-- **02 Agent/** - symlinks to key OpenClaw workspace files (when integration is enabled)
-- **03 Journal/** - daily journals (`YYYY-MM-DD.md`)
-- **04 Templates/** - Templater note templates and Web Clipper JSON templates
-- **05 Attachments/** - files and media
-
-If OpenClaw integration is disabled, `02 Agent/` is omitted and numbering compacts to `02 Journal/`, `03 Templates/`, and `04 Attachments/`.
+- **02 Journal/** - daily journals (`YYYY-MM-DD.md`)
+- **03 Templates/** - Templater note templates and Web Clipper JSON templates
+- **04 Attachments/** - files and media
 
 ## Included workflows
 
@@ -22,13 +19,23 @@ If OpenClaw integration is disabled, `02 Agent/` is omitted and numbering compac
   - `clipper-twitter-bookmark.json`
   - `clipper-youtube-watch.json`
 - Dataview dashboard: `01 Notes/Media Queues Dashboard.md`
+- QMD root-folder collections (created by `zettelclaw init` when `qmd` is installed)
 
 ## OpenClaw integration
 
 When an OpenClaw workspace is detected during `zettelclaw init`, the CLI:
 
-- creates `02 Agent/` symlinks for `AGENTS.md`, `SOUL.md`, `IDENTITY.md`, `USER.md`, `TOOLS.md`, and `MEMORY.md`
 - patches OpenClaw config `memorySearch.extraPaths` so your agent can read the vault as memory context
+
+## QMD integration
+
+If `qmd` is available, `zettelclaw init` creates one collection per root vault folder:
+
+- `zettelclaw-<vault>-inbox`
+- `zettelclaw-<vault>-notes`
+- `zettelclaw-<vault>-journal`
+- `zettelclaw-<vault>-templates`
+- `zettelclaw-<vault>-attachments`
 
 ## Web Clipper import
 
@@ -37,4 +44,4 @@ In the Obsidian Web Clipper extension:
 1. Open extension settings.
 2. Go to `Templates`.
 3. Click `New Template`.
-4. Paste one of the JSON templates from `04 Templates/`.
+4. Paste one of the JSON templates from `03 Templates/`.

@@ -20,7 +20,7 @@ const pillars = [
   },
   {
     title: "CLI Install + Verify",
-    body: "Install vault files, plugin binaries, OpenClaw symlinks, and verify the setup programmatically.",
+    body: "Install vault files, plugin binaries, OpenClaw memory-path integration, and verify the setup programmatically.",
   },
   {
     title: "Queue Workflows",
@@ -92,8 +92,7 @@ const pillars = [
           <article>
             <h3>OpenClaw integration</h3>
             <p>
-              The CLI symlinks key workspace files into `02 Agent/` and patches `memorySearch.extraPaths` so agents can search
-              the vault.
+              The CLI patches `memorySearch.extraPaths` so OpenClaw can search the vault as shared memory context.
             </p>
           </article>
         </div>

@@ -8,6 +8,7 @@ Zettelclaw gives you:
 - typed note templates
 - bundled plugin install via CLI
 - OpenClaw integration through vault memory paths
+- QMD collection setup for each root vault folder
 - Web Clipper templates for read-it-later / reading list / watch list, including Twitter bookmarks and YouTube captures
 - Dataview dashboards to surface those queues
 - a vault-specific agent skill
@@ -31,22 +32,26 @@ npx zettelclaw plugins
 - Vault folders:
   - `00 Inbox/`
   - `01 Notes/`
-  - `02 Agent/` (only when OpenClaw workspace is detected)
-  - `03 Journal/`
-  - `04 Templates/`
-  - `05 Attachments/`
+  - `02 Journal/`
+  - `03 Templates/`
+  - `04 Attachments/`
 - Obsidian plugin defaults (Templater, Linter, Dataview, optional Obsidian Git)
 - Note templates for evergreen/project/research/contact/writing/journal
 - Queue templates for read-it-later, reading, and watch items
-- Web Clipper template JSON files in `04 Templates/`:
+- Web Clipper template JSON files in `03 Templates/`:
   - `clipper-read-it-later.json`
   - `clipper-reading-list.json`
   - `clipper-watch-list.json`
   - `clipper-twitter-bookmark.json`
   - `clipper-youtube-watch.json`
 - `01 Notes/Media Queues Dashboard.md` with Dataview tables
+- QMD root-folder collections (when `qmd` is installed):
+  - `zettelclaw-<vault>-inbox`
+  - `zettelclaw-<vault>-notes`
+  - `zettelclaw-<vault>-journal`
+  - `zettelclaw-<vault>-templates`
+  - `zettelclaw-<vault>-attachments`
 - OpenClaw integration:
-  - `02 Agent/` symlinks to key workspace files
   - `memorySearch.extraPaths` patch in OpenClaw config to include vault path
 
 ## Commands
@@ -58,7 +63,7 @@ npx zettelclaw init
 # Download/refresh plugin binaries
 npx zettelclaw plugins
 
-# Verify vault structure, templates, plugins, and OpenClaw wiring
+# Verify vault structure, templates, plugins, QMD collections, and OpenClaw wiring
 npx zettelclaw verify
 ```
 

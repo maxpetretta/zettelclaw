@@ -17,14 +17,11 @@ Zettelclaw is an opinionated Obsidian vault for human + agent collaboration. It 
 <vault>/
 ├── 00 Inbox/
 ├── 01 Notes/
-├── 02 Agent/        # symlinks to OpenClaw workspace files when integration is enabled
-├── 03 Journal/
-├── 04 Templates/
-├── 05 Attachments/
+├── 02 Journal/
+├── 03 Templates/
+├── 04 Attachments/
 └── README.md
 ```
-
-If OpenClaw integration is off, `02 Agent/` is absent and folder numbering compacts.
 
 ## Note types
 
@@ -42,7 +39,7 @@ Use YAML frontmatter on every note with at least `type`, `created`, `updated`.
 
 ## Templates
 
-Always read the matching template in `04 Templates/` before creating a note:
+Always read the matching template in `03 Templates/` before creating a note:
 
 - `evergreen.md`
 - `project.md`
@@ -56,7 +53,7 @@ Always read the matching template in `04 Templates/` before creating a note:
 
 ## Queue workflows
 
-Web Clipper templates are in `04 Templates/`:
+Web Clipper templates are in `03 Templates/`:
 
 - `clipper-read-it-later.json` -> `00 Inbox/`
 - `clipper-reading-list.json` -> `01 Notes/`
@@ -75,11 +72,14 @@ Dashboard note:
 - Update `updated` whenever a note changes.
 - Link related notes with `[[wikilinks]]`.
 - Do not create new top-level folders unless the user explicitly asks.
-- Do not edit `02 Agent/*` targets directly; they are workspace symlinks.
 
 ## Search patterns
 
 ```bash
+# qmd (preferred when installed)
+qmd query "current project decisions" -c zettelclaw-<vault>-notes
+qmd search "type: read-it-later" -c zettelclaw-<vault>-inbox
+
 # projects
 rg -l 'type: project' "<vault>/01 Notes/"
 
