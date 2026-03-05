@@ -31,12 +31,14 @@ export interface EnsureQmdCollectionsResult {
   configured: string[]
   failed: string[]
   skipped: boolean
+  missingBinary?: boolean
   message?: string
 }
 
 export interface ListQmdCollectionsResult {
   ok: boolean
   names: string[]
+  missingBinary?: boolean
   message?: string
 }
 
@@ -46,8 +48,6 @@ const COLLECTION_FOLDERS: CollectionFolderSpec[] = [
   { suffix: "inbox", folder: FOLDERS.inbox },
   { suffix: "notes", folder: FOLDERS.notes },
   { suffix: "journal", folder: FOLDERS.journal },
-  { suffix: "templates", folder: FOLDERS.templates },
-  { suffix: "attachments", folder: FOLDERS.attachments },
 ]
 
 function formatFailureMessage(args: string[], status: number, stderr: string, stdout: string): string {
@@ -65,7 +65,56 @@ function formatFailureMessage(args: string[], status: number, stderr: string, st
 }
 
 function runQmdCommand(args: string[], options: QmdCommandOptions = {}): QmdCommandResult {
-  const result = spawnSync("qmd", args, {
+  return runCommand("qmd", args, options)
+}
+
+function toSlug(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return slug.length > 0 ? slug : "vault"
+}
+
+function collectionPrefixForVault(vaultPath: string): string {
+  return `zettelclaw-${toSlug(basename(vaultPath))}`
+}
+
+export function expectedQmdCollections(vaultPath: string): QmdCollectionSpec[] {
+  const prefix = collectionPrefixForVault(vaultPath)
+
+  return COLLECTION_FOLDERS.map((spec) => ({
+    name: `${prefix}-${spec.suffix}`,
+    path: join(vaultPath, spec.folder),
+    mask: MARKDOWN_MASK,
+  }))
+}
+
+function parseQmdCollectionNames(raw: string): string[] {
+  const names: string[] = []
+
+  for (const line of raw.split(/\r?\n/u)) {
+    const match = line.match(/^(.+?)\s+\(qmd:\/\/.+\)$/u)
+    if (match?.[1]) {
+      names.push(match[1].trim())
+    }
+  }
+
+  return names
+}
+
+function qmdMissingMessage(): string {
+  return "qmd is not installed. Install it with `npm install -g @tobilu/qmd` (or `bun install -g @tobilu/qmd`) and rerun `zettelclaw init`."
+}
+
+export interface InstallQmdResult {
+  installed: boolean
+  command?: string
+  message?: string
+}
+
+function runCommand(command: string, args: string[], options: QmdCommandOptions = {}): QmdCommandResult {
+  const result = spawnSync(command, args, {
     encoding: "utf8",
     timeout: options.timeoutMs ?? 120_000,
   })
@@ -108,43 +157,43 @@ function runQmdCommand(args: string[], options: QmdCommandOptions = {}): QmdComm
   }
 }
 
-function toSlug(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-  return slug.length > 0 ? slug : "vault"
-}
+export function installQmdGlobal(): InstallQmdResult {
+  const installAttempts: Array<{ command: string; args: string[] }> = [
+    { command: "bun", args: ["install", "-g", "@tobilu/qmd"] },
+    { command: "npm", args: ["install", "-g", "@tobilu/qmd"] },
+  ]
+  const failures: string[] = []
 
-function collectionPrefixForVault(vaultPath: string): string {
-  return `zettelclaw-${toSlug(basename(vaultPath))}`
-}
+  for (const attempt of installAttempts) {
+    const availabilityCheck = runCommand(attempt.command, ["--version"], { timeoutMs: 10_000 })
+    if (!availabilityCheck.ok && availabilityCheck.errorCode === "ENOENT") {
+      continue
+    }
 
-export function expectedQmdCollections(vaultPath: string): QmdCollectionSpec[] {
-  const prefix = collectionPrefixForVault(vaultPath)
+    const install = runCommand(attempt.command, attempt.args, { timeoutMs: 300_000 })
+    const commandLine = `${attempt.command} ${attempt.args.join(" ")}`
 
-  return COLLECTION_FOLDERS.map((spec) => ({
-    name: `${prefix}-${spec.suffix}`,
-    path: join(vaultPath, spec.folder),
-    mask: MARKDOWN_MASK,
-  }))
-}
+    if (install.ok) {
+      return {
+        installed: true,
+        command: commandLine,
+      }
+    }
 
-function parseQmdCollectionNames(raw: string): string[] {
-  const names: string[] = []
+    failures.push(`${commandLine}: ${install.message ?? "failed"}`)
+  }
 
-  for (const line of raw.split(/\r?\n/u)) {
-    const match = line.match(/^(.+?)\s+\(qmd:\/\/.+\)$/u)
-    if (match?.[1]) {
-      names.push(match[1].trim())
+  if (failures.length === 0) {
+    return {
+      installed: false,
+      message: "Could not install QMD because neither `bun` nor `npm` was found on PATH.",
     }
   }
 
-  return names
-}
-
-function qmdMissingMessage(): string {
-  return "qmd is not installed. Install it with `npm install -g @tobilu/qmd` (or `bun install -g @tobilu/qmd`) and rerun `zettelclaw init`."
+  return {
+    installed: false,
+    message: `Could not install QMD.\n${failures.map((line) => `- ${line}`).join("\n")}`,
+  }
 }
 
 export function ensureQmdCollections(vaultPath: string): EnsureQmdCollectionsResult {
@@ -154,6 +203,7 @@ export function ensureQmdCollections(vaultPath: string): EnsureQmdCollectionsRes
       configured: [],
       failed: [],
       skipped: true,
+      missingBinary: true,
       message: qmdMissingMessage(),
     }
   }
@@ -199,6 +249,7 @@ export function listQmdCollections(): ListQmdCollectionsResult {
     return {
       ok: false,
       names: [],
+      missingBinary: true,
       message: qmdMissingMessage(),
     }
   }

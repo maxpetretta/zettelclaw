@@ -7,7 +7,7 @@ import { ensureOpenClawMemoryPath } from "../lib/openclaw"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { type DownloadResult, downloadPlugins } from "../lib/plugins"
-import { ensureQmdCollections } from "../lib/qmd"
+import { ensureQmdCollections, installQmdGlobal } from "../lib/qmd"
 import { configureVaultFolders } from "../lib/vault-folders"
 import { isDirectory, pathExists } from "../lib/vault-fs"
 import {
@@ -109,6 +109,29 @@ function downloadVaultPlugins(vaultPath: string, syncMethod: SyncMethod, minimal
   })
 }
 
+async function promptInstallQmd(): Promise<boolean> {
+  const selection = unwrapPrompt(
+    await select({
+      message: "QMD is not installed. Install it globally now?",
+      initialValue: "install",
+      options: [
+        { value: "install", label: "Install QMD now" },
+        { value: "skip", label: "Skip for now" },
+      ],
+    }),
+  )
+
+  if (selection === "install") {
+    return true
+  }
+
+  if (selection === "skip") {
+    return false
+  }
+
+  throw new Error(`Invalid QMD install option selected: ${String(selection)}`)
+}
+
 export async function runInit(options: InitOptions): Promise<void> {
   intro("🦞 Zettelclaw - Install vault")
 
@@ -164,8 +187,36 @@ export async function runInit(options: InitOptions): Promise<void> {
   await configureMinimalTheme(vaultPath, minimal)
 
   s.start("Configuring QMD collections")
-  const qmdResult = await ensureQmdCollections(vaultPath)
-  s.stop(qmdResult.skipped ? "QMD setup skipped" : "QMD collections configured")
+  let qmdResult = await ensureQmdCollections(vaultPath)
+
+  if (qmdResult.skipped && qmdResult.missingBinary && !options.yes) {
+    s.stop("QMD not installed")
+
+    if (await promptInstallQmd()) {
+      s.start("Installing QMD")
+      const installQmdResult = installQmdGlobal()
+
+      if (installQmdResult.installed) {
+        const command = installQmdResult.command ? ` (${installQmdResult.command})` : ""
+        s.stop(`QMD installed${command}`)
+
+        s.start("Configuring QMD collections")
+        qmdResult = await ensureQmdCollections(vaultPath)
+        s.stop(qmdResult.skipped ? "QMD setup skipped" : "QMD collections configured")
+      } else {
+        s.stop("QMD install failed")
+        if (installQmdResult.message) {
+          log.warn(installQmdResult.message)
+        }
+      }
+    } else {
+      log.warn(
+        "Skipped QMD installation. Install later with `bun install -g @tobilu/qmd` (or `npm install -g @tobilu/qmd`) and rerun `zettelclaw init`.",
+      )
+    }
+  } else {
+    s.stop(qmdResult.skipped ? "QMD setup skipped" : "QMD collections configured")
+  }
 
   if (syncMethod === "git") {
     const gitDir = join(vaultPath, ".git")
