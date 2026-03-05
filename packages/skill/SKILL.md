@@ -1,15 +1,11 @@
 ---
 name: zettelclaw
-description: "Work directly inside a Zettelclaw vault with typed notes, queue workflows, and dataview dashboards."
-read_when:
-  - The user asks to create, update, or search vault notes
-  - The user asks about reading list, watch list, or read-it-later workflows
-  - The user asks how Zettelclaw vault structure works
+description: "Work inside a Zettelclaw vault using the current typed frontmatter schema, inbox + Base workflows, and human-write/agent-read guardrails. Use when creating, updating, organizing, or searching notes in a Zettelclaw vault, including inbox processing, /ask callouts, and journal scaffolding."
 ---
 
 # Zettelclaw
 
-Zettelclaw is an opinionated Obsidian vault for human + agent collaboration. It uses flat folders, typed frontmatter, and queue dashboards for ongoing work.
+Follow the canonical Zettelclaw vault model: capture externally, write durable notes manually, and use the agent for navigation/synthesis.
 
 ## Vault structure
 
@@ -25,71 +21,90 @@ Zettelclaw is an opinionated Obsidian vault for human + agent collaboration. It 
 
 ## Note types
 
-Use YAML frontmatter on every note with at least `type`, `created`, `updated`.
+Use YAML frontmatter on every note:
 
-- `evergreen`: durable ideas
-- `project`: tracked work (`status: active|paused|archived`)
-- `research`: open investigations (`status: active|archived`)
-- `contact`: people notes
-- `writing`: publishable drafts
-- `journal`: daily logs
-- `capture`: universal web captures in `00 Inbox/` (`queue: inbox|reading|watch`)
-- `read-it-later`: captured links in `00 Inbox/`
-- `reading`: reading queue items in `01 Notes/`
-- `watch`: watch queue items in `01 Notes/`
+- Required on all notes:
+  - `type`
+  - `tags`
+  - `created`
+- Required on `doc` and content notes:
+  - `status` (`queued | in-progress | done | archived`)
+- Optional content metadata:
+  - `author`
+  - `source`
+
+Use these primary types:
+
+- `note`: durable atomic thinking note; no `status`
+- `doc`: non-atomic working/reference note; uses `status`
+- `journal`: daily log note; no `status`
+- content types: `article`, `book`, `movie`, `tv`, `youtube`, `tweet`, `podcast`, `paper` (and extensible additional content types); uses `status`
 
 ## Templates
 
 Always read the matching template in `03 Templates/` before creating a note:
 
-- `evergreen.md`
-- `project.md`
-- `research.md`
-- `contact.md`
-- `writing.md`
+- `note.md`
 - `journal.md`
-- `read-it-later.md`
-- `reading-item.md`
-- `watch-item.md`
+- `clipper-capture.json`
 
-## Queue workflows
+Use core templates/date syntax. Do not require Templater.
 
-Web Clipper template is in `03 Templates/`:
+## Inbox workflow
 
-- `clipper-capture.json` -> `00 Inbox/`
-- Use frontmatter `queue: inbox|reading|watch` (or tags) to classify captured items
+- Web captures land in `00 Inbox/` via `clipper-capture.json`.
+- Clipper sets `type` by URL (`tweet`, `youtube`, else `article`) and `status: queued`.
+- Process inbox captures by keeping/moving, converting into a `type: note`, or deleting.
+- Do not auto-write durable thinking notes from captured content unless explicitly asked.
 
-Dashboard note:
+## Bases workflow
 
-- `01 Notes/Media Queues Dashboard.md` (Dataview tables for all queues)
+- `00 Inbox/inbox.base` is the canonical queue view.
+- Grouping is by `note.type` for scan-by-content-type triage.
+- Prefer creating/editing `.base` files over Dataview.
+
+## Titles as APIs
+
+A note's title is its interface. Use complete, declarative phrases: "Spaced Repetition Works Because of Retrieval," not "Spaced Repetition." A well-titled note can be linked and understood without opening it. When creating or renaming notes, always prefer a full declarative statement.
+
+## Tag conventions
+
+Tags live in the frontmatter `tags` array, not inline in the body.
+
+- Lowercase, hyphenated: `spaced-repetition`, not `Spaced Repetition` or `spacedRepetition`.
+- Topic-oriented, not structural: `learning` (what it's about), not `important` (how you feel about it).
+- Nest only when a hierarchy is genuinely useful: `ai/transformers` is fine, deep nesting is not.
+- Suggest tags based on the vault's existing taxonomy rather than inventing new ones.
 
 ## Editing rules
 
-- Prefer appending over rewriting existing content.
-- Keep filenames in Title Case.
-- Update `updated` whenever a note changes.
-- Link related notes with `[[wikilinks]]`.
-- Do not create new top-level folders unless the user explicitly asks.
+- Preserve existing prose unless user asks to rewrite.
+- Do not add or maintain an `updated` frontmatter field.
+- Use dense wikilinking (`[[Note Title]]`) and allow unresolved links as stubs.
+- Do not create top-level folders unless explicitly requested.
+- Do not assign/change `status`, move notes, or delete notes without explicit instruction.
+- Agent write surface is limited to:
+  - `/ask` response callouts
+  - optional daily briefing callout in journals
 
 ## Search patterns
 
 ```bash
 # qmd (preferred when installed)
-qmd query "current project decisions" -c zettelclaw-<vault>-notes
-qmd search "type: capture" -c zettelclaw-<vault>-inbox
+qmd query "spaced repetition and retrieval" -c zettelclaw-<vault>-notes
+qmd search "status: queued" -c zettelclaw-<vault>-inbox
+qmd vsearch "what have I been learning about memory" -c zettelclaw-<vault>-notes
 
-# projects
-rg -l 'type: project' "<vault>/01 Notes/"
-
-# reading queue
-rg -l 'type: reading' "<vault>/01 Notes/"
-
-# watch queue
-rg -l 'type: watch' "<vault>/01 Notes/"
-
-# read-it-later captures
-rg -l 'type: read-it-later' "<vault>/00 Inbox/"
-
-# universal captures
-rg -l 'type: capture' "<vault>/00 Inbox/"
+# ripgrep fallback
+rg -l 'type: note' "01 Notes/"
+rg -l 'type: article' "00 Inbox/" "01 Notes/"
+rg -l 'status: queued' "00 Inbox/" "01 Notes/"
 ```
+
+## OpenClaw integration
+
+If configuring OpenClaw memory paths, use:
+
+- `agents.defaults.memorySearch.extraPaths`
+
+Do not write legacy top-level `memorySearch`.
