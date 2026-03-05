@@ -1,30 +1,41 @@
 ---
-import "@fontsource/sora/400.css"
-import "@fontsource/sora/700.css"
 import "@fontsource/jetbrains-mono/400.css"
 import "@fontsource/jetbrains-mono/600.css"
-import "@/styles/global.css"
 
-const title = "Zettelclaw | Obsidian Vault Template + Agent Skill"
+const title = "Zettelclaw — Obsidian Vault Template + Agent Skill"
 const description =
-  "Opinionated Obsidian vault template for human-write, agent-read knowledge work. Typed notes, web clipper capture, Bases views, and CLI setup."
+  "Opinionated Obsidian vault template for human-write, agent-read knowledge work. Typed notes, web clipper capture, Bases views, QMD search, and CLI setup."
 
-const pillars = [
+const features = [
   {
-    title: "Human Writes, Agent Reads",
-    body: "The vault is your thinking. The agent searches, links, and surfaces connections — never ghostwrites.",
+    label: "Vault",
+    title: "Five folders. Flat.",
+    body: "Inbox, Notes, Journal, Templates, Attachments. No subfolders. Notes are organized by links and metadata, not hierarchy.",
   },
   {
-    title: "Minimal by Design",
-    body: "Five folders, four frontmatter properties, two templates. Nothing you won't use.",
+    label: "Types",
+    title: "Typed frontmatter",
+    body: "note, doc, journal, plus content types — article, book, movie, youtube, tweet, podcast, paper. Four universal properties. Two optional.",
   },
   {
-    title: "CLI Install + Verify",
-    body: "Install vault files, plugin binaries, OpenClaw memory-path integration, and verify the setup programmatically.",
+    label: "Capture",
+    title: "Clipper → Inbox → Notes",
+    body: "One universal Web Clipper template. Sets type by URL, status to queued. Process captures into durable notes or discard.",
   },
   {
-    title: "Typed Content Pipeline",
-    body: "Universal clipper captures articles, tweets, and videos. Bases views replace Dataview for queues and dashboards.",
+    label: "Views",
+    title: "Bases, not Dataview",
+    body: "YAML .base files the agent can write. inbox.base ships included. Inline editing, grouping by type, no bespoke query language.",
+  },
+  {
+    label: "Search",
+    title: "QMD hybrid search",
+    body: "Keyword, semantic, and hybrid search across vault collections. Falls back to ripgrep when QMD isn't installed.",
+  },
+  {
+    label: "Agent",
+    title: "Skill-based context",
+    body: "Agent guidance ships as a skill, not a vault file. OpenClaw memory paths wired automatically at init.",
   },
 ]
 ---
@@ -36,81 +47,870 @@ const pillars = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#111722" />
+    <meta name="theme-color" content="#13111c" />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site ?? "https://zettelclaw.com")} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap"
+      rel="stylesheet"
+    />
   </head>
 
   <body>
-    <main class="page-shell">
-      <section class="hero">
-        <p class="eyebrow">Obsidian Vault Template + Agent Skill</p>
-        <h1>Shared memory that stays useful after the chat window closes.</h1>
-        <p class="lede">
-          Zettelclaw gives you an opinionated Obsidian vault for one workflow: capture what you consume, write your thinking about
-          it, and let an AI agent help you navigate and connect what you've written.
-        </p>
+    <div class="graph-bg" aria-hidden="true">
+      <svg id="graph" viewBox="0 0 1440 700" preserveAspectRatio="xMidYMid slice" fill="none">
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
+    </div>
 
-        <div class="actions">
-          <a class="btn btn-solid" href="https://github.com/maxpetretta/zettelclaw">View GitHub</a>
-          <a class="btn btn-ghost" href="#start">Get Started</a>
+    <main>
+      <nav class="nav">
+        <a href="/" class="wordmark">Zettelclaw</a>
+        <a href="https://github.com/maxpetretta/zettelclaw" class="nav-link">GitHub</a>
+      </nav>
+
+      <section class="hero">
+        <p class="eyebrow">Obsidian vault template <span class="plus">+</span> agent skill</p>
+        <h1>An Obsidian vault your agent can actually&nbsp;read.</h1>
+        <p class="lede">
+          Capture what you consume. Write your thinking about it. Let an AI agent help you navigate and connect what you've
+          written. One command sets it all up.
+        </p>
+        <div class="hero-cta">
+          <button class="copy-block" data-copy="npx zettelclaw" data-label="Copy">
+            <span class="prompt">$</span>
+            <code>npx zettelclaw</code>
+            <span class="copy-label">Copy</span>
+          </button>
+          <a class="btn-ghost" href="https://github.com/maxpetretta/zettelclaw">View on GitHub &rarr;</a>
         </div>
       </section>
 
-      <section class="panel" id="included">
-        <h2>What ships in the repo</h2>
-        <div class="grid">
+      <div class="divider" aria-hidden="true"></div>
+
+      <section class="model reveal">
+        <h2>Human writes. <span class="text-orange">Agent reads.</span></h2>
+        <p class="model-lede">
+          The vault is your externalized thinking. The agent is a reader, navigator, and synthesizer&thinsp;&mdash;&thinsp;never a
+          ghostwriter.
+        </p>
+        <div class="model-grid">
+          <div class="model-col model-col--purple">
+            <h3><span class="dot dot--purple"></span> You write</h3>
+            <ul>
+              <li>One atomic idea per note</li>
+              <li>Titled as complete, declarative phrases</li>
+              <li>Dense <code>[[wikilinks]]</code>, stubs encouraged</li>
+              <li>Your thinking, not summaries</li>
+            </ul>
+          </div>
+          <div class="model-col model-col--orange">
+            <h3><span class="dot dot--orange"></span> Agent reads</h3>
+            <ul>
+              <li>Searches across your vault</li>
+              <li>Surfaces forgotten connections</li>
+              <li>Finds contradictions across time</li>
+              <li>Suggests links and tags</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider" aria-hidden="true"></div>
+
+      <section class="features reveal">
+        <h2>Everything you need.<br /><span class="text-muted">Nothing you don't.</span></h2>
+        <div class="feature-grid">
           {
-            pillars.map((item) => (
-              <article class="card">
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
+            features.map((f) => (
+              <article class="feature-card">
+                <span class="feature-label">{f.label}</span>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
               </article>
             ))
           }
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Included workflows</h2>
-        <div class="workflow-grid">
-          <article>
-            <h3>Web clipper capture</h3>
-            <ul>
-              <li>`clipper-capture.json` routes captures to `00 Inbox/`</li>
-              <li>Sets `type` by URL — `tweet`, `youtube`, or `article`</li>
-              <li>Every capture starts as `status: queued`</li>
-            </ul>
-          </article>
-          <article>
-            <h3>Bases queue views</h3>
-            <p>
-              `inbox.base` groups captures by type for triage. Create more `.base` files for reading queues, watch lists, or any
-              filtered view — no Dataview needed.
-            </p>
-          </article>
-          <article>
-            <h3>OpenClaw integration</h3>
-            <p>
-              The CLI patches `agents.defaults.memorySearch.extraPaths` so OpenClaw can search the vault as shared memory context.
-            </p>
-          </article>
-        </div>
-      </section>
+      <div class="divider" aria-hidden="true"></div>
 
-      <section class="panel" id="start">
-        <h2>Start in two commands</h2>
-        <pre><code>npx zettelclaw init
-npx zettelclaw verify</code></pre>
-        <p class="small">Need to re-pull plugin binaries later? Run `npx zettelclaw plugins`.</p>
+      <section class="start reveal" id="start">
+        <h2>Two commands. Done.</h2>
+        <div class="start-commands">
+          <button class="copy-block copy-block--lg" data-copy="npx zettelclaw init" data-label="Copy">
+            <span class="prompt">$</span>
+            <code>npx zettelclaw init</code>
+            <span class="copy-label">Copy</span>
+          </button>
+          <button class="copy-block copy-block--lg" data-copy="npx zettelclaw verify" data-label="Copy">
+            <span class="prompt">$</span>
+            <code>npx zettelclaw verify</code>
+            <span class="copy-label">Copy</span>
+          </button>
+        </div>
+        <p class="start-note">
+          Need to refresh plugin binaries later? <code>npx zettelclaw plugins</code>
+        </p>
       </section>
 
       <footer class="footer">
-        <span>Zettelclaw</span>
-        <div>
-          <a href="https://github.com/maxpetretta/zettelclaw">GitHub</a>
+        <span class="footer-wordmark">Zettelclaw</span>
+        <div class="footer-links">
           <a href="https://www.npmjs.com/package/zettelclaw">npm</a>
+          <a href="https://github.com/maxpetretta/zettelclaw">GitHub</a>
         </div>
       </footer>
     </main>
+
+    <script>
+      // ---- Animated graph background ----
+      const NS = "http://www.w3.org/2000/svg"
+      const svg = document.getElementById("graph")!
+
+      const fills = [
+        "rgba(139, 92, 246, 0.30)", // purple
+        "rgba(139, 92, 246, 0.50)", // purple bright
+        "rgba(167, 139, 250, 0.38)", // light purple
+        "rgba(109, 40, 217, 0.40)", // deep purple
+        "rgba(196, 181, 253, 0.30)", // pale purple
+        "rgba(249, 115, 22, 0.45)", // orange
+        "rgba(251, 146, 60, 0.40)", // light orange
+        "rgba(253, 186, 116, 0.32)", // amber
+        "rgba(6, 182, 212, 0.32)", // teal
+        "rgba(34, 211, 238, 0.28)", // cyan
+        "rgba(236, 72, 153, 0.30)", // rose
+        "rgba(244, 114, 182, 0.26)", // pink
+      ]
+
+      function pickFill(i: number): string {
+        const overrides: Record<number, number> = {
+          5: 5,
+          14: 1,
+          8: 6,
+          30: 8,
+          29: 9,
+          4: 10,
+          27: 11,
+          9: 7,
+          22: 3,
+          31: 10,
+          17: 8,
+        }
+        if (i in overrides) return fills[overrides[i]]
+        const r = Math.random()
+        if (r < 0.55) return fills[Math.floor(Math.random() * 5)]
+        if (r < 0.72) return fills[5 + Math.floor(Math.random() * 3)]
+        if (r < 0.88) return fills[8 + Math.floor(Math.random() * 2)]
+        return fills[10 + Math.floor(Math.random() * 2)]
+      }
+
+      // prettier-ignore
+      const seed: [number, number, number][] = [
+        // Cluster A - top left
+        [120,140,3.5],[175,95,2.5],[80,195,2],[200,165,3.5],[155,215,2.5],
+        // Cluster B - center left
+        [340,310,5],[295,275,3],[385,275,2.5],[310,355,2.5],[390,345,2],
+        // Cluster C - top center
+        [595,115,3],[645,85,2.5],[560,150,2],[680,135,3],
+        // Cluster D - center (main)
+        [720,370,7],[660,330,3.5],[785,330,3],[685,425,3],[765,420,3.5],[645,395,2.5],[805,385,2.5],
+        // Cluster E - right
+        [1020,195,3.5],[1070,165,2.5],[1000,240,2.5],[1080,225,2],
+        // Cluster F - bottom right
+        [1100,475,3],[1060,515,2.5],[1140,500,2],
+        // Scattered
+        [450,180,2],[500,480,2],[850,195,2],[250,470,2],[900,515,2.5],[1250,300,2],[160,400,2],
+      ]
+
+      // prettier-ignore
+      const edgePairs: [number, number][] = [
+        [0,1],[0,2],[0,3],[3,4],[1,3],
+        [5,6],[5,7],[5,8],[6,7],
+        [10,11],[10,12],[11,13],[10,13],
+        [14,15],[14,16],[14,17],[14,18],[14,19],[14,20],[15,19],[16,20],[17,18],
+        [21,22],[21,23],[22,24],
+        [25,26],[25,27],
+        [3,6],[5,15],[13,14],[20,21],[18,25],[28,10],[30,21],[29,17],
+      ]
+
+      interface GNode {
+        x: number
+        y: number
+        baseR: number
+        vx: number
+        vy: number
+        fill: string
+        phase: number
+        pulseSpeed: number
+        el: SVGCircleElement
+      }
+
+      interface GEdge {
+        a: number
+        b: number
+        el: SVGLineElement
+      }
+
+      const edgeG = document.createElementNS(NS, "g")
+      edgeG.setAttribute("stroke-width", "1")
+      svg.appendChild(edgeG)
+
+      const nodeG = document.createElementNS(NS, "g")
+      svg.appendChild(nodeG)
+
+      const nodes: GNode[] = seed.map(([x, y, r], i) => {
+        const el = document.createElementNS(NS, "circle")
+        const fill = pickFill(i)
+        el.setAttribute("cx", String(x))
+        el.setAttribute("cy", String(y))
+        el.setAttribute("r", String(r))
+        el.setAttribute("fill", fill)
+        if (r >= 5) el.setAttribute("filter", "url(#glow)")
+        nodeG.appendChild(el)
+        return {
+          x,
+          y,
+          baseR: r,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          fill,
+          phase: Math.random() * Math.PI * 2,
+          pulseSpeed: 0.4 + Math.random() * 0.6,
+          el,
+        }
+      })
+
+      const edges: GEdge[] = edgePairs.map(([a, b]) => {
+        const el = document.createElementNS(NS, "line")
+        el.setAttribute("stroke", "rgba(167, 139, 250, 0.25)")
+        edgeG.appendChild(el)
+        return { a, b, el }
+      })
+
+      function animate(t: number) {
+        const s = t / 1000
+        for (const n of nodes) {
+          // Soft boundary repulsion
+          if (n.x < 30) n.vx += 0.008
+          if (n.x > 1410) n.vx -= 0.008
+          if (n.y < 30) n.vy += 0.008
+          if (n.y > 670) n.vy -= 0.008
+
+          // Gentle drag to keep speeds bounded
+          n.vx *= 0.9995
+          n.vy *= 0.9995
+
+          n.x += n.vx
+          n.y += n.vy
+
+          const r = n.baseR + Math.sin(s * n.pulseSpeed + n.phase) * n.baseR * 0.18
+          n.el.setAttribute("cx", String(n.x))
+          n.el.setAttribute("cy", String(n.y))
+          n.el.setAttribute("r", String(r))
+        }
+
+        for (const e of edges) {
+          const na = nodes[e.a]
+          const nb = nodes[e.b]
+          e.el.setAttribute("x1", String(na.x))
+          e.el.setAttribute("y1", String(na.y))
+          e.el.setAttribute("x2", String(nb.x))
+          e.el.setAttribute("y2", String(nb.y))
+
+          // Fade edges by distance
+          const dx = na.x - nb.x
+          const dy = na.y - nb.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          const opacity = Math.max(0.06, 0.28 - dist / 2200)
+          e.el.setAttribute("stroke-opacity", String(opacity))
+        }
+
+        requestAnimationFrame(animate)
+      }
+
+      requestAnimationFrame(animate)
+
+      // ---- Copy buttons ----
+      document.addEventListener("click", (e) => {
+        const btn = (e.target as HTMLElement).closest("[data-copy]") as HTMLElement | null
+        if (!btn) return
+        const text = btn.getAttribute("data-copy")!
+        navigator.clipboard.writeText(text)
+        const label = btn.querySelector(".copy-label")
+        if (label) {
+          label.textContent = "Copied!"
+          setTimeout(() => {
+            label.textContent = "Copy"
+          }, 2000)
+        }
+      })
+
+      // ---- Scroll reveal ----
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible")
+            }
+          }
+        },
+        { threshold: 0.08 },
+      )
+      document.querySelectorAll(".reveal").forEach((el) => observer.observe(el))
+    </script>
   </body>
 </html>
+
+<style is:global>
+  :root {
+    --bg-deep: #13111c;
+    --bg-surface: #1c1828;
+    --bg-card: #221e30;
+    --bg-card-hover: #2a2540;
+
+    --purple-600: #7c3aed;
+    --purple-500: #8b5cf6;
+    --purple-400: #a78bfa;
+    --purple-300: #c4b5fd;
+
+    --orange-500: #f97316;
+    --orange-400: #fb923c;
+    --orange-300: #fdba74;
+
+    --text-primary: #ede8f5;
+    --text-secondary: #a99bc4;
+    --text-muted: #6b5f82;
+
+    --border: rgba(139, 92, 246, 0.1);
+    --border-hover: rgba(139, 92, 246, 0.22);
+
+    --font-serif: "Fraunces", "Georgia", serif;
+    --font-body: "Newsreader", "Georgia", serif;
+    --font-mono: "JetBrains Mono", "IBM Plex Mono", monospace;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--text-primary);
+    background: var(--bg-deep);
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  a {
+    color: inherit;
+    text-decoration-color: var(--text-muted);
+    text-underline-offset: 0.2em;
+    transition: text-decoration-color 0.2s;
+  }
+
+  a:hover {
+    text-decoration-color: var(--purple-400);
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---- Graph background ---- */
+
+  .graph-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .graph-bg svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ---- Layout ---- */
+
+  main {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 1020px);
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  /* ---- Nav ---- */
+
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 0;
+  }
+
+  .wordmark {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 1.15rem;
+    text-decoration: none;
+    letter-spacing: -0.02em;
+  }
+
+  .nav-link {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    text-decoration: none;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+  }
+
+  .nav-link:hover {
+    color: var(--text-primary);
+  }
+
+  /* ---- Hero ---- */
+
+  .hero {
+    padding: clamp(3rem, 8vw, 6rem) 0 clamp(2.5rem, 6vw, 4rem);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--purple-400);
+    margin-bottom: 1.2rem;
+  }
+
+  .eyebrow .plus {
+    color: var(--orange-400);
+  }
+
+  .hero h1 {
+    font-size: clamp(2.4rem, 6.5vw, 4.5rem);
+    font-weight: 900;
+    max-width: 16ch;
+    margin-bottom: 1.2rem;
+    background: linear-gradient(135deg, var(--text-primary) 60%, var(--purple-300));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .lede {
+    font-size: clamp(1.05rem, 1.8vw, 1.2rem);
+    color: var(--text-secondary);
+    max-width: 52ch;
+    margin-bottom: 2rem;
+  }
+
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* ---- Copy block ---- */
+
+  .copy-block {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    padding: 0.7rem 0.8rem 0.7rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition:
+      border-color 0.2s,
+      background 0.2s;
+  }
+
+  .copy-block:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+  }
+
+  .copy-block .prompt {
+    color: var(--text-muted);
+    user-select: none;
+  }
+
+  .copy-block code {
+    font-size: inherit;
+  }
+
+  .copy-block .copy-label {
+    margin-left: auto;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: rgba(139, 92, 246, 0.12);
+    color: var(--purple-400);
+    transition: background 0.15s;
+  }
+
+  .copy-block:hover .copy-label {
+    background: rgba(139, 92, 246, 0.2);
+  }
+
+  .copy-block--lg {
+    width: 100%;
+    max-width: 420px;
+    font-size: 1rem;
+    padding: 0.85rem 1rem 0.85rem 1.2rem;
+  }
+
+  .btn-ghost {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    text-decoration: none;
+    color: var(--text-secondary);
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition:
+      border-color 0.2s,
+      color 0.2s;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  /* ---- Divider ---- */
+
+  .divider {
+    height: 1px;
+    width: 50%;
+    margin: 0 auto;
+    background: linear-gradient(to right, transparent, var(--purple-600), var(--orange-500), transparent);
+    opacity: 0.3;
+  }
+
+  /* ---- Model section ---- */
+
+  .model {
+    padding: clamp(2.5rem, 5vw, 4rem) 0;
+  }
+
+  .model h2 {
+    font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+  }
+
+  .text-orange {
+    color: var(--orange-400);
+  }
+
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  .model-lede {
+    color: var(--text-secondary);
+    max-width: 50ch;
+    margin-bottom: 2.2rem;
+    font-size: 1.05rem;
+  }
+
+  .model-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+  }
+
+  .model-col {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 1.4rem;
+    background: var(--bg-card);
+  }
+
+  .model-col h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .dot--purple {
+    background: var(--purple-500);
+    box-shadow: 0 0 8px var(--purple-500);
+  }
+
+  .dot--orange {
+    background: var(--orange-500);
+    box-shadow: 0 0 8px var(--orange-500);
+  }
+
+  .model-col ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .model-col li {
+    padding: 0.3rem 0;
+    padding-left: 1rem;
+    position: relative;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+
+  .model-col li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+  }
+
+  .model-col--purple {
+    border-color: rgba(139, 92, 246, 0.15);
+  }
+
+  .model-col--purple li::before {
+    background: var(--purple-500);
+  }
+
+  .model-col--orange {
+    border-color: rgba(249, 115, 22, 0.15);
+  }
+
+  .model-col--orange li::before {
+    background: var(--orange-500);
+  }
+
+  /* ---- Features ---- */
+
+  .features {
+    padding: clamp(2.5rem, 5vw, 4rem) 0;
+  }
+
+  .features h2 {
+    font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+    font-weight: 700;
+    margin-bottom: 2rem;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .feature-card {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 1.3rem;
+    background: var(--bg-card);
+    transition:
+      border-color 0.25s,
+      transform 0.25s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+  }
+
+  .feature-label {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--purple-400);
+    background: rgba(139, 92, 246, 0.08);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.7rem;
+  }
+
+  .feature-card h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.45rem;
+  }
+
+  .feature-card p {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  /* ---- Start ---- */
+
+  .start {
+    padding: clamp(2.5rem, 5vw, 4rem) 0;
+    text-align: center;
+  }
+
+  .start h2 {
+    font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+    font-weight: 700;
+    margin-bottom: 1.8rem;
+  }
+
+  .start-commands {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .start-note {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+  }
+
+  .start-note code {
+    color: var(--text-secondary);
+  }
+
+  /* ---- Footer ---- */
+
+  .footer {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-muted);
+  }
+
+  .footer-wordmark {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 1.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+
+  .footer-links a {
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover {
+    color: var(--text-primary);
+  }
+
+  /* ---- Scroll reveal ---- */
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.7s ease,
+      transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ---- Responsive ---- */
+
+  @media (max-width: 768px) {
+    main {
+      padding: 0 1rem 3rem;
+    }
+
+    .model-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .feature-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .copy-block--lg {
+      max-width: 100%;
+    }
+
+    .hero h1 {
+      max-width: 100%;
+    }
+
+    .divider {
+      width: 70%;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .feature-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
