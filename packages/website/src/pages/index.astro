@@ -5,26 +5,26 @@ import "@fontsource/jetbrains-mono/400.css"
 import "@fontsource/jetbrains-mono/600.css"
 import "@/styles/global.css"
 
-const title = "Zettelclaw | Obsidian Vault Template for OpenClaw"
+const title = "Zettelclaw | Obsidian Vault Template + Agent Skill"
 const description =
-  "Opinionated Obsidian vault template with CLI installer, note templates, clipper workflows, and OpenClaw memory-path integration."
+  "Opinionated Obsidian vault template for human-write, agent-read knowledge work. Typed notes, web clipper capture, Bases views, and CLI setup."
 
 const pillars = [
   {
-    title: "Opinionated Vault",
-    body: "Pre-configured Obsidian structure, plugin defaults, journal setup, and starter notes.",
+    title: "Human Writes, Agent Reads",
+    body: "The vault is your thinking. The agent searches, links, and surfaces connections — never ghostwrites.",
   },
   {
-    title: "Template-First Notes",
-    body: "Typed templates for evergreen, projects, research, contacts, writing, and media queues.",
+    title: "Minimal by Design",
+    body: "Five folders, four frontmatter properties, two templates. Nothing you won't use.",
   },
   {
     title: "CLI Install + Verify",
     body: "Install vault files, plugin binaries, OpenClaw memory-path integration, and verify the setup programmatically.",
   },
   {
-    title: "Queue Workflows",
-    body: "One universal clipper template for articles, tweets, and videos with queue classification plus Dataview tables.",
+    title: "Typed Content Pipeline",
+    body: "Universal clipper captures articles, tweets, and videos. Bases views replace Dataview for queues and dashboards.",
   },
 ]
 ---
@@ -43,11 +43,11 @@ const pillars = [
   <body>
     <main class="page-shell">
       <section class="hero">
-        <p class="eyebrow">Vault Template for OpenClaw + Obsidian</p>
+        <p class="eyebrow">Obsidian Vault Template + Agent Skill</p>
         <h1>Shared memory that stays useful after the chat window closes.</h1>
         <p class="lede">
-          Zettelclaw bootstraps a practical second-brain vault: templates, plugins, web clipper workflows, and OpenClaw access
-          wired in.
+          Zettelclaw gives you an opinionated Obsidian vault for one workflow: capture what you consume, write your thinking about
+          it, and let an AI agent help you navigate and connect what you've written.
         </p>
 
         <div class="actions">
@@ -74,17 +74,18 @@ const pillars = [
         <h2>Included workflows</h2>
         <div class="workflow-grid">
           <article>
-            <h3>Web clipper template</h3>
+            <h3>Web clipper capture</h3>
             <ul>
-              <li>`clipper-capture.json` -> `00 Inbox/`</li>
-              <li>Use `queue: inbox|reading|watch` to classify each capture</li>
-              <li>Works across articles, X/Twitter posts, and YouTube pages</li>
+              <li>`clipper-capture.json` routes captures to `00 Inbox/`</li>
+              <li>Sets `type` by URL — `tweet`, `youtube`, or `article`</li>
+              <li>Every capture starts as `status: queued`</li>
             </ul>
           </article>
           <article>
-            <h3>Dataview dashboard</h3>
+            <h3>Bases queue views</h3>
             <p>
-              `01 Notes/Media Queues Dashboard.md` includes Dataview tables for read-it-later, reading queue, and watch queue.
+              `inbox.base` groups captures by type for triage. Create more `.base` files for reading queues, watch lists, or any
+              filtered view — no Dataview needed.
             </p>
           </article>
           <article>
