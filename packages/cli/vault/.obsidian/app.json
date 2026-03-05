@@ -1,5 +1,5 @@
 {
-  "livePreview": false,
+  "livePreview": true,
   "showFrontmatter": true,
   "showInlineTitle": false,
   "readableLineLength": true,

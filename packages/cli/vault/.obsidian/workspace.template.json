@@ -6,6 +6,7 @@
       {
         "id": "main-tabs",
         "type": "tabs",
+        "stacked": true,
         "children": [
           {
             "id": "welcome-leaf",

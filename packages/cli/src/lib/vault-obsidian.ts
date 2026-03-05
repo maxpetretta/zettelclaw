@@ -47,6 +47,55 @@ function rewriteTemplatePaths(value: unknown, templatesFolder: string): unknown 
   return value
 }
 
+function enableMainTabsStackedByDefault(workspace: unknown): unknown {
+  if (!workspace || typeof workspace !== "object" || Array.isArray(workspace)) {
+    return workspace
+  }
+
+  const workspaceState = workspace as Record<string, unknown>
+  return {
+    ...workspaceState,
+    main: enableTabsStackedByDefault(workspaceState.main),
+  }
+}
+
+function enableTabsStackedByDefault(node: unknown): unknown {
+  if (!node || typeof node !== "object" || Array.isArray(node)) {
+    return node
+  }
+
+  const workspaceNode = node as Record<string, unknown>
+
+  if (workspaceNode.type === "tabs") {
+    return {
+      ...workspaceNode,
+      stacked: typeof workspaceNode.stacked === "boolean" ? workspaceNode.stacked : true,
+    }
+  }
+
+  if (!Array.isArray(workspaceNode.children)) {
+    return workspaceNode
+  }
+
+  let stackedApplied = false
+  const children = workspaceNode.children.map((child) => {
+    if (stackedApplied) {
+      return child
+    }
+
+    const nextChild = enableTabsStackedByDefault(child)
+    if (nextChild !== child) {
+      stackedApplied = true
+    }
+    return nextChild
+  })
+
+  return {
+    ...workspaceNode,
+    children,
+  }
+}
+
 export async function configureApp(pathToVault: string): Promise<void> {
   const folders = getVaultFolders()
   const journalTemplatePath = `${folders.templates}/journal.md`
@@ -55,6 +104,7 @@ export async function configureApp(pathToVault: string): Promise<void> {
   const existingAppConfig = await readJsonFileOrDefault<Record<string, unknown>>(appPath, {})
   const appConfig = {
     ...existingAppConfig,
+    livePreview: typeof existingAppConfig.livePreview === "boolean" ? existingAppConfig.livePreview : true,
     openBehavior: typeof existingAppConfig.openBehavior === "string" ? existingAppConfig.openBehavior : "daily",
     attachmentFolderPath: folders.attachments,
     newFileLocation: "folder",
@@ -91,7 +141,7 @@ export async function configureApp(pathToVault: string): Promise<void> {
 
   if (await pathExists(workspacePath)) {
     const workspace = await readJsonFileOrDefault<unknown>(workspacePath, {})
-    const nextWorkspace = rewriteTemplatePaths(workspace, folders.templates)
+    const nextWorkspace = enableMainTabsStackedByDefault(rewriteTemplatePaths(workspace, folders.templates))
     await writeJsonFile(workspacePath, nextWorkspace)
   }
 }
