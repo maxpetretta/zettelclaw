@@ -47,14 +47,7 @@ export async function ensureOpenClawMemoryPath(vaultPath: string, configPath: st
   let changed = false
   try {
     const config = asRecord(JSON.parse(raw))
-
-    const globalMemorySearch = asRecord(config.memorySearch)
-    config.memorySearch = globalMemorySearch
-    const globalExtraPaths = ensureStringArray(globalMemorySearch.extraPaths)
-    globalMemorySearch.extraPaths = globalExtraPaths
-    if (addUniquePath(globalExtraPaths, vaultPath)) {
-      changed = true
-    }
+    const legacyMemorySearch = asRecord(config.memorySearch)
 
     const agents = asRecord(config.agents)
     config.agents = agents
@@ -67,7 +60,20 @@ export async function ensureOpenClawMemoryPath(vaultPath: string, configPath: st
 
     const defaultExtraPaths = ensureStringArray(defaultsMemorySearch.extraPaths)
     defaultsMemorySearch.extraPaths = defaultExtraPaths
+
+    const legacyExtraPaths = ensureStringArray(legacyMemorySearch.extraPaths)
+    for (const legacyPath of legacyExtraPaths) {
+      if (addUniquePath(defaultExtraPaths, legacyPath)) {
+        changed = true
+      }
+    }
+
     if (addUniquePath(defaultExtraPaths, vaultPath)) {
+      changed = true
+    }
+
+    if ("memorySearch" in config) {
+      config.memorySearch = undefined
       changed = true
     }
 

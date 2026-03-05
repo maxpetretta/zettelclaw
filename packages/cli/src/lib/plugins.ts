@@ -34,33 +34,12 @@ function sha256Hex(value: Uint8Array): string {
 
 const CORE_PLUGINS: PluginSource[] = [
   {
-    id: "templater-obsidian",
-    repo: "SilentVoid13/Templater",
-    releaseTag: "2.18.1",
+    id: "calendar",
+    repo: "liamcain/obsidian-calendar-plugin",
+    releaseTag: "1.5.10",
     assets: [
-      asset("main.js", "390be01a6e5b78ffb21b79dce296564c126972c32a4ef94deff81fe2c43ec5c6"),
-      asset("manifest.json", "bef3e826246535ad45c698f375e3f2d8adf082e97ef4389622e60e7c3da569ab"),
-      asset("styles.css", "f7d4ee5bd4ec1d032eda1f4e1da481e713c57af964ec1e55d31494f086068d1e", false),
-    ],
-  },
-  {
-    id: "obsidian-linter",
-    repo: "platers/obsidian-linter",
-    releaseTag: "1.31.0",
-    assets: [
-      asset("main.js", "3b76f4354302d9db820bffa51d40a57b70458c96be45ac16e1d23c52294663a6"),
-      asset("manifest.json", "159af31b1184bb5513c19bf676201b9797e794e2cde62357884099adebb55247"),
-      asset("styles.css", "0ccf508b05a9445dc7c433b1acfcae9f40b2d8e218d53fdffeadd74d413c22db", false),
-    ],
-  },
-  {
-    id: "dataview",
-    repo: "blacksmithgu/obsidian-dataview",
-    releaseTag: "0.5.70",
-    assets: [
-      asset("main.js", "6bb1cf7010afad830e73575fca0e2bfbd3279c562e3d9d24f2d2f45161eb7d00"),
-      asset("manifest.json", "9235db47112da81b85591c79ecb9ae2574e5e72207056e976472f90616286185"),
-      asset("styles.css", "3306dd9032e00f989ba7233a37fd255bc4d3f4340cee661762e952f3f6aa1de9", false),
+      asset("main.js", "7fb339e9cf9fdbe5a801fa2b8ab85b366b5b3777fbd193cbc8728bc27711d125"),
+      asset("manifest.json", "f3e9581338648512baa12d5b458490f7fd367918f7bdb6bd86171ce57be7d08b"),
     ],
   },
 ]

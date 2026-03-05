@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises"
 import { join } from "node:path"
 
-import { getVaultFolders, JOURNAL_FOLDER_ALIASES } from "./folders"
+import { getVaultFolders } from "./folders"
 import { pathExists, readJsonFileOrDefault, removePathIfExists, writeJsonFile } from "./vault-fs"
 
 export type SyncMethod = "git" | "obsidian-sync" | "none"
@@ -59,6 +59,8 @@ export async function configureApp(pathToVault: string): Promise<void> {
     attachmentFolderPath: folders.attachments,
     newFileLocation: "folder",
     newFileFolderPath: folders.notes,
+    propertiesInDocument:
+      typeof existingAppConfig.propertiesInDocument === "string" ? existingAppConfig.propertiesInDocument : "source",
   }
 
   await writeJsonFile(appPath, appConfig)
@@ -79,49 +81,11 @@ export async function configureApp(pathToVault: string): Promise<void> {
   templatesConfig.folder = folders.templates
   await writeJsonFile(templatesPath, templatesConfig)
 
-  const templaterPath = join(pathToVault, ".obsidian", "plugins", "templater-obsidian", "data.json")
-
-  if (await pathExists(templaterPath)) {
-    const templaterConfig = await readJsonFileOrDefault<Record<string, unknown>>(templaterPath, {})
-    templaterConfig.templates_folder = folders.templates
-    templaterConfig.trigger_on_file_creation = true
-    templaterConfig.enable_folder_templates = true
-
-    const rawRules = Array.isArray(templaterConfig.folder_templates) ? templaterConfig.folder_templates : []
-    const normalizedRules: unknown[] = []
-    let journalRuleSet = false
-
-    for (const rule of rawRules) {
-      if (!rule || typeof rule !== "object") {
-        normalizedRules.push(rule)
-        continue
-      }
-
-      const nextRule = { ...(rule as Record<string, unknown>) }
-      const ruleFolder = typeof nextRule.folder === "string" ? nextRule.folder : ""
-      const isJournalRule =
-        JOURNAL_FOLDER_ALIASES.includes(ruleFolder) ||
-        (typeof nextRule.template === "string" && nextRule.template.endsWith("/journal.md"))
-
-      if (isJournalRule) {
-        nextRule.folder = folders.journal
-        nextRule.template = journalTemplatePath
-        journalRuleSet = true
-      }
-
-      normalizedRules.push(nextRule)
-    }
-
-    if (!journalRuleSet) {
-      normalizedRules.push({
-        folder: folders.journal,
-        template: journalTemplatePath,
-      })
-    }
-
-    templaterConfig.folder_templates = normalizedRules
-    await writeJsonFile(templaterPath, templaterConfig)
-  }
+  const backlinkPath = join(pathToVault, ".obsidian", "backlink.json")
+  const backlinkConfig = await readJsonFileOrDefault<Record<string, unknown>>(backlinkPath, {})
+  backlinkConfig.backlinkInDocument =
+    typeof backlinkConfig.backlinkInDocument === "boolean" ? backlinkConfig.backlinkInDocument : false
+  await writeJsonFile(backlinkPath, backlinkConfig)
 
   const workspacePath = join(pathToVault, ".obsidian", "workspace.json")
 
@@ -140,7 +104,7 @@ export async function configureCoreSync(pathToVault: string, method: SyncMethod)
 }
 
 function buildCommunityPlugins(options: CommunityPluginOptions): string[] {
-  const plugins: string[] = ["templater-obsidian", "obsidian-linter", "dataview"]
+  const plugins: string[] = ["calendar"]
 
   if (options.includeGit) {
     plugins.push("obsidian-git")
@@ -151,6 +115,21 @@ function buildCommunityPlugins(options: CommunityPluginOptions): string[] {
   }
 
   return plugins
+}
+
+async function writeCalendarPluginConfig(pathToVault: string): Promise<void> {
+  const calendarSettingsPath = join(pathToVault, ".obsidian", "plugins", "calendar", "data.json")
+
+  await writeJsonFile(calendarSettingsPath, {
+    shouldConfirmBeforeCreate: true,
+    weekStart: "locale",
+    wordsPerDot: 250,
+    showWeeklyNote: false,
+    weeklyNoteFormat: "",
+    weeklyNoteTemplate: "",
+    weeklyNoteFolder: "",
+    localeOverride: "system-default",
+  })
 }
 
 async function writeMinimalPluginConfigs(pathToVault: string): Promise<void> {
@@ -204,7 +183,7 @@ async function writeMinimalPluginConfigs(pathToVault: string): Promise<void> {
     hideSearchCounts: false,
     hideInstructions: false,
     hidePropertiesReading: false,
-    hideVault: true,
+    hideVault: false,
   })
 }
 
@@ -220,6 +199,7 @@ export async function configureCommunityPlugins(pathToVault: string, options: Co
 
   const plugins = buildCommunityPlugins(options)
   await writeJsonFile(communityPath, plugins)
+  await writeCalendarPluginConfig(pathToVault)
 
   if (options.includeMinimalThemeTools) {
     await writeMinimalPluginConfigs(pathToVault)

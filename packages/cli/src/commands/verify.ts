@@ -13,7 +13,7 @@ import { isDirectory, pathExists } from "../lib/vault-fs"
 
 const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
 const TEMPLATE_FOLDER_CANDIDATES = [...TEMPLATES_FOLDER_ALIASES]
-const REQUIRED_PLUGIN_IDS = ["templater-obsidian", "obsidian-linter", "dataview"] as const
+const REQUIRED_PLUGIN_IDS = ["calendar"] as const
 
 export interface VerifyOptions {
   yes: boolean
@@ -27,6 +27,10 @@ interface VerifyCheck {
   name: string
   status: CheckStatus
   detail: string
+}
+
+function hasLegacyTopLevelMemorySearch(config: Record<string, unknown>): boolean {
+  return "memorySearch" in config
 }
 
 async function promptVaultPath(): Promise<string> {
@@ -99,20 +103,9 @@ async function buildTemplateChecks(vaultPath: string): Promise<VerifyCheck[]> {
   }
 
   const requiredTemplateFiles = [
-    `${templatesFolder}/evergreen.md`,
-    `${templatesFolder}/project.md`,
-    `${templatesFolder}/research.md`,
-    `${templatesFolder}/contact.md`,
-    `${templatesFolder}/writing.md`,
+    `${templatesFolder}/note.md`,
     `${templatesFolder}/journal.md`,
-    `${templatesFolder}/read-it-later.md`,
-    `${templatesFolder}/reading-item.md`,
-    `${templatesFolder}/watch-item.md`,
-    `${templatesFolder}/clipper-read-it-later.json`,
-    `${templatesFolder}/clipper-reading-list.json`,
-    `${templatesFolder}/clipper-watch-list.json`,
-    `${templatesFolder}/clipper-twitter-bookmark.json`,
-    `${templatesFolder}/clipper-youtube-watch.json`,
+    `${templatesFolder}/clipper-capture.json`,
   ] as const
 
   const checks: VerifyCheck[] = []
@@ -158,30 +151,33 @@ async function buildPluginCheck(vaultPath: string): Promise<VerifyCheck> {
   }
 }
 
-async function buildDataviewCheck(vaultPath: string): Promise<VerifyCheck> {
-  const dashboardPath = join(vaultPath, "01 Notes", "Media Queues Dashboard.md")
-  const contents = await readFileText(dashboardPath)
+async function buildInboxBaseCheck(vaultPath: string): Promise<VerifyCheck> {
+  const inboxBasePath = join(vaultPath, "00 Inbox", "inbox.base")
+  const contents = await readFileText(inboxBasePath)
 
   if (!contents) {
     return {
-      name: "Dataview dashboard",
+      name: "Inbox Base view",
       status: "fail",
-      detail: "01 Notes/Media Queues Dashboard.md missing",
+      detail: "00 Inbox/inbox.base missing",
     }
   }
 
-  if (!contents.includes("```dataview")) {
+  const hasInboxFilter = contents.includes('file.inFolder("00 Inbox")')
+  const hasMarkdownFilter = contents.includes('file.ext == "md"')
+
+  if (!(hasInboxFilter && hasMarkdownFilter)) {
     return {
-      name: "Dataview dashboard",
+      name: "Inbox Base view",
       status: "warn",
-      detail: "dashboard found, but dataview queries were not detected",
+      detail: "inbox.base found, but expected inbox markdown filters were not detected",
     }
   }
 
   return {
-    name: "Dataview dashboard",
+    name: "Inbox Base view",
     status: "pass",
-    detail: "media queue views configured",
+    detail: "00 Inbox/inbox.base configured",
   }
 }
 
@@ -232,6 +228,14 @@ async function buildOpenClawChecks(vaultPath: string, workspacePath: string): Pr
 
   checks.push({ name: "OpenClaw config", status: "pass", detail: toTildePath(openclawConfigPath) })
 
+  if (hasLegacyTopLevelMemorySearch(configResult.config)) {
+    checks.push({
+      name: "OpenClaw config schema",
+      status: "fail",
+      detail: "top-level memorySearch is legacy; use agents.defaults.memorySearch",
+    })
+  }
+
   const scopedPaths = readOpenClawExtraPathsByScope(configResult.config)
   const allPaths = [...scopedPaths.global, ...scopedPaths.defaults]
 
@@ -281,7 +285,7 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
   }
 
   checks.push(await buildPluginCheck(vaultPath))
-  checks.push(await buildDataviewCheck(vaultPath))
+  checks.push(await buildInboxBaseCheck(vaultPath))
   checks.push(buildQmdCheck(vaultPath))
   checks.push(...(await buildTemplateChecks(vaultPath)))
 

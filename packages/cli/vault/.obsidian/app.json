@@ -6,5 +6,6 @@
   "openBehavior": "daily",
   "attachmentFolderPath": "04 Attachments",
   "newFileLocation": "folder",
-  "newFileFolderPath": "01 Notes"
+  "newFileFolderPath": "01 Notes",
+  "propertiesInDocument": "source"
 }

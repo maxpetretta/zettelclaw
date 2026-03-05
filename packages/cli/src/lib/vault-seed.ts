@@ -39,14 +39,12 @@ function formatLocalDate(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function buildStarterEvergreenNote(dateStamp: string): string {
+function buildStarterNote(dateStamp: string): string {
   return [
     "---",
-    "type: evergreen",
+    "type: note",
     "tags: [zettelclaw, systems, knowledge]",
-    'summary: "This vault works best when captures move from inbox to linked durable notes."',
     `created: ${dateStamp}`,
-    `updated: ${dateStamp}`,
     "---",
     "",
     "# Zettelclaw Vault Principles",
@@ -55,44 +53,40 @@ function buildStarterEvergreenNote(dateStamp: string): string {
     "",
     "## Core loop",
     "1. Capture quickly in `00 Inbox/` (including Web Clipper saves).",
-    "2. Promote useful captures to typed notes in `01 Notes/`.",
-    "3. Keep projects/research notes updated as work progresses.",
-    "4. Use dashboards to keep reading and watch queues visible.",
+    "2. Process inbox items: keep (`status: queued`), write a note, or discard.",
+    "3. Write durable ideas as `type: note` in `01 Notes/`.",
+    "4. Link concepts aggressively with `[[wikilinks]]`.",
     "",
     "## Note design rules",
-    "- Prefer one idea per evergreen note.",
-    "- Keep frontmatter accurate (`type`, `created`, `updated`).",
+    "- Prefer one atomic idea per note.",
+    "- Keep frontmatter accurate (`type`, `tags`, `created`, plus `status` for docs/content).",
     "- Link related notes with `[[wikilinks]]`.",
     "- Treat `00 Inbox/` as transient and `01 Notes/` as durable.",
     "",
     "## OpenClaw integration",
-    "- `memorySearch.extraPaths` in OpenClaw config points at this vault.",
-    "",
-    "## Related",
-    "- [[Media Queues Dashboard]]",
-    "",
+    "- `agents.defaults.memorySearch.extraPaths` in OpenClaw config points at this vault.",
   ].join("\n")
 }
 
 function buildStarterInboxNote(dateStamp: string): string {
   return [
     "---",
-    "type: read-it-later",
-    "status: inbox",
-    "tags: [read-later, captures]",
+    "type: article",
+    "status: queued",
+    "tags: [workflow, learning]",
+    "source: https://obsidian.md",
     `created: ${dateStamp}`,
-    `updated: ${dateStamp}`,
     "---",
     "",
     "# Build A Capture Habit",
     "",
     "Start small:",
-    "- Save interesting links with the read-it-later clipper template.",
-    "- Triage inbox items daily.",
-    "- Promote only durable ideas into typed notes.",
+    "- Save interesting links with the universal capture clipper template.",
+    "- Process inbox items regularly.",
+    "- Write a durable `type: note` when a source triggers original thinking.",
     "",
     "## Next action",
-    "- [ ] Import Web Clipper templates from `03 Templates/`.",
+    "- [ ] Process `00 Inbox/` and decide what to keep, convert, or discard.",
     "",
   ].join("\n")
 }
@@ -101,10 +95,14 @@ function buildStarterJournalEntry(dateStamp: string): string {
   return [
     "---",
     "type: journal",
-    "tags: [journals]",
+    "tags: []",
     `created: ${dateStamp}`,
-    `updated: ${dateStamp}`,
     "---",
+    "",
+    "> [!agent] Daily briefing",
+    "> - Vault installed and configured",
+    "> - Inbox view available at `00 Inbox/inbox.base`",
+    "> - Templates ready in `03 Templates/`",
     "",
     "## Done",
     "- Installed and configured Zettelclaw.",
@@ -112,8 +110,8 @@ function buildStarterJournalEntry(dateStamp: string): string {
     "## Decisions",
     "- This vault will be the shared long-term context between human and agent.",
     "",
-    "## Facts",
-    "- Web clipper templates are stored in `03 Templates/`.",
+    "## Learned",
+    "- The inbox is a queue; durable notes belong in `01 Notes/`.",
     "",
     "## Open",
     "- Import clipper templates and test the first capture.",
@@ -200,7 +198,7 @@ export async function seedVaultStarterContent(vaultPath: string): Promise<void> 
   const starterInboxPath = join(vaultPath, folders.inbox, STARTER_INBOX_FILENAME)
   const starterJournalPath = join(vaultPath, folders.journal, `${dateStamp}.md`)
 
-  await writeFileIfMissing(starterNotePath, buildStarterEvergreenNote(dateStamp))
+  await writeFileIfMissing(starterNotePath, buildStarterNote(dateStamp))
   await writeFileIfMissing(starterInboxPath, buildStarterInboxNote(dateStamp))
   await writeFileIfMissing(starterJournalPath, buildStarterJournalEntry(dateStamp))
 }

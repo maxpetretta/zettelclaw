@@ -100,7 +100,60 @@
     "type": "split",
     "children": [
       {
-        "id": "right-tabs",
+        "id": "right-tabs-calendar",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "calendar-pane",
+            "type": "leaf",
+            "state": {
+              "type": "calendar",
+              "state": {},
+              "icon": "calendar-with-checkmark",
+              "title": "Calendar"
+            }
+          }
+        ]
+      },
+      {
+        "id": "right-tabs-backlinks",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "backlink-pane",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "outgoing-pane",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          }
+        ]
+      },
+      {
+        "id": "right-tabs-outline",
         "type": "tabs",
         "children": [
           {
@@ -121,8 +174,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -138,9 +190,7 @@
   "active": "welcome-leaf",
   "lastOpenFiles": [
     "README.md",
-    "01 Notes/Media Queues Dashboard.md",
-    "03 Templates/clipper-read-it-later.json",
-    "03 Templates/clipper-reading-list.json",
-    "03 Templates/clipper-watch-list.json"
+    "00 Inbox/inbox.base",
+    "03 Templates/clipper-capture.json"
   ]
 }

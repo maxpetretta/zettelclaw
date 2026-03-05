@@ -1,47 +1,31 @@
 # Welcome to your Zettelclaw vault
 
-This vault is tuned for human + agent collaboration with Obsidian and OpenClaw.
+This vault follows the canonical Zettelclaw spec: capture in inbox, write durable notes, and let an agent help you navigate what you wrote.
 
-- **00 Inbox/** - raw captures and read-it-later drops
-- **01 Notes/** - durable notes, projects, research, and queue items
-- **02 Journal/** - daily journals (`YYYY-MM-DD.md`)
-- **03 Templates/** - Templater note templates and Web Clipper JSON templates
-- **04 Attachments/** - files and media
+- **00 Inbox/** - unprocessed captures from Web Clipper
+- **01 Notes/** - durable notes and content references
+- **02 Journal/** - daily notes (`YYYY-MM-DD.md`)
+- **03 Templates/** - core note templates and Web Clipper template
+- **04 Attachments/** - files embedded in notes
 
-## Included workflows
+## Included templates
 
-- Typed notes for `evergreen`, `project`, `research`, `contact`, and `writing`
-- Queue templates for `read-it-later`, `reading`, and `watch`
-- Web Clipper templates for:
-  - `clipper-read-it-later.json`
-  - `clipper-reading-list.json`
-  - `clipper-watch-list.json`
-  - `clipper-twitter-bookmark.json`
-  - `clipper-youtube-watch.json`
-- Dataview dashboard: `01 Notes/Media Queues Dashboard.md`
-- QMD root-folder collections (created by `zettelclaw init` when `qmd` is installed)
+- `03 Templates/note.md`
+- `03 Templates/journal.md`
+- `03 Templates/clipper-capture.json`
 
-## OpenClaw integration
+## Included Base view
 
-When an OpenClaw workspace is detected during `zettelclaw init`, the CLI:
-
-- patches OpenClaw config `memorySearch.extraPaths` so your agent can read the vault as memory context
+- `00 Inbox/inbox.base`
 
 ## QMD integration
 
-If `qmd` is available, `zettelclaw init` creates one collection per root vault folder:
+If `qmd` is installed, `zettelclaw init` creates collections for:
 
 - `zettelclaw-<vault>-inbox`
 - `zettelclaw-<vault>-notes`
 - `zettelclaw-<vault>-journal`
-- `zettelclaw-<vault>-templates`
-- `zettelclaw-<vault>-attachments`
 
-## Web Clipper import
+## OpenClaw integration
 
-In the Obsidian Web Clipper extension:
-
-1. Open extension settings.
-2. Go to `Templates`.
-3. Click `New Template`.
-4. Paste one of the JSON templates from `03 Templates/`.
+When an OpenClaw workspace is detected during `zettelclaw init`, the CLI patches `agents.defaults.memorySearch.extraPaths` so your agent can read this vault as memory context.

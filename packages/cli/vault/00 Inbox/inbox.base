@@ -1,0 +1,18 @@
+filters:
+  and:
+    - file.inFolder("00 Inbox")
+    - 'file.ext == "md"'
+
+views:
+  - type: table
+    name: "Inbox"
+    groupBy:
+      property: note.type
+      direction: ASC
+    order:
+      - file.name
+      - type
+      - status
+      - author
+      - source
+      - created
