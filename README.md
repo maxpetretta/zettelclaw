@@ -5,12 +5,12 @@ Opinionated Obsidian vault template + CLI for human/agent knowledge work with Op
 Zettelclaw gives you:
 
 - a pre-configured Obsidian vault scaffold
-- typed note templates
+- minimal templates (`note`, `journal`, and Web Clipper capture)
+- an inbox Base view (`00 Inbox/inbox.base`)
 - bundled plugin install via CLI
 - OpenClaw integration through vault memory paths
-- QMD collection setup for each root vault folder
-- Web Clipper templates for read-it-later / reading list / watch list, including Twitter bookmarks and YouTube captures
-- Dataview dashboards to surface those queues
+- QMD collection setup for inbox, notes, and journal
+- a universal Web Clipper template that works across source types (including Twitter and YouTube)
 - a vault-specific agent skill
 - a single-page marketing site
 
@@ -35,24 +35,19 @@ npx zettelclaw plugins
   - `02 Journal/`
   - `03 Templates/`
   - `04 Attachments/`
-- Obsidian plugin defaults (Templater, Linter, Dataview, optional Obsidian Git)
-- Note templates for evergreen/project/research/contact/writing/journal
-- Queue templates for read-it-later, reading, and watch items
-- Web Clipper template JSON files in `03 Templates/`:
-  - `clipper-read-it-later.json`
-  - `clipper-reading-list.json`
-  - `clipper-watch-list.json`
-  - `clipper-twitter-bookmark.json`
-  - `clipper-youtube-watch.json`
-- `01 Notes/Media Queues Dashboard.md` with Dataview tables
-- QMD root-folder collections (when `qmd` is installed):
+- Obsidian plugin defaults (Calendar, optional Obsidian Git)
+- Note templates for `note` and `journal`
+- Universal Web Clipper template JSON in `03 Templates/`:
+  - `clipper-capture.json`
+  - classify captures by `type` (`article`, `tweet`, `youtube`) + `status: queued`
+- Base view:
+  - `00 Inbox/inbox.base`
+- QMD collections (when `qmd` is installed):
   - `zettelclaw-<vault>-inbox`
   - `zettelclaw-<vault>-notes`
   - `zettelclaw-<vault>-journal`
-  - `zettelclaw-<vault>-templates`
-  - `zettelclaw-<vault>-attachments`
 - OpenClaw integration:
-  - `memorySearch.extraPaths` patch in OpenClaw config to include vault path
+  - `agents.defaults.memorySearch.extraPaths` patch in OpenClaw config to include vault path
 
 ## Commands
 

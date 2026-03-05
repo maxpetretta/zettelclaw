@@ -24,7 +24,7 @@ const pillars = [
   },
   {
     title: "Queue Workflows",
-    body: "Read-it-later, reading list, watch list, Twitter bookmark, and YouTube clipper templates plus Dataview tables.",
+    body: "One universal clipper template for articles, tweets, and videos with queue classification plus Dataview tables.",
   },
 ]
 ---
@@ -74,13 +74,11 @@ const pillars = [
         <h2>Included workflows</h2>
         <div class="workflow-grid">
           <article>
-            <h3>Web clipper templates</h3>
+            <h3>Web clipper template</h3>
             <ul>
-              <li>`clipper-read-it-later.json` -> `00 Inbox/`</li>
-              <li>`clipper-reading-list.json` -> `01 Notes/`</li>
-              <li>`clipper-watch-list.json` -> `01 Notes/`</li>
-              <li>`clipper-twitter-bookmark.json` -> `00 Inbox/`</li>
-              <li>`clipper-youtube-watch.json` -> `01 Notes/`</li>
+              <li>`clipper-capture.json` -> `00 Inbox/`</li>
+              <li>Use `queue: inbox|reading|watch` to classify each capture</li>
+              <li>Works across articles, X/Twitter posts, and YouTube pages</li>
             </ul>
           </article>
           <article>
@@ -92,7 +90,7 @@ const pillars = [
           <article>
             <h3>OpenClaw integration</h3>
             <p>
-              The CLI patches `memorySearch.extraPaths` so OpenClaw can search the vault as shared memory context.
+              The CLI patches `agents.defaults.memorySearch.extraPaths` so OpenClaw can search the vault as shared memory context.
             </p>
           </article>
         </div>

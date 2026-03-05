@@ -33,6 +33,7 @@ Use YAML frontmatter on every note with at least `type`, `created`, `updated`.
 - `contact`: people notes
 - `writing`: publishable drafts
 - `journal`: daily logs
+- `capture`: universal web captures in `00 Inbox/` (`queue: inbox|reading|watch`)
 - `read-it-later`: captured links in `00 Inbox/`
 - `reading`: reading queue items in `01 Notes/`
 - `watch`: watch queue items in `01 Notes/`
@@ -53,13 +54,10 @@ Always read the matching template in `03 Templates/` before creating a note:
 
 ## Queue workflows
 
-Web Clipper templates are in `03 Templates/`:
+Web Clipper template is in `03 Templates/`:
 
-- `clipper-read-it-later.json` -> `00 Inbox/`
-- `clipper-reading-list.json` -> `01 Notes/`
-- `clipper-watch-list.json` -> `01 Notes/`
-- `clipper-twitter-bookmark.json` -> `00 Inbox/`
-- `clipper-youtube-watch.json` -> `01 Notes/`
+- `clipper-capture.json` -> `00 Inbox/`
+- Use frontmatter `queue: inbox|reading|watch` (or tags) to classify captured items
 
 Dashboard note:
 
@@ -78,7 +76,7 @@ Dashboard note:
 ```bash
 # qmd (preferred when installed)
 qmd query "current project decisions" -c zettelclaw-<vault>-notes
-qmd search "type: read-it-later" -c zettelclaw-<vault>-inbox
+qmd search "type: capture" -c zettelclaw-<vault>-inbox
 
 # projects
 rg -l 'type: project' "<vault>/01 Notes/"
@@ -91,4 +89,7 @@ rg -l 'type: watch' "<vault>/01 Notes/"
 
 # read-it-later captures
 rg -l 'type: read-it-later' "<vault>/00 Inbox/"
+
+# universal captures
+rg -l 'type: capture' "<vault>/00 Inbox/"
 ```
