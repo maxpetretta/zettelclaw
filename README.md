@@ -7,7 +7,7 @@ Zettelclaw gives you:
 - a pre-configured Obsidian vault scaffold
 - minimal templates (`note`, `journal`, and Web Clipper capture)
 - an inbox Base view (`00 Inbox/inbox.base`)
-- bundled plugin install via CLI
+- bundled plugin install during `init`
 - OpenClaw integration through vault memory paths
 - QMD collection setup for inbox, notes, and journal
 - a universal Web Clipper template that works across source types (including Twitter and YouTube)
@@ -19,12 +19,6 @@ Zettelclaw gives you:
 ```bash
 npx zettelclaw init
 npx zettelclaw verify
-```
-
-If you want to refresh plugin binaries later:
-
-```bash
-npx zettelclaw plugins
 ```
 
 ## What `init` configures
@@ -55,9 +49,6 @@ npx zettelclaw plugins
 # Install/configure vault and OpenClaw integration (if workspace exists)
 npx zettelclaw init
 
-# Download/refresh plugin binaries
-npx zettelclaw plugins
-
 # Verify vault structure, templates, plugins, QMD collections, and OpenClaw wiring
 npx zettelclaw verify
 ```
@@ -67,7 +58,7 @@ Useful flags:
 - `--vault <path>`
 - `--workspace <path>`
 - `--sync <git|obsidian-sync|none>`
-- `--minimal`
+- `--theme <minimal|obsidian>`
 - `--yes`
 
 ## Repo layout

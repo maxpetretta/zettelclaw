@@ -1,8 +1,14 @@
 import { readFile } from "node:fs/promises"
-import { dirname, join } from "node:path"
+import { basename, dirname, join } from "node:path"
 import { intro, log, text } from "@clack/prompts"
 
-import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
+import {
+  DEFAULT_OPENCLAW_WORKSPACE_PATH,
+  DEFAULT_VAULT_PATH,
+  formatCommandIntro,
+  toTildePath,
+  unwrapPrompt,
+} from "../lib/cli"
 import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES, TEMPLATES_FOLDER_ALIASES } from "../lib/folders"
 import { readOpenClawConfigFile, readOpenClawExtraPathsByScope } from "../lib/openclaw-config"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
@@ -27,6 +33,11 @@ interface VerifyCheck {
   name: string
   status: CheckStatus
   detail: string
+}
+
+interface VerifySection {
+  title: string
+  checks: VerifyCheck[]
 }
 
 function hasLegacyTopLevelMemorySearch(config: Record<string, unknown>): boolean {
@@ -84,191 +95,342 @@ function pathListIncludes(paths: readonly string[], targetPath: string): boolean
   return paths.some((value) => normalizePath(value) === target)
 }
 
+function parseJsonRecord(raw: string | undefined): Record<string, unknown> | undefined {
+  if (!raw) {
+    return undefined
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>
+    }
+  } catch {
+    return undefined
+  }
+
+  return undefined
+}
+
 function formatCheck(check: VerifyCheck): string {
   const icon = check.status === "pass" ? "✅" : check.status === "fail" ? "❌" : "⚠️"
   return `${icon} ${check.name}: ${check.detail}`
 }
 
-async function buildTemplateChecks(vaultPath: string): Promise<VerifyCheck[]> {
-  let templatesFolder: string | null = null
-  for (const candidate of TEMPLATE_FOLDER_CANDIDATES) {
-    if (await isDirectory(join(vaultPath, candidate))) {
-      templatesFolder = candidate
-      break
+function formatSection(section: VerifySection): string {
+  return [section.title, ...section.checks.map((check) => formatCheck(check))].join("\n")
+}
+
+function combineStatuses(left: CheckStatus, right: CheckStatus): CheckStatus {
+  if (left === "fail" || right === "fail") {
+    return "fail"
+  }
+
+  if (left === "warn" || right === "warn") {
+    return "warn"
+  }
+
+  return "pass"
+}
+
+function formatVaultFolderLabel(path: string): string {
+  return basename(path).replace(/^\d{2}\s+/u, "")
+}
+
+function summarizeQmdIssue(message: string | undefined, missingBinary: boolean | undefined): string {
+  if (missingBinary) {
+    return "qmd not installed"
+  }
+
+  if (!message) {
+    return "qmd unavailable"
+  }
+
+  if (message.includes("ERR_DLOPEN_FAILED") || message.includes("better_sqlite3.node")) {
+    return "QMD native module failed to load; reinstall QMD for the current Node version"
+  }
+
+  const firstLine = message
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0)
+
+  return firstLine ?? "qmd unavailable"
+}
+
+function findTabsNode(node: unknown): Record<string, unknown> | undefined {
+  if (!node || typeof node !== "object" || Array.isArray(node)) {
+    return undefined
+  }
+
+  const record = node as Record<string, unknown>
+  if (record.type === "tabs") {
+    return record
+  }
+
+  if (!Array.isArray(record.children)) {
+    return undefined
+  }
+
+  for (const child of record.children) {
+    const found = findTabsNode(child)
+    if (found) {
+      return found
     }
   }
 
-  if (!templatesFolder) {
-    return [{ name: "Templates folder", status: "fail", detail: "Could not find Templates folder" }]
+  return undefined
+}
+
+async function findTemplatesFolder(vaultPath: string): Promise<string | null> {
+  for (const candidate of TEMPLATE_FOLDER_CANDIDATES) {
+    if (await isDirectory(join(vaultPath, candidate))) {
+      return candidate
+    }
   }
 
-  const requiredTemplateFiles = [
-    `${templatesFolder}/note.md`,
-    `${templatesFolder}/journal.md`,
-    `${templatesFolder}/clipper-capture.json`,
-  ] as const
-
-  const checks: VerifyCheck[] = []
-
-  for (const relativeFile of requiredTemplateFiles) {
-    const absolutePath = join(vaultPath, relativeFile)
-    const exists = await pathExists(absolutePath)
-    checks.push({
-      name: `Template ${relativeFile}`,
-      status: exists ? "pass" : "fail",
-      detail: exists ? "present" : "missing",
-    })
-  }
-
-  return checks
+  return null
 }
 
 async function buildPluginCheck(vaultPath: string): Promise<VerifyCheck> {
   const pluginsPath = join(vaultPath, ".obsidian", "community-plugins.json")
   const raw = await readFileText(pluginsPath)
   if (!raw) {
-    return { name: "Community plugins", status: "fail", detail: "community-plugins.json missing" }
+    return { name: "Plugins", status: "fail", detail: "community-plugins.json missing" }
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
-    return { name: "Community plugins", status: "fail", detail: "community-plugins.json is not valid JSON" }
+    return { name: "Plugins", status: "fail", detail: "community-plugins.json is not valid JSON" }
   }
 
   const ids = Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : []
   const missing = REQUIRED_PLUGIN_IDS.filter((id) => !ids.includes(id))
 
   if (missing.length === 0) {
-    return { name: "Community plugins", status: "pass", detail: ids.join(", ") }
+    return { name: "Plugins", status: "pass", detail: ids.join(", ") }
   }
 
   return {
-    name: "Community plugins",
+    name: "Plugins",
     status: "fail",
     detail: `missing required plugin ids: ${missing.join(", ")}`,
   }
 }
 
-async function buildInboxBaseCheck(vaultPath: string): Promise<VerifyCheck> {
-  const inboxBasePath = join(vaultPath, "00 Inbox", "inbox.base")
-  const contents = await readFileText(inboxBasePath)
+async function buildVaultSettingsCheck(vaultPath: string): Promise<VerifyCheck> {
+  let status: CheckStatus = "pass"
+  const issues: string[] = []
 
-  if (!contents) {
-    return {
-      name: "Inbox Base view",
-      status: "fail",
-      detail: "00 Inbox/inbox.base missing",
+  const appConfig = parseJsonRecord(await readFileText(join(vaultPath, ".obsidian", "app.json")))
+  if (!appConfig) {
+    status = combineStatuses(status, "warn")
+    issues.push("app.json missing or invalid")
+  } else if (appConfig.livePreview !== true) {
+    status = combineStatuses(status, "warn")
+    issues.push("Live Preview off")
+  }
+
+  const workspace = parseJsonRecord(await readFileText(join(vaultPath, ".obsidian", "workspace.json")))
+  if (!workspace) {
+    status = combineStatuses(status, "warn")
+    issues.push("workspace.json missing or invalid")
+  } else {
+    const mainTabs = findTabsNode(workspace.main)
+    if (!mainTabs || mainTabs.stacked !== true) {
+      status = combineStatuses(status, "warn")
+      issues.push("stacked tabs off")
     }
   }
 
-  const hasInboxFilter = contents.includes('file.inFolder("00 Inbox")')
-  const hasMarkdownFilter = contents.includes('file.ext == "md"')
+  const inboxBasePath = join(vaultPath, "00 Inbox", "inbox.base")
+  const inboxBaseContents = await readFileText(inboxBasePath)
+  if (!inboxBaseContents) {
+    status = combineStatuses(status, "fail")
+    issues.push("Inbox Base missing")
+  } else {
+    const hasInboxFilter = inboxBaseContents.includes('file.inFolder("00 Inbox")')
+    const hasMarkdownFilter = inboxBaseContents.includes('file.ext == "md"')
 
-  if (!(hasInboxFilter && hasMarkdownFilter)) {
+    if (!(hasInboxFilter && hasMarkdownFilter)) {
+      status = combineStatuses(status, "warn")
+      issues.push("Inbox Base filters not detected")
+    }
+  }
+
+  const templatesFolder = await findTemplatesFolder(vaultPath)
+  if (!templatesFolder) {
+    status = combineStatuses(status, "fail")
+    issues.push("Templates folder missing")
+  } else {
+    const requiredTemplateFiles = [
+      `${templatesFolder}/note.md`,
+      `${templatesFolder}/journal.md`,
+      `${templatesFolder}/clipper-capture.json`,
+    ] as const
+
+    const missingTemplates: string[] = []
+    for (const relativeFile of requiredTemplateFiles) {
+      if (!(await pathExists(join(vaultPath, relativeFile)))) {
+        missingTemplates.push(basename(relativeFile))
+      }
+    }
+
+    if (missingTemplates.length > 0) {
+      status = combineStatuses(status, "fail")
+      issues.push(`missing templates: ${missingTemplates.join(", ")}`)
+    }
+  }
+
+  if (status === "pass") {
     return {
-      name: "Inbox Base view",
-      status: "warn",
-      detail: "inbox.base found, but expected inbox markdown filters were not detected",
+      name: "Settings",
+      status,
+      detail: "Live Preview on, stacked tabs enabled, Inbox Base configured, templates present",
     }
   }
 
   return {
-    name: "Inbox Base view",
-    status: "pass",
-    detail: "00 Inbox/inbox.base configured",
+    name: "Settings",
+    status,
+    detail: issues.join("; "),
   }
 }
 
-function buildQmdCheck(vaultPath: string): VerifyCheck {
+function buildQmdChecks(vaultPath: string): VerifyCheck[] {
   const expected = expectedQmdCollections(vaultPath)
   const listed = listQmdCollections()
 
   if (!listed.ok) {
-    return {
-      name: "QMD collections",
-      status: "warn",
-      detail: listed.message ?? "qmd unavailable",
-    }
+    return [
+      {
+        name: "Installed",
+        status: "warn",
+        detail: summarizeQmdIssue(listed.message, listed.missingBinary),
+      },
+      {
+        name: "Collections",
+        status: "warn",
+        detail: listed.missingBinary ? "skipped until QMD is installed" : "skipped until QMD is healthy",
+      },
+    ]
   }
 
   const names = new Set(listed.names)
   const missing = expected.filter((collection) => !names.has(collection.name))
+  const configured = expected
+    .filter((collection) => names.has(collection.name))
+    .map((collection) => formatVaultFolderLabel(collection.path))
 
   if (missing.length === 0) {
-    return {
-      name: "QMD collections",
-      status: "pass",
-      detail: `${expected.length} root-folder collections configured`,
-    }
+    return [
+      {
+        name: "Installed",
+        status: "pass",
+        detail: "qmd available",
+      },
+      {
+        name: "Collections",
+        status: "pass",
+        detail: configured.join(", "),
+      },
+    ]
   }
 
-  return {
-    name: "QMD collections",
-    status: "warn",
-    detail: `missing ${missing.length}/${expected.length}: ${missing.map((collection) => collection.name).join(", ")}`,
+  const missingLabels = missing.map((collection) => formatVaultFolderLabel(collection.path))
+  const detailParts: string[] = []
+
+  if (configured.length > 0) {
+    detailParts.push(`configured: ${configured.join(", ")}`)
   }
+  detailParts.push(`missing: ${missingLabels.join(", ")}`)
+
+  return [
+    {
+      name: "Installed",
+      status: "pass",
+      detail: "qmd available",
+    },
+    {
+      name: "Collections",
+      status: "warn",
+      detail: detailParts.join("; "),
+    },
+  ]
 }
 
 async function buildOpenClawChecks(vaultPath: string, workspacePath: string): Promise<VerifyCheck[]> {
-  const checks: VerifyCheck[] = []
   const openclawDir = dirname(workspacePath)
   const openclawConfigPath = join(openclawDir, "openclaw.json")
 
   const configResult = await readOpenClawConfigFile(openclawConfigPath)
   if (!configResult.config) {
-    checks.push({
-      name: "OpenClaw config",
-      status: "warn",
-      detail: configResult.error ?? `missing ${toTildePath(openclawConfigPath)}`,
-    })
-    return checks
+    return [
+      {
+        name: "Settings",
+        status: "warn",
+        detail: configResult.error ?? `missing ${toTildePath(openclawConfigPath)}`,
+      },
+      {
+        name: "Memory paths",
+        status: "warn",
+        detail: "skipped until OpenClaw settings are available",
+      },
+    ]
   }
 
-  checks.push({ name: "OpenClaw config", status: "pass", detail: toTildePath(openclawConfigPath) })
-
-  if (hasLegacyTopLevelMemorySearch(configResult.config)) {
-    checks.push({
-      name: "OpenClaw config schema",
-      status: "fail",
-      detail: "top-level memorySearch is legacy; use agents.defaults.memorySearch",
-    })
-  }
+  const settingsCheck: VerifyCheck = hasLegacyTopLevelMemorySearch(configResult.config)
+    ? {
+        name: "Settings",
+        status: "fail",
+        detail: `legacy top-level memorySearch in ${toTildePath(openclawConfigPath)}; use agents.defaults.memorySearch`,
+      }
+    : {
+        name: "Settings",
+        status: "pass",
+        detail: toTildePath(openclawConfigPath),
+      }
 
   const scopedPaths = readOpenClawExtraPathsByScope(configResult.config)
   const allPaths = [...scopedPaths.global, ...scopedPaths.defaults]
 
   if (pathListIncludes(allPaths, vaultPath)) {
-    checks.push({
-      name: "OpenClaw memory extraPaths",
-      status: "pass",
-      detail: "vault path present",
-    })
-  } else {
-    checks.push({
-      name: "OpenClaw memory extraPaths",
-      status: "fail",
-      detail: `vault path missing from extraPaths in ${toTildePath(openclawConfigPath)}`,
-    })
+    return [
+      settingsCheck,
+      {
+        name: "Memory paths",
+        status: "pass",
+        detail: "vault path present",
+      },
+    ]
   }
 
-  return checks
+  return [
+    settingsCheck,
+    {
+      name: "Memory paths",
+      status: "fail",
+      detail: `vault path missing from extraPaths in ${toTildePath(openclawConfigPath)}`,
+    },
+  ]
 }
 
 export async function runVerify(options: VerifyOptions): Promise<void> {
-  intro("🦞 Zettelclaw - Verify install")
+  intro(formatCommandIntro("Verify install"))
 
-  const checks: VerifyCheck[] = []
+  const vaultChecks: VerifyCheck[] = []
+  const openClawChecks: VerifyCheck[] = []
 
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
   const workspaceDetected = await isDirectory(workspacePath)
 
   if (workspaceDetected) {
     configureOpenClawEnvForWorkspace(workspacePath)
-    checks.push({ name: "OpenClaw workspace", status: "pass", detail: toTildePath(workspacePath) })
+    openClawChecks.push({ name: "Workspace", status: "pass", detail: toTildePath(workspacePath) })
   } else {
-    checks.push({ name: "OpenClaw workspace", status: "warn", detail: `missing ${toTildePath(workspacePath)}` })
+    openClawChecks.push({ name: "Workspace", status: "warn", detail: `missing ${toTildePath(workspacePath)}` })
   }
 
   const vaultPath = await detectVaultPath(options, workspacePath)
@@ -276,27 +438,36 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
     throw new Error("Could not find a Zettelclaw vault. Provide --vault or run `zettelclaw init` first.")
   }
 
-  checks.push({ name: "Vault path", status: "pass", detail: toTildePath(vaultPath) })
+  vaultChecks.push({ name: "Path", status: "pass", detail: toTildePath(vaultPath) })
 
   if (await looksLikeZettelclawVault(vaultPath, NOTES_FOLDER_CANDIDATES, JOURNAL_FOLDER_CANDIDATES)) {
-    checks.push({ name: "Vault structure", status: "pass", detail: "notes + journal folders detected" })
+    vaultChecks.push({ name: "Structure", status: "pass", detail: "notes + journal folders detected" })
   } else {
-    checks.push({ name: "Vault structure", status: "fail", detail: "notes/journal folders not detected" })
+    vaultChecks.push({ name: "Structure", status: "fail", detail: "notes/journal folders not detected" })
   }
 
-  checks.push(await buildPluginCheck(vaultPath))
-  checks.push(await buildInboxBaseCheck(vaultPath))
-  checks.push(buildQmdCheck(vaultPath))
-  checks.push(...(await buildTemplateChecks(vaultPath)))
+  vaultChecks.push(await buildPluginCheck(vaultPath))
+  vaultChecks.push(await buildVaultSettingsCheck(vaultPath))
 
   if (workspaceDetected) {
-    checks.push(...(await buildOpenClawChecks(vaultPath, workspacePath)))
+    openClawChecks.push(...(await buildOpenClawChecks(vaultPath, workspacePath)))
+  } else {
+    openClawChecks.push(
+      { name: "Settings", status: "warn", detail: "skipped until workspace is available" },
+      { name: "Memory paths", status: "warn", detail: "skipped until workspace is available" },
+    )
   }
 
-  for (const check of checks) {
-    log.message(formatCheck(check))
-  }
+  const qmdChecks = buildQmdChecks(vaultPath)
+  const sections: VerifySection[] = [
+    { title: "Vault", checks: vaultChecks },
+    { title: "OpenClaw", checks: openClawChecks },
+    { title: "QMD", checks: qmdChecks },
+  ]
 
+  log.message(sections.map((section) => formatSection(section)).join("\n\n"))
+
+  const checks = sections.flatMap((section) => section.checks)
   const failCount = checks.filter((check) => check.status === "fail").length
   const warnCount = checks.filter((check) => check.status === "warn").length
 

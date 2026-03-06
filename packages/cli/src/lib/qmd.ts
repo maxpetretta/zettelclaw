@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { basename, join } from "node:path"
 
 import { FOLDERS } from "./folders"
@@ -157,7 +157,94 @@ function runCommand(command: string, args: string[], options: QmdCommandOptions 
   }
 }
 
-export function installQmdGlobal(): InstallQmdResult {
+async function runCommandAsync(
+  command: string,
+  args: string[],
+  options: QmdCommandOptions = {},
+): Promise<QmdCommandResult> {
+  return await new Promise((resolve) => {
+    const child = spawn(command, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+
+    let stdout = ""
+    let stderr = ""
+    let settled = false
+    const timeoutMs = options.timeoutMs ?? 120_000
+
+    const finish = (result: QmdCommandResult) => {
+      if (settled) {
+        return
+      }
+
+      settled = true
+      clearTimeout(timeout)
+      resolve(result)
+    }
+
+    child.stdout?.setEncoding("utf8")
+    child.stdout?.on("data", (chunk: string) => {
+      stdout += chunk
+    })
+
+    child.stderr?.setEncoding("utf8")
+    child.stderr?.on("data", (chunk: string) => {
+      stderr += chunk
+    })
+
+    child.on("error", (error) => {
+      const maybeCode = "code" in error ? error.code : undefined
+      const result: QmdCommandResult = {
+        ok: false,
+        status: 1,
+        stdout,
+        stderr,
+        message: error.message,
+      }
+
+      if (typeof maybeCode === "string") {
+        result.errorCode = maybeCode
+      }
+
+      finish(result)
+    })
+
+    child.on("close", (status) => {
+      const exitStatus = status ?? 1
+
+      if (exitStatus !== 0) {
+        finish({
+          ok: false,
+          status: exitStatus,
+          stdout,
+          stderr,
+          message: formatFailureMessage(args, exitStatus, stderr, stdout),
+        })
+        return
+      }
+
+      finish({
+        ok: true,
+        status: exitStatus,
+        stdout,
+        stderr,
+      })
+    })
+
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM")
+      finish({
+        ok: false,
+        status: 1,
+        stdout,
+        stderr,
+        message: `${command} ${args.join(" ")} timed out after ${timeoutMs}ms`,
+      })
+    }, timeoutMs)
+  })
+}
+
+export async function installQmdGlobal(): Promise<InstallQmdResult> {
   const installAttempts: Array<{ command: string; args: string[] }> = [
     { command: "bun", args: ["install", "-g", "@tobilu/qmd"] },
     { command: "npm", args: ["install", "-g", "@tobilu/qmd"] },
@@ -170,7 +257,7 @@ export function installQmdGlobal(): InstallQmdResult {
       continue
     }
 
-    const install = runCommand(attempt.command, attempt.args, { timeoutMs: 300_000 })
+    const install = await runCommandAsync(attempt.command, attempt.args, { timeoutMs: 300_000 })
     const commandLine = `${attempt.command} ${attempt.args.join(" ")}`
 
     if (install.ok) {

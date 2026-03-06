@@ -1,13 +1,20 @@
 import { spawnSync } from "node:child_process"
-import { dirname, join } from "node:path"
+import { basename, dirname, join } from "node:path"
 import { intro, log, select, spinner, text } from "@clack/prompts"
 
-import { DEFAULT_OPENCLAW_WORKSPACE_PATH, DEFAULT_VAULT_PATH, toTildePath, unwrapPrompt } from "../lib/cli"
+import {
+  DEFAULT_OPENCLAW_WORKSPACE_PATH,
+  DEFAULT_VAULT_PATH,
+  formatCommandIntro,
+  type ThemePreset,
+  toTildePath,
+  unwrapPrompt,
+} from "../lib/cli"
 import { ensureOpenClawMemoryPath } from "../lib/openclaw"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { type DownloadResult, downloadPlugins } from "../lib/plugins"
-import { ensureQmdCollections, installQmdGlobal } from "../lib/qmd"
+import { ensureQmdCollections, expectedQmdCollections, installQmdGlobal } from "../lib/qmd"
 import { configureVaultFolders } from "../lib/vault-folders"
 import { isDirectory, pathExists } from "../lib/vault-fs"
 import {
@@ -22,7 +29,7 @@ import { copyVaultSeed, seedVaultStarterContent } from "../lib/vault-seed"
 export interface InitOptions {
   yes: boolean
   vaultPath?: string | undefined
-  minimal: boolean
+  theme?: ThemePreset | undefined
   workspacePath?: string | undefined
   syncMethod?: SyncMethod | undefined
 }
@@ -65,7 +72,7 @@ async function promptSyncMethod(defaultMethod: SyncMethod): Promise<SyncMethod> 
       message: "How do you want to sync your vault?",
       initialValue: defaultMethod,
       options: [
-        { value: "git", label: "Git" },
+        { value: "git", label: "Git (Recommended)" },
         { value: "obsidian-sync", label: "Obsidian Sync" },
         { value: "none", label: "None" },
       ],
@@ -79,33 +86,33 @@ async function promptSyncMethod(defaultMethod: SyncMethod): Promise<SyncMethod> 
   throw new Error(`Invalid sync method selected: ${String(selection)}`)
 }
 
-async function promptMinimalTheme(defaultEnabled: boolean): Promise<boolean> {
+async function promptTheme(defaultTheme: ThemePreset): Promise<ThemePreset> {
   const selection = unwrapPrompt(
     await select({
       message: "Choose a theme preset",
-      initialValue: defaultEnabled ? "minimal" : "default",
+      initialValue: defaultTheme,
       options: [
-        { value: "minimal", label: "Minimal theme (default)" },
-        { value: "default", label: "Obsidian default theme" },
+        { value: "minimal", label: "Minimal (Recommended)" },
+        { value: "obsidian", label: "Obsidian" },
       ],
     }),
   )
 
-  if (selection === "minimal") {
-    return true
-  }
-
-  if (selection === "default") {
-    return false
+  if (selection === "minimal" || selection === "obsidian") {
+    return selection
   }
 
   throw new Error(`Invalid theme option selected: ${String(selection)}`)
 }
 
-function downloadVaultPlugins(vaultPath: string, syncMethod: SyncMethod, minimal: boolean): Promise<DownloadResult> {
+function themeUsesMinimalTools(theme: ThemePreset): boolean {
+  return theme === "minimal"
+}
+
+function downloadVaultPlugins(vaultPath: string, syncMethod: SyncMethod, theme: ThemePreset): Promise<DownloadResult> {
   return downloadPlugins(vaultPath, {
     includeGit: syncMethod === "git",
-    includeMinimal: minimal,
+    includeMinimal: themeUsesMinimalTools(theme),
   })
 }
 
@@ -132,8 +139,16 @@ async function promptInstallQmd(): Promise<boolean> {
   throw new Error(`Invalid QMD install option selected: ${String(selection)}`)
 }
 
+function buildQmdCollectionSummary(vaultPath: string, configuredCollections: readonly string[]): string | null {
+  const labels = expectedQmdCollections(vaultPath)
+    .filter((collection) => configuredCollections.includes(collection.name))
+    .map((collection) => basename(collection.path).replace(/^\d{2}\s+/u, ""))
+
+  return labels.length > 0 ? labels.join(", ") : null
+}
+
 export async function runInit(options: InitOptions): Promise<void> {
-  intro("🦞 Zettelclaw - Install vault")
+  intro(formatCommandIntro("Install vault"))
 
   const defaultVaultPath = resolveUserPath(DEFAULT_VAULT_PATH)
   const rawVaultPath = options.vaultPath ?? (options.yes ? defaultVaultPath : await promptVaultPath(defaultVaultPath))
@@ -144,7 +159,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   const syncMethod = options.syncMethod ?? (options.yes ? "git" : await promptSyncMethod("git"))
-  const minimal = options.yes ? true : options.minimal || (await promptMinimalTheme(true))
+  const theme = options.theme ?? (options.yes ? "minimal" : await promptTheme("minimal"))
+  const minimal = themeUsesMinimalTools(theme)
 
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
   const explicitWorkspaceConfigured = typeof options.workspacePath === "string" && options.workspacePath.length > 0
@@ -175,8 +191,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   s.stop("Vault configured")
 
   s.start("Downloading plugins")
-  const pluginResult = await downloadVaultPlugins(vaultPath, syncMethod, minimal)
-  s.stop("Plugin download finished")
+  const pluginResult = await downloadVaultPlugins(vaultPath, syncMethod, theme)
+  s.stop("Plugin downloads finished")
 
   // Plugin downloads replace plugin directories; re-apply plugin config files afterward.
   await configureCommunityPlugins(vaultPath, {
@@ -194,7 +210,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
     if (await promptInstallQmd()) {
       s.start("Installing QMD")
-      const installQmdResult = installQmdGlobal()
+      const installQmdResult = await installQmdGlobal()
 
       if (installQmdResult.installed) {
         const command = installQmdResult.command ? ` (${installQmdResult.command})` : ""
@@ -229,13 +245,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   const summaryLines = [`Vault path: ${toTildePath(vaultPath)}`]
-  if (pluginResult.downloaded.length > 0) {
-    summaryLines.push(`Plugins: ${pluginResult.downloaded.join(", ")}`)
-  }
-
-  if (qmdResult.configured.length > 0) {
-    summaryLines.push(`QMD collections: ${qmdResult.configured.length} root folders`)
-  }
+  const qmdCollectionSummary = buildQmdCollectionSummary(vaultPath, qmdResult.configured)
+  summaryLines.push(`QMD collections: ${qmdCollectionSummary ?? "none"}`)
+  summaryLines.push(`Plugins: ${pluginResult.downloaded.join(", ") || "none"}`)
 
   if (workspaceDetected) {
     const openclawConfigPath = join(dirname(workspacePath), "openclaw.json")
@@ -255,7 +267,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   log.message(summaryLines.join("\n"))
 
   if (pluginResult.failed.length > 0) {
-    log.warn(`Failed to download: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
+    log.warn(`Failed plugin downloads: ${pluginResult.failed.join(", ")} — install manually from Obsidian`)
   }
 
   if (qmdResult.message) {
@@ -266,5 +278,5 @@ export async function runInit(options: InitOptions): Promise<void> {
     log.warn(`QMD collection failures:\n${qmdResult.failed.map((line) => `- ${line}`).join("\n")}`)
   }
 
-  log.success("Done. Open your vault in Obsidian to start using the template.")
+  log.success("Done! Open your vault in Obsidian to get started")
 }

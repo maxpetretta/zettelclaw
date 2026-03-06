@@ -3,8 +3,8 @@
 import { log } from "@clack/prompts"
 
 import { runInit } from "./commands/init"
-import { runInstallPlugins } from "./commands/install-plugins"
 import { runVerify } from "./commands/verify"
+import { CLI_TAGLINE, type ThemePreset } from "./lib/cli"
 import type { SyncMethod } from "./lib/vault-obsidian"
 
 interface ParsedArgs {
@@ -12,7 +12,7 @@ interface ParsedArgs {
   flags: {
     yes: boolean
     vaultPath?: string | undefined
-    minimal: boolean
+    theme?: ThemePreset | undefined
     workspacePath?: string | undefined
     syncMethod?: SyncMethod | undefined
   }
@@ -30,28 +30,28 @@ interface OptionSpec {
 
 const OPTION_SPECS: readonly OptionSpec[] = [
   { longName: "--yes", flag: "yes", kind: "boolean" },
-  { longName: "--minimal", flag: "minimal", kind: "boolean" },
   { longName: "--vault", flag: "vaultPath", kind: "string" },
   { longName: "--workspace", flag: "workspacePath", kind: "string" },
   { longName: "--sync", flag: "syncMethod", kind: "string" },
+  { longName: "--theme", flag: "theme", kind: "string" },
 ]
 
 const OPTION_SPEC_BY_LONG_NAME = new Map(OPTION_SPECS.map((spec) => [spec.longName, spec]))
 
 function usage(): string {
   return [
-    "🦞 Zettelclaw - Your agent's second brain, built together",
+    `🦞 ${CLI_TAGLINE}`,
+    "Zettelclaw CLI",
     "",
     "Usage:",
     "  zettelclaw init [options]     Install and configure a Zettelclaw vault",
-    "  zettelclaw plugins [options]  Install or refresh bundled plugin binaries",
     "  zettelclaw verify [options]   Verify vault, plugin, and OpenClaw integration",
     "",
     "Options:",
     "  --vault <path>      Set vault path (default: ~/zettelclaw)",
     "  --workspace <path>  Override OpenClaw workspace path (default: ~/.openclaw/workspace)",
     "  --sync <method>     git | obsidian-sync | none (default: git)",
-    "  --minimal           Install Minimal theme (+ minimal settings + hider)",
+    "  --theme <preset>    minimal | obsidian",
     "  --yes               Accept defaults non-interactively",
   ].join("\n")
 }
@@ -85,13 +85,21 @@ function normalizeSyncMethod(rawValue: string): SyncMethod {
   throw new Error(`Invalid value for --sync: ${rawValue}. Expected git, obsidian-sync, or none.`)
 }
 
+function normalizeThemePreset(rawValue: string): ThemePreset {
+  if (rawValue === "minimal" || rawValue === "obsidian") {
+    return rawValue
+  }
+
+  throw new Error(`Invalid value for --theme: ${rawValue}. Expected minimal or obsidian.`)
+}
+
 function assignParsedFlag(parsed: ParsedArgs, spec: OptionSpec, rawValue?: string): void {
   if (spec.kind === "boolean") {
     if (rawValue !== undefined) {
       throw new Error(`Unknown argument: ${spec.longName}=${rawValue}`)
     }
 
-    if (spec.flag === "yes" || spec.flag === "minimal") {
+    if (spec.flag === "yes") {
       parsed.flags[spec.flag] = true
       return
     }
@@ -116,6 +124,9 @@ function assignParsedFlag(parsed: ParsedArgs, spec: OptionSpec, rawValue?: strin
       return
     case "syncMethod":
       parsed.flags.syncMethod = normalizeSyncMethod(rawValue)
+      return
+    case "theme":
+      parsed.flags.theme = normalizeThemePreset(rawValue)
       return
     default:
       throw new Error(`Unsupported value option mapping for ${spec.longName}`)
@@ -147,12 +158,16 @@ function applyOption(parsed: ParsedArgs, rest: string[], index: number): number 
 }
 
 function validateArgs(parsed: ParsedArgs): void {
-  if (parsed.command !== "init" && parsed.command !== "plugins" && parsed.command !== "verify") {
+  if (parsed.command !== "init" && parsed.command !== "verify") {
     return
   }
 
   if (parsed.command === "verify" && parsed.flags.syncMethod) {
-    throw new Error("--sync is only supported with `zettelclaw init` and `zettelclaw plugins`")
+    throw new Error("--sync is only supported with `zettelclaw init`")
+  }
+
+  if (parsed.command === "verify" && parsed.flags.theme) {
+    throw new Error("--theme is only supported with `zettelclaw init`")
   }
 }
 
@@ -163,7 +178,6 @@ function parseArgs(argv: string[]): ParsedArgs {
     command,
     flags: {
       yes: false,
-      minimal: false,
     },
   }
 
@@ -201,18 +215,8 @@ async function main() {
     await runInit({
       yes: parsed.flags.yes,
       vaultPath: parsed.flags.vaultPath,
-      minimal: parsed.flags.minimal,
+      theme: parsed.flags.theme,
       workspacePath: parsed.flags.workspacePath,
-      syncMethod: parsed.flags.syncMethod,
-    })
-    return
-  }
-
-  if (parsed.command === "plugins") {
-    await runInstallPlugins({
-      yes: parsed.flags.yes,
-      vaultPath: parsed.flags.vaultPath,
-      minimal: parsed.flags.minimal,
       syncMethod: parsed.flags.syncMethod,
     })
     return
