@@ -252,6 +252,10 @@ const features = [
         "rgba(244, 114, 182, 0.26)", // pink
       ]
 
+      function readFill(index: number): string {
+        return fills[index] ?? fills[0] ?? "rgba(139, 92, 246, 0.30)"
+      }
+
       function pickFill(i: number): string {
         const overrides: Record<number, number> = {
           5: 5,
@@ -266,12 +270,13 @@ const features = [
           31: 10,
           17: 8,
         }
-        if (i in overrides) return fills[overrides[i]]
+        const override = overrides[i]
+        if (typeof override === "number") return readFill(override)
         const r = Math.random()
-        if (r < 0.55) return fills[Math.floor(Math.random() * 5)]
-        if (r < 0.72) return fills[5 + Math.floor(Math.random() * 3)]
-        if (r < 0.88) return fills[8 + Math.floor(Math.random() * 2)]
-        return fills[10 + Math.floor(Math.random() * 2)]
+        if (r < 0.55) return readFill(Math.floor(Math.random() * 5))
+        if (r < 0.72) return readFill(5 + Math.floor(Math.random() * 3))
+        if (r < 0.88) return readFill(8 + Math.floor(Math.random() * 2))
+        return readFill(10 + Math.floor(Math.random() * 2))
       }
 
       // prettier-ignore
@@ -382,6 +387,7 @@ const features = [
         for (const e of edges) {
           const na = nodes[e.a]
           const nb = nodes[e.b]
+          if (!(na && nb)) continue
           e.el.setAttribute("x1", String(na.x))
           e.el.setAttribute("y1", String(na.y))
           e.el.setAttribute("x2", String(nb.x))
@@ -500,8 +506,8 @@ views:
         if (title === "inbox.base") {
           return `<pre class="ide-yaml">${baseContent}</pre>`
         }
-        if (title in vault) {
-          const file = vault[title]
+        const file = vault[title]
+        if (file) {
           const body = file.body.map((p) => `<p class="ide-p">${linkify(p)}</p>`).join("")
           return `<div class="ide-fm"><span class="ide-fm-fence">---</span>${fmHtml(file.fm)}<span class="ide-fm-fence">---</span></div><h1 class="ide-h1">${title}</h1>${body}`
         }
@@ -534,17 +540,18 @@ views:
 
       function updateSidebar(title: string) {
         document.querySelectorAll(".ide-file").forEach((f) => f.classList.remove("ide-file--active"))
-        const match = document.querySelector(`[data-file="${title}"]`)
+        const match = document.querySelector<HTMLElement>(`[data-file="${title}"]`)
         if (match) match.classList.add("ide-file--active")
       }
 
       function pushPane(title: string) {
         // If this title is already the active (rightmost) pane, do nothing
-        if (paneStack.length > 0 && paneStack[paneStack.length - 1].title === title) return
+        const activePane = paneStack.at(-1)
+        if (activePane?.title === title) return
 
         // Collapse current active pane
-        if (paneStack.length > 0) {
-          const current = paneStack[paneStack.length - 1]
+        if (activePane) {
+          const current = activePane
           current.el.classList.remove("ide-pane--active")
           current.el.classList.add("ide-pane--collapsed")
         }
@@ -575,6 +582,7 @@ views:
 
         // Mark this pane as active
         const pane = paneStack[idx]
+        if (!pane) return
         pane.el.classList.remove("ide-pane--collapsed")
         pane.el.classList.add("ide-pane--active")
 
