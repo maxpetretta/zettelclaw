@@ -5,31 +5,28 @@ import { ensureQmdCollections, expectedQmdCollections, installQmdGlobal, listQmd
 import { readTextFile, withEnv, withTempDir, writeExecutable } from "./test-helpers"
 
 describe("qmd integration helpers", () => {
-  test("builds expected collection names from the vault path", () => {
+  test("builds expected collection names from the folder suffix", () => {
     expect(expectedQmdCollections("/tmp/My Vault")).toEqual([
       {
-        name: "zettelclaw-my-vault-inbox",
+        name: "zettelclaw-inbox",
         path: "/tmp/My Vault/00 Inbox",
         mask: "**/*.md",
       },
       {
-        name: "zettelclaw-my-vault-notes",
+        name: "zettelclaw-notes",
         path: "/tmp/My Vault/01 Notes",
         mask: "**/*.md",
       },
       {
-        name: "zettelclaw-my-vault-journal",
+        name: "zettelclaw-journal",
         path: "/tmp/My Vault/02 Journal",
         mask: "**/*.md",
       },
-    ])
-  })
-
-  test("falls back to a generic vault slug when the folder name has no alphanumerics", () => {
-    expect(expectedQmdCollections("/tmp/!!!").map((collection) => collection.name)).toEqual([
-      "zettelclaw-vault-inbox",
-      "zettelclaw-vault-notes",
-      "zettelclaw-vault-journal",
+      {
+        name: "zettelclaw-attachments",
+        path: "/tmp/My Vault/04 Attachments",
+        mask: "**/*.md",
+      },
     ])
   })
 
@@ -140,7 +137,7 @@ exit 1
         const expectedNames = expectedQmdCollections(join(dir, "vault")).map((collection) => collection.name)
 
         expect(result.skipped).toBe(false)
-        expect(result.configured).toEqual(expectedNames.slice(0, 2))
+        expect(result.configured).toEqual(expectedNames.filter((name) => !name.endsWith("-journal")))
         expect(result.failed).toEqual([`${expectedNames[2]}: journal failed`])
         expect((await readTextFile(logPath)).trim().split("\n")).toEqual(expectedNames)
       })

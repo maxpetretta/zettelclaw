@@ -22,9 +22,10 @@ This vault follows the canonical Zettelclaw spec: capture in inbox, write durabl
 
 If `qmd` is installed, `zettelclaw init` creates collections for:
 
-- `zettelclaw-<vault>-inbox`
-- `zettelclaw-<vault>-notes`
-- `zettelclaw-<vault>-journal`
+- `zettelclaw-inbox`
+- `zettelclaw-notes`
+- `zettelclaw-journal`
+- `zettelclaw-attachments`
 
 ## OpenClaw integration
 

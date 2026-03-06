@@ -600,24 +600,25 @@ A single universal template handles all content types. URL triggers set the `typ
 `zettelclaw init` creates one QMD collection per vault folder:
 
 ```
-zettelclaw-<vault>-inbox
-zettelclaw-<vault>-notes
-zettelclaw-<vault>-journal
+zettelclaw-inbox
+zettelclaw-notes
+zettelclaw-journal
+zettelclaw-attachments
 ```
 
-Templates and Attachments are not indexed.
+Templates are not indexed.
 
 ### Search commands
 
 ```bash
 # Hybrid search (best quality — keyword + semantic + reranking)
-qmd query "spaced repetition and retrieval" -c zettelclaw-vault-notes
+qmd query "spaced repetition and retrieval" -c zettelclaw-notes
 
 # Keyword search (fast, exact terms)
-qmd search "type: source" -c zettelclaw-vault-inbox
+qmd search "type: source" -c zettelclaw-inbox
 
 # Semantic search (conceptual similarity)
-qmd vsearch "what makes learning stick" -c zettelclaw-vault-notes
+qmd vsearch "what makes learning stick" -c zettelclaw-notes
 ```
 
 ### Fallback

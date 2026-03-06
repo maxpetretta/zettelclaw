@@ -9,7 +9,7 @@ Zettelclaw gives you:
 - an inbox Base view (`00 Inbox/inbox.base`)
 - bundled plugin install during `init`
 - OpenClaw integration through vault memory paths
-- QMD collection setup for inbox, notes, and journal
+- QMD collection setup for inbox, notes, journal, and attachments
 - a universal Web Clipper template that works across source types (including Twitter and YouTube)
 - a vault-specific agent skill
 - a single-page marketing site
@@ -37,9 +37,10 @@ npx zettelclaw verify
 - Base view:
   - `00 Inbox/inbox.base`
 - QMD collections (when `qmd` is installed):
-  - `zettelclaw-<vault>-inbox`
-  - `zettelclaw-<vault>-notes`
-  - `zettelclaw-<vault>-journal`
+  - `zettelclaw-inbox`
+  - `zettelclaw-notes`
+  - `zettelclaw-journal`
+  - `zettelclaw-attachments`
 - OpenClaw integration:
   - `agents.defaults.memorySearch.extraPaths` patch in OpenClaw config to include vault path
 

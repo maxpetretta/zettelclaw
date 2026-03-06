@@ -89,11 +89,18 @@ Tags live in the frontmatter `tags` array, not inline in the body.
 
 ## Search patterns
 
+Default QMD collections:
+
+- `zettelclaw-inbox`
+- `zettelclaw-notes`
+- `zettelclaw-journal`
+- `zettelclaw-attachments`
+
 ```bash
 # qmd (preferred when installed)
-qmd query "spaced repetition and retrieval" -c zettelclaw-<vault>-notes
-qmd search "status: queued" -c zettelclaw-<vault>-inbox
-qmd vsearch "what have I been learning about memory" -c zettelclaw-<vault>-notes
+qmd query "spaced repetition and retrieval" -c zettelclaw-notes
+qmd search "status: queued" -c zettelclaw-inbox
+qmd vsearch "what have I been learning about memory" -c zettelclaw-notes
 
 # ripgrep fallback
 rg -l 'type: note' "01 Notes/"

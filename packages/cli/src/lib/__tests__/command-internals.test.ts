@@ -140,7 +140,7 @@ exit 1
           {
             name: "Collections",
             status: "warn",
-            detail: "configured: Inbox; missing: Notes, Journal",
+            detail: "configured: Inbox; missing: Notes, Journal, Attachments",
           },
         ])
       })

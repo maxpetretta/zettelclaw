@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process"
-import { basename, join } from "node:path"
+import { join } from "node:path"
 
 import { FOLDERS } from "./folders"
 
@@ -48,6 +48,7 @@ const COLLECTION_FOLDERS: CollectionFolderSpec[] = [
   { suffix: "inbox", folder: FOLDERS.inbox },
   { suffix: "notes", folder: FOLDERS.notes },
   { suffix: "journal", folder: FOLDERS.journal },
+  { suffix: "attachments", folder: FOLDERS.attachments },
 ]
 
 function formatFailureMessage(args: string[], status: number, stderr: string, stdout: string): string {
@@ -68,23 +69,9 @@ function runQmdCommand(args: string[], options: QmdCommandOptions = {}): QmdComm
   return runCommand("qmd", args, options)
 }
 
-function toSlug(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-  return slug.length > 0 ? slug : "vault"
-}
-
-function collectionPrefixForVault(vaultPath: string): string {
-  return `zettelclaw-${toSlug(basename(vaultPath))}`
-}
-
 export function expectedQmdCollections(vaultPath: string): QmdCollectionSpec[] {
-  const prefix = collectionPrefixForVault(vaultPath)
-
   return COLLECTION_FOLDERS.map((spec) => ({
-    name: `${prefix}-${spec.suffix}`,
+    name: `zettelclaw-${spec.suffix}`,
     path: join(vaultPath, spec.folder),
     mask: MARKDOWN_MASK,
   }))
