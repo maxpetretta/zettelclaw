@@ -83,7 +83,7 @@ const features = [
         <h1>An Obsidian vault your agent can actually&nbsp;read.</h1>
         <p class="lede">
           Your notes become searchable context for your AI agent — not dead files in a folder. Every conversation picks up
-          where the last one left off. Two commands from empty folder to working system.
+          where the last one left off. One command from empty folder to working system.
         </p>
         <div class="hero-cta">
           <button class="copy-block" data-copy="npx zettelclaw" data-label="Copy">
@@ -210,26 +210,21 @@ const features = [
       <div class="divider" aria-hidden="true"></div>
 
       <section class="start reveal" id="start">
-        <h2>Two commands. Done.</h2>
+        <h2>One command. Done.</h2>
         <div class="start-commands">
           <button class="copy-block copy-block--lg" data-copy="npx zettelclaw init" data-label="Copy">
             <span class="prompt">$</span>
             <code>npx zettelclaw init</code>
             <span class="copy-label">Copy</span>
           </button>
-          <button class="copy-block copy-block--lg" data-copy="npx zettelclaw verify" data-label="Copy">
-            <span class="prompt">$</span>
-            <code>npx zettelclaw verify</code>
-            <span class="copy-label">Copy</span>
-          </button>
         </div>
         <p class="start-note">
-          Need to refresh plugin binaries later? <code>npx zettelclaw plugins</code>
+          Want to verify your setup? <code>npx zettelclaw verify</code>
         </p>
       </section>
 
       <footer class="footer">
-        <span class="footer-wordmark">Zettelclaw</span>
+        <span class="footer-wordmark">Built with 🦞 by <a href="https://x.com/maxpetretta">Max Petretta</a></span>
         <div class="footer-links">
           <a href="https://www.npmjs.com/package/zettelclaw">npm</a>
           <a href="https://github.com/maxpetretta/zettelclaw">GitHub</a>
@@ -737,7 +732,7 @@ views:
     z-index: 1;
     width: min(100%, 1120px);
     margin: 0 auto;
-    padding: 0 1.5rem 4rem;
+    padding: 0 2.5rem 4rem;
   }
 
   /* ---- Nav ---- */
@@ -1405,9 +1400,9 @@ views:
   }
 
   .footer-wordmark {
-    font-family: var(--font-serif);
-    font-weight: 700;
-    font-size: 0.95rem;
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 0.82rem;
   }
 
   .footer-links {
@@ -1415,6 +1410,15 @@ views:
     gap: 1.2rem;
     font-family: var(--font-mono);
     font-size: 0.82rem;
+  }
+
+  .footer-wordmark a {
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-wordmark a:hover {
+    color: var(--text-primary);
   }
 
   .footer-links a {
