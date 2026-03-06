@@ -9,7 +9,7 @@ import { expectedQmdCollections } from "../qmd"
 import { configureVaultFolders } from "../vault-folders"
 import { configureApp, configureCommunityPlugins, configureCoreSync, configureMinimalTheme } from "../vault-obsidian"
 import { copyVaultSeed, seedVaultStarterContent } from "../vault-seed"
-import { readJsonFile, withEnv, withTempDir, writeExecutable, writeJsonFile } from "./test-helpers"
+import { readJsonFile, readTextFile, withEnv, withTempDir, writeExecutable, writeJsonFile, writeTextFile } from "./test-helpers"
 
 function qmdListScript(vaultPath: string): string {
   const lines = expectedQmdCollections(vaultPath).map(
@@ -103,6 +103,7 @@ describe("command flows", () => {
           },
         },
       })
+      expect(await readTextFile(join(dirname(workspacePath), "skills", "zettelclaw", "SKILL.md"))).toContain("# Zettelclaw")
     })
   })
 
@@ -135,6 +136,113 @@ describe("command flows", () => {
             workspacePath,
           }),
         ).resolves.toBeUndefined()
+      })
+    })
+  })
+
+  test("runInit overwrites an existing OpenClaw zettelclaw skill install", async () => {
+    await withTempDir("zettelclaw-run-init-skill-overwrite-", async (dir) => {
+      const vaultPath = join(dir, "vault")
+      const workspacePath = join(dir, "workspace", "state")
+      const openClawConfigPath = join(dirname(workspacePath), "openclaw.json")
+      const skillPath = join(dirname(workspacePath), "skills", "zettelclaw", "SKILL.md")
+      const originalFetch = globalThis.fetch
+
+      await mkdir(workspacePath, { recursive: true })
+      await writeJsonFile(openClawConfigPath, {
+        agents: {
+          defaults: {
+            memorySearch: {
+              extraPaths: [],
+            },
+          },
+        },
+      })
+      await writeTextFile(skillPath, "old skill")
+
+      globalThis.fetch = async () => new Response(null, { status: 404 })
+
+      try {
+        await withEnv(
+          { OPENCLAW_CONFIG_PATH: undefined, OPENCLAW_STATE_DIR: undefined, PATH: join(dir, "bin") },
+          async () => {
+            await runInit({
+              yes: true,
+              syncMethod: "none",
+              theme: "obsidian",
+              vaultPath,
+              workspacePath,
+            })
+          },
+        )
+      } finally {
+        globalThis.fetch = originalFetch
+      }
+
+      expect(await readTextFile(skillPath)).toContain("# Zettelclaw")
+    })
+  })
+
+  test("runInit warns but succeeds when OpenClaw skill install fails", async () => {
+    await withTempDir("zettelclaw-run-init-skill-warn-", async (dir) => {
+      const vaultPath = join(dir, "vault")
+      const workspacePath = join(dir, "workspace", "state")
+      const openClawConfigPath = join(dirname(workspacePath), "openclaw.json")
+      const blockedSkillsPath = join(dirname(workspacePath), "skills")
+      const originalFetch = globalThis.fetch
+
+      await mkdir(workspacePath, { recursive: true })
+      await writeJsonFile(openClawConfigPath, {
+        agents: {
+          defaults: {
+            memorySearch: {
+              extraPaths: [],
+            },
+          },
+        },
+      })
+      await writeTextFile(blockedSkillsPath, "not a directory")
+
+      globalThis.fetch = async () => new Response(null, { status: 404 })
+
+      try {
+        await withEnv(
+          { OPENCLAW_CONFIG_PATH: undefined, OPENCLAW_STATE_DIR: undefined, PATH: join(dir, "bin") },
+          async () => {
+            await expect(
+              runInit({
+                yes: true,
+                syncMethod: "none",
+                theme: "obsidian",
+                vaultPath,
+                workspacePath,
+              }),
+            ).resolves.toBeUndefined()
+          },
+        )
+      } finally {
+        globalThis.fetch = originalFetch
+      }
+
+      expect(await readTextFile(blockedSkillsPath)).toBe("not a directory")
+      expect(
+        await readJsonFile<{
+          agents?: {
+            defaults?: {
+              memorySearch?: {
+                extraPaths?: string[]
+              }
+            }
+          }
+        }>(openClawConfigPath),
+      ).toEqual({
+        agents: {
+          defaults: {
+            memorySearch: {
+              extraPaths: [vaultPath],
+            },
+          },
+        },
       })
     })
   })

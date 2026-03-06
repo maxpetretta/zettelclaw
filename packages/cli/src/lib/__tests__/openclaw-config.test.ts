@@ -128,7 +128,7 @@ describe("openclaw config and vault detection", () => {
         },
       })
 
-      await expect(detectExistingFolder(vaultPath, ["01 Notes", "Notes"])).resolves.toBe("01 Notes")
+      await expect(detectExistingFolder(vaultPath, ["01 Notes"])).resolves.toBe("01 Notes")
       await expect(looksLikeZettelclawVault(vaultPath, ["01 Notes"], ["02 Journal"])).resolves.toBe(true)
       await expect(detectVaultFromOpenClawConfig(configPath, ["01 Notes"], ["02 Journal"])).resolves.toBe(vaultPath)
     })

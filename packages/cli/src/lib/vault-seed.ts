@@ -104,38 +104,16 @@ async function buildStarterJournalEntry(vaultPath: string, dateStamp: string): P
   })
 }
 
-function pathIsInsideFolder(relativePath: string, folder: string): boolean {
-  return relativePath === folder || relativePath.startsWith(`${folder}/`)
-}
-
-function remapSeedPath(relativePath: string): string | null {
-  let mapped = relativePath
-
-  if (mapped === "gitignore") {
-    mapped = ".gitignore"
+function normalizeSeedPath(relativePath: string): string {
+  if (relativePath === "gitignore") {
+    return ".gitignore"
   }
 
-  if (mapped === ".obsidian/workspace.template.json") {
-    mapped = ".obsidian/workspace.json"
+  if (relativePath === ".obsidian/workspace.template.json") {
+    return ".obsidian/workspace.json"
   }
 
-  if (pathIsInsideFolder(mapped, "02 Agent")) {
-    return null
-  }
-
-  if (mapped.startsWith("03 Journal/")) {
-    mapped = mapped.replace("03 Journal/", `${FOLDERS.journal}/`)
-  }
-
-  if (mapped.startsWith("04 Templates/")) {
-    mapped = mapped.replace("04 Templates/", `${FOLDERS.templates}/`)
-  }
-
-  if (mapped.startsWith("05 Attachments/")) {
-    mapped = mapped.replace("05 Attachments/", `${FOLDERS.attachments}/`)
-  }
-
-  return mapped
+  return relativePath
 }
 
 export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions): Promise<CopyResult> {
@@ -149,11 +127,7 @@ export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions
   }
 
   for (const relativePath of files) {
-    const mappedRelativePath = remapSeedPath(relativePath)
-
-    if (!mappedRelativePath) {
-      continue
-    }
+    const mappedRelativePath = normalizeSeedPath(relativePath)
 
     const source = join(TEMPLATE_ROOT, ...relativePath.split("/"))
     const destination = join(vaultPath, ...mappedRelativePath.split("/"))

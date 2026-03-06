@@ -16,7 +16,6 @@ export interface CommunityPluginOptions {
   includeMinimalThemeTools: boolean
 }
 
-const TEMPLATE_PATH_PREFIX = /^(?:\d{2} )?Templates\//
 const MINIMAL_APPEARANCE_DEFAULTS: Record<string, unknown> = {
   accentColor: "",
   theme: "system",
@@ -24,27 +23,6 @@ const MINIMAL_APPEARANCE_DEFAULTS: Record<string, unknown> = {
   showRibbon: false,
   showViewHeader: true,
   baseFontSize: 14,
-}
-
-function rewriteTemplatePaths(value: unknown, templatesFolder: string): unknown {
-  if (typeof value === "string") {
-    return value.replace(TEMPLATE_PATH_PREFIX, `${templatesFolder}/`)
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((entry) => rewriteTemplatePaths(entry, templatesFolder))
-  }
-
-  if (value && typeof value === "object") {
-    const next: Record<string, unknown> = {}
-    for (const [key, nested] of Object.entries(value)) {
-      next[key] = rewriteTemplatePaths(nested, templatesFolder)
-    }
-
-    return next
-  }
-
-  return value
 }
 
 function enableMainTabsStackedByDefault(workspace: unknown): unknown {
@@ -141,7 +119,7 @@ export async function configureApp(pathToVault: string): Promise<void> {
 
   if (await pathExists(workspacePath)) {
     const workspace = await readJsonFileOrDefault<unknown>(workspacePath, {})
-    const nextWorkspace = enableMainTabsStackedByDefault(rewriteTemplatePaths(workspace, folders.templates))
+    const nextWorkspace = enableMainTabsStackedByDefault(workspace)
     await writeJsonFile(workspacePath, nextWorkspace)
   }
 }

@@ -9,7 +9,7 @@ import {
   toTildePath,
   unwrapPrompt,
 } from "../lib/cli"
-import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES, TEMPLATES_FOLDER_ALIASES } from "../lib/folders"
+import { FOLDERS } from "../lib/folders"
 import { readOpenClawConfigFile, readOpenClawExtraPathsByScope } from "../lib/openclaw-config"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
@@ -18,8 +18,6 @@ import { expectedQmdCollections, listQmdCollections } from "../lib/qmd"
 import { detectVaultFromOpenClawConfig, looksLikeZettelclawVault } from "../lib/vault-detect"
 import { isDirectory, pathExists } from "../lib/vault-fs"
 
-const JOURNAL_FOLDER_CANDIDATES = [...JOURNAL_FOLDER_ALIASES]
-const TEMPLATE_FOLDER_CANDIDATES = [...TEMPLATES_FOLDER_ALIASES]
 const REQUIRED_PLUGIN_IDS = ["calendar"] as const
 
 export interface VerifyOptions {
@@ -63,11 +61,7 @@ async function detectVaultPath(options: VerifyOptions, workspacePath: string): P
   }
 
   const openclawConfigPath = join(dirname(workspacePath), "openclaw.json")
-  const detected = await detectVaultFromOpenClawConfig(
-    openclawConfigPath,
-    NOTES_FOLDER_CANDIDATES,
-    JOURNAL_FOLDER_CANDIDATES,
-  )
+  const detected = await detectVaultFromOpenClawConfig(openclawConfigPath, [FOLDERS.notes], [FOLDERS.journal])
   if (detected) {
     return detected
   }
@@ -184,13 +178,7 @@ function findTabsNode(node: unknown): Record<string, unknown> | undefined {
 }
 
 async function findTemplatesFolder(vaultPath: string): Promise<string | null> {
-  for (const candidate of TEMPLATE_FOLDER_CANDIDATES) {
-    if (await isDirectory(join(vaultPath, candidate))) {
-      return candidate
-    }
-  }
-
-  return null
+  return (await isDirectory(join(vaultPath, FOLDERS.templates))) ? FOLDERS.templates : null
 }
 
 async function buildPluginCheck(vaultPath: string): Promise<VerifyCheck> {
@@ -488,7 +476,7 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
 
   vaultChecks.push({ name: "Path", status: "pass", detail: toTildePath(vaultPath) })
 
-  if (await looksLikeZettelclawVault(vaultPath, NOTES_FOLDER_CANDIDATES, JOURNAL_FOLDER_CANDIDATES)) {
+  if (await looksLikeZettelclawVault(vaultPath, [FOLDERS.notes], [FOLDERS.journal])) {
     vaultChecks.push({ name: "Structure", status: "pass", detail: "notes + journal folders detected" })
   } else {
     vaultChecks.push({ name: "Structure", status: "fail", detail: "notes/journal folders not detected" })

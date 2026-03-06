@@ -6,12 +6,13 @@ import { toTildePath } from "../cli"
 import { forEachConcurrent } from "../concurrency"
 import { FOLDERS, getVaultFolders } from "../folders"
 import { asRecord, asStringArray } from "../json"
+import { installOpenClawSkillForWorkspace, resolveOpenClawSkillInstallPath } from "../openclaw-skill"
 import { resolveOpenClawEnvForWorkspace } from "../openclaw-workspace"
 import { expandHome, resolveUserPath } from "../paths"
 import { resolveSkillPath } from "../skill"
 import { substituteTemplate } from "../template"
 import { uniqueTrimmedStrings } from "../text"
-import { withTempDir, writeTextFile } from "./test-helpers"
+import { readTextFile, withTempDir, writeTextFile } from "./test-helpers"
 
 describe("core utility modules", () => {
   test("json helpers normalize values", () => {
@@ -92,6 +93,21 @@ describe("core utility modules", () => {
     expect(resolveOpenClawEnvForWorkspace("/tmp/openclaw/workspace")).toEqual({
       stateDir: "/tmp/openclaw",
       configPath: "/tmp/openclaw/openclaw.json",
+    })
+  })
+
+  test("openclaw skill helper installs the bundled skill into managed skills", async () => {
+    await withTempDir("zettelclaw-openclaw-skill-", async (dir) => {
+      const workspacePath = join(dir, "workspace", "state")
+      const installedPath = resolveOpenClawSkillInstallPath(join(dir, "workspace"))
+
+      await writeTextFile(join(installedPath, "SKILL.md"), "old skill")
+
+      const result = await installOpenClawSkillForWorkspace(workspacePath)
+
+      expect(result.installedPath).toBe(installedPath)
+      expect(result.sourcePath).toContain("/skill")
+      expect(await readTextFile(join(installedPath, "SKILL.md"))).toContain("# Zettelclaw")
     })
   })
 

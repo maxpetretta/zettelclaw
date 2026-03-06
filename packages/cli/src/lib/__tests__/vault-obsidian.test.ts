@@ -80,22 +80,6 @@ describe("configureApp", () => {
     expect(workspace.main?.children?.[0]?.stacked).toBe(false)
   })
 
-  test("rewrites template paths inside workspace state", async () => {
-    const vaultPath = await createTempVault()
-
-    await writeJsonFile(join(vaultPath, ".obsidian", "workspace.json"), {
-      main: {
-        type: "tabs",
-        children: [],
-      },
-      lastOpenFiles: ["04 Templates/journal.md"],
-    })
-
-    await configureApp(vaultPath)
-
-    const workspace = await readJsonFile<{ lastOpenFiles?: string[] }>(join(vaultPath, ".obsidian", "workspace.json"))
-    expect(workspace.lastOpenFiles).toEqual(["03 Templates/journal.md"])
-  })
 })
 
 describe("other vault obsidian config helpers", () => {

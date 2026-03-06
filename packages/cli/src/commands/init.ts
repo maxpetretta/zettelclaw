@@ -11,6 +11,7 @@ import {
   unwrapPrompt,
 } from "../lib/cli"
 import { ensureOpenClawMemoryPath } from "../lib/openclaw"
+import { installOpenClawSkillForWorkspace } from "../lib/openclaw-skill"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { type DownloadResult, downloadPlugins } from "../lib/plugins"
@@ -266,6 +267,14 @@ export async function runInit(options: InitOptions): Promise<void> {
 
     if (openclawPatch.message) {
       log.warn(openclawPatch.message)
+    }
+
+    try {
+      await installOpenClawSkillForWorkspace(workspacePath)
+      summaryLines.push("OpenClaw skill: installed")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      log.warn(`Could not install OpenClaw skill: ${message}`)
     }
   } else {
     log.warn(`OpenClaw workspace not found at ${toTildePath(workspacePath)}. Skipped memory-path patch.`)

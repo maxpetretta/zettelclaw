@@ -29,7 +29,7 @@ If `qmd` is installed, `zettelclaw init` creates collections for:
 
 ## OpenClaw integration
 
-When an OpenClaw workspace is detected during `zettelclaw init`, the CLI patches `agents.defaults.memorySearch.extraPaths` so your agent can read this vault as memory context.
+When an OpenClaw workspace is detected during `zettelclaw init`, the CLI patches `agents.defaults.memorySearch.extraPaths` so your agent can read this vault as memory context, and installs the bundled `zettelclaw` skill into OpenClaw's managed `skills/` directory.
 
 ## Agent integration
 

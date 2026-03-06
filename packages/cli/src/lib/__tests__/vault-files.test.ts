@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { mkdir, symlink } from "node:fs/promises"
+import { mkdir } from "node:fs/promises"
 import { join } from "node:path"
 
 import { configureVaultFolders } from "../vault-folders"
@@ -8,7 +8,7 @@ import { copyVaultSeed, seedVaultStarterContent } from "../vault-seed"
 import { substituteTemplate } from "../template"
 import { readTextFile, withTempDir, writeTextFile } from "./test-helpers"
 
-describe("vault filesystem, folder migration, and seed content", () => {
+describe("vault filesystem and seed content", () => {
   test("vault-fs helpers read and write expected files", async () => {
     await withTempDir("zettelclaw-vault-fs-", async (dir) => {
       const nestedFile = join(dir, "nested", "note.md")
@@ -23,15 +23,9 @@ describe("vault filesystem, folder migration, and seed content", () => {
     })
   })
 
-  test("configureVaultFolders migrates legacy names and removes managed agent symlink folders", async () => {
+  test("configureVaultFolders creates the canonical vault folders", async () => {
     await withTempDir("zettelclaw-vault-folders-", async (dir) => {
-      await mkdir(join(dir, "Inbox"), { recursive: true })
-      await mkdir(join(dir, "Notes"), { recursive: true })
-      await mkdir(join(dir, "Daily"), { recursive: true })
-      await mkdir(join(dir, "Templates"), { recursive: true })
-      await mkdir(join(dir, "Attachments"), { recursive: true })
-      await mkdir(join(dir, "02 Agent"), { recursive: true })
-      await symlink("/tmp", join(dir, "02 Agent", ".gitkeep-link"))
+      await mkdir(join(dir, "scratch"), { recursive: true })
 
       await configureVaultFolders(dir)
 
@@ -40,23 +34,11 @@ describe("vault filesystem, folder migration, and seed content", () => {
       await expect(isDirectory(join(dir, "02 Journal"))).resolves.toBe(true)
       await expect(isDirectory(join(dir, "03 Templates"))).resolves.toBe(true)
       await expect(isDirectory(join(dir, "04 Attachments"))).resolves.toBe(true)
-      await expect(pathExists(join(dir, "02 Agent"))).resolves.toBe(false)
+      await expect(isDirectory(join(dir, "scratch"))).resolves.toBe(true)
     })
   })
 
-  test("configureVaultFolders preserves non-managed agent folders", async () => {
-    await withTempDir("zettelclaw-vault-agent-", async (dir) => {
-      await mkdir(join(dir, "03 Agent"), { recursive: true })
-      await writeTextFile(join(dir, "03 Agent", "notes.md"), "keep me")
-
-      await configureVaultFolders(dir)
-
-      await expect(pathExists(join(dir, "03 Agent"))).resolves.toBe(true)
-      await expect(readTextFile(join(dir, "03 Agent", "notes.md"))).resolves.toBe("keep me")
-    })
-  })
-
-  test("copyVaultSeed remaps template files and omits managed agent content", async () => {
+  test("copyVaultSeed copies the canonical seed files", async () => {
     await withTempDir("zettelclaw-vault-seed-", async (dir) => {
       const result = await copyVaultSeed(dir, { overwrite: false })
 
@@ -64,7 +46,6 @@ describe("vault filesystem, folder migration, and seed content", () => {
       expect(result.added).toContain(".obsidian/workspace.json")
       expect(result.added).toContain("03 Templates/note.md")
       expect(result.added).toContain("04 Attachments/.gitkeep")
-      expect(result.added.some((path) => path.startsWith("02 Agent"))).toBe(false)
       await expect(pathExists(join(dir, ".obsidian", "workspace.json"))).resolves.toBe(true)
     })
   })
