@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { mkdir, rename, rm, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 
 interface AssetSource {
@@ -21,6 +21,8 @@ interface ThemeSource {
   releaseTag: string
   assets: AssetSource[]
 }
+
+type AssetDownloader = (repo: string, releaseTag: string, source: AssetSource) => Promise<Uint8Array | null>
 
 function asset(name: string, sha256: string, required = true): AssetSource {
   return { name, sha256, required }
@@ -88,6 +90,105 @@ const MINIMAL_THEME: ThemeSource = {
   ],
 }
 
+const MANAGED_PLUGIN_IDS = [
+  ...CORE_PLUGINS.map((plugin) => plugin.id),
+  GIT_PLUGIN.id,
+  ...MINIMAL_PLUGINS.map((plugin) => plugin.id),
+] as const
+
+export const MANAGED_THEME_NAMES = [MINIMAL_THEME.name] as const
+
+export type ManagedPluginId = (typeof MANAGED_PLUGIN_IDS)[number]
+
+function uniqueSortedStrings(values: readonly string[]): string[] {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right))
+}
+
+function isManagedPluginId(value: string): value is ManagedPluginId {
+  return MANAGED_PLUGIN_IDS.includes(value as ManagedPluginId)
+}
+
+export function getManagedPluginIds(options: DownloadOptions): string[] {
+  const ids = [CORE_PLUGINS[0]?.id].filter((id): id is string => typeof id === "string")
+
+  if (options.includeGit) {
+    ids.push(GIT_PLUGIN.id)
+  }
+
+  if (options.includeMinimal) {
+    ids.push(...MINIMAL_PLUGINS.map((plugin) => plugin.id))
+  }
+
+  return uniqueSortedStrings(ids)
+}
+
+export interface ReadEnabledCommunityPluginsResult {
+  ids: string[]
+  error?: string
+}
+
+export async function readEnabledCommunityPlugins(vaultPath: string): Promise<ReadEnabledCommunityPluginsResult> {
+  const communityPluginsPath = join(vaultPath, ".obsidian", "community-plugins.json")
+
+  let raw = ""
+  try {
+    raw = await readFile(communityPluginsPath, "utf8")
+  } catch {
+    return {
+      ids: [],
+      error: "community-plugins.json missing",
+    }
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return {
+      ids: [],
+      error: "community-plugins.json is not valid JSON",
+    }
+  }
+
+  const ids = Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : []
+  return { ids: uniqueSortedStrings(ids) }
+}
+
+export async function readInstalledManagedPlugins(vaultPath: string): Promise<string[]> {
+  const pluginDir = join(vaultPath, ".obsidian", "plugins")
+
+  let entries: string[] = []
+  try {
+    entries = await readdir(pluginDir)
+  } catch {
+    return []
+  }
+
+  return uniqueSortedStrings(entries.filter((entry) => isManagedPluginId(entry)))
+}
+
+export interface ManagedPluginContractState {
+  enabled: string[]
+  installed: string[]
+  missingInstalled: string[]
+  extraInstalled: string[]
+}
+
+export async function readManagedPluginContractState(
+  vaultPath: string,
+  enabledPluginIds: readonly string[],
+): Promise<ManagedPluginContractState> {
+  const enabled = uniqueSortedStrings(enabledPluginIds.filter((id) => isManagedPluginId(id)))
+  const installed = await readInstalledManagedPlugins(vaultPath)
+
+  return {
+    enabled,
+    installed,
+    missingInstalled: enabled.filter((id) => !installed.includes(id)),
+    extraInstalled: installed.filter((id) => !enabled.includes(id)),
+  }
+}
+
 async function downloadAsset(repo: string, releaseTag: string, source: AssetSource): Promise<Uint8Array | null> {
   const url = `https://github.com/${repo}/releases/download/${releaseTag}/${source.name}`
 
@@ -113,7 +214,7 @@ async function downloadAsset(repo: string, releaseTag: string, source: AssetSour
   }
 }
 
-async function downloadPlugin(pluginDir: string, plugin: PluginSource): Promise<boolean> {
+async function downloadPlugin(pluginDir: string, plugin: PluginSource, download: AssetDownloader): Promise<boolean> {
   const targetDir = join(pluginDir, plugin.id)
   const stageDir = join(pluginDir, `.tmp-${plugin.id}-${Date.now()}`)
   await mkdir(stageDir, { recursive: true })
@@ -121,7 +222,7 @@ async function downloadPlugin(pluginDir: string, plugin: PluginSource): Promise<
   let success = true
 
   for (const source of plugin.assets) {
-    const data = await downloadAsset(plugin.repo, plugin.releaseTag, source)
+    const data = await download(plugin.repo, plugin.releaseTag, source)
 
     if (data !== null) {
       await writeFile(join(stageDir, source.name), data)
@@ -141,7 +242,7 @@ async function downloadPlugin(pluginDir: string, plugin: PluginSource): Promise<
   return success
 }
 
-async function downloadTheme(themesDir: string, theme: ThemeSource): Promise<boolean> {
+async function downloadTheme(themesDir: string, theme: ThemeSource, download: AssetDownloader): Promise<boolean> {
   const targetDir = join(themesDir, theme.name)
   const stageDir = join(themesDir, `.tmp-${theme.name}-${Date.now()}`)
   await mkdir(stageDir, { recursive: true })
@@ -149,7 +250,7 @@ async function downloadTheme(themesDir: string, theme: ThemeSource): Promise<boo
   let success = true
 
   for (const source of theme.assets) {
-    const data = await downloadAsset(theme.repo, theme.releaseTag, source)
+    const data = await download(theme.repo, theme.releaseTag, source)
 
     if (data !== null) {
       await writeFile(join(stageDir, source.name), data)
@@ -179,7 +280,11 @@ export interface DownloadOptions {
   includeMinimal: boolean
 }
 
-export async function downloadPlugins(vaultPath: string, options: DownloadOptions): Promise<DownloadResult> {
+export async function downloadPlugins(
+  vaultPath: string,
+  options: DownloadOptions,
+  download: AssetDownloader = downloadAsset,
+): Promise<DownloadResult> {
   const pluginDir = join(vaultPath, ".obsidian", "plugins")
   const result: DownloadResult = { downloaded: [], failed: [] }
 
@@ -196,7 +301,7 @@ export async function downloadPlugins(vaultPath: string, options: DownloadOption
   const pluginOutcomes = await Promise.all(
     plugins.map(async (plugin) => ({
       plugin,
-      ok: await downloadPlugin(pluginDir, plugin),
+      ok: await downloadPlugin(pluginDir, plugin, download),
     })),
   )
 
@@ -210,7 +315,7 @@ export async function downloadPlugins(vaultPath: string, options: DownloadOption
 
   if (options.includeMinimal) {
     const themesDir = join(vaultPath, ".obsidian", "themes")
-    const ok = await downloadTheme(themesDir, MINIMAL_THEME)
+    const ok = await downloadTheme(themesDir, MINIMAL_THEME, download)
 
     if (ok) {
       result.downloaded.push("Minimal theme")

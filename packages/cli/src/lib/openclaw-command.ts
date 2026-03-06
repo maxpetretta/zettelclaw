@@ -31,6 +31,7 @@ function formatFailureMessage(args: string[], status: number, stderr: string, st
 export function runOpenClawCommand(args: string[], options: OpenClawCommandOptions = {}): OpenClawCommandResult {
   const result = spawnSync("openclaw", args, {
     encoding: "utf8",
+    env: process.env,
     timeout: options.timeoutMs ?? 30_000,
   })
 

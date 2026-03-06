@@ -38,6 +38,7 @@ function initGitRepository(vaultPath: string): string | null {
   const result = spawnSync("git", ["init"], {
     cwd: vaultPath,
     encoding: "utf8",
+    env: process.env,
   })
 
   if (result.error) {
@@ -145,6 +146,12 @@ function buildQmdCollectionSummary(vaultPath: string, configuredCollections: rea
     .map((collection) => basename(collection.path).replace(/^\d{2}\s+/u, ""))
 
   return labels.length > 0 ? labels.join(", ") : null
+}
+
+export const __testing = {
+  buildQmdCollectionSummary,
+  initGitRepository,
+  themeUsesMinimalTools,
 }
 
 export async function runInit(options: InitOptions): Promise<void> {

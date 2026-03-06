@@ -116,6 +116,7 @@ export interface InstallQmdResult {
 function runCommand(command: string, args: string[], options: QmdCommandOptions = {}): QmdCommandResult {
   const result = spawnSync(command, args, {
     encoding: "utf8",
+    env: process.env,
     timeout: options.timeoutMs ?? 120_000,
   })
 
@@ -164,6 +165,7 @@ async function runCommandAsync(
 ): Promise<QmdCommandResult> {
   return await new Promise((resolve) => {
     const child = spawn(command, args, {
+      env: process.env,
       stdio: ["ignore", "pipe", "pipe"],
     })
 

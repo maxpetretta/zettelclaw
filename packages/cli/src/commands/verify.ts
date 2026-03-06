@@ -13,6 +13,7 @@ import { JOURNAL_FOLDER_ALIASES, NOTES_FOLDER_CANDIDATES, TEMPLATES_FOLDER_ALIAS
 import { readOpenClawConfigFile, readOpenClawExtraPathsByScope } from "../lib/openclaw-config"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
+import { readEnabledCommunityPlugins, readManagedPluginContractState } from "../lib/plugins"
 import { expectedQmdCollections, listQmdCollections } from "../lib/qmd"
 import { detectVaultFromOpenClawConfig, looksLikeZettelclawVault } from "../lib/vault-detect"
 import { isDirectory, pathExists } from "../lib/vault-fs"
@@ -193,30 +194,51 @@ async function findTemplatesFolder(vaultPath: string): Promise<string | null> {
 }
 
 async function buildPluginCheck(vaultPath: string): Promise<VerifyCheck> {
-  const pluginsPath = join(vaultPath, ".obsidian", "community-plugins.json")
-  const raw = await readFileText(pluginsPath)
-  if (!raw) {
-    return { name: "Plugins", status: "fail", detail: "community-plugins.json missing" }
+  const enabledResult = await readEnabledCommunityPlugins(vaultPath)
+  if (enabledResult.error) {
+    return { name: "Plugins", status: "fail", detail: enabledResult.error }
   }
 
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    return { name: "Plugins", status: "fail", detail: "community-plugins.json is not valid JSON" }
+  const missingRequired = REQUIRED_PLUGIN_IDS.filter((id) => !enabledResult.ids.includes(id))
+  if (missingRequired.length > 0) {
+    return {
+      name: "Plugins",
+      status: "fail",
+      detail: `missing required plugin ids: ${missingRequired.join(", ")}`,
+    }
   }
 
-  const ids = Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : []
-  const missing = REQUIRED_PLUGIN_IDS.filter((id) => !ids.includes(id))
+  const contract = await readManagedPluginContractState(vaultPath, enabledResult.ids)
+  const detailParts = [`enabled: ${contract.enabled.join(", ") || "none"}`]
 
-  if (missing.length === 0) {
-    return { name: "Plugins", status: "pass", detail: ids.join(", ") }
+  if (contract.missingInstalled.length > 0) {
+    detailParts.push(`missing installed assets: ${contract.missingInstalled.join(", ")}`)
+  }
+
+  if (contract.extraInstalled.length > 0) {
+    detailParts.push(`extra installed: ${contract.extraInstalled.join(", ")}`)
+  }
+
+  if (contract.missingInstalled.length > 0) {
+    return {
+      name: "Plugins",
+      status: "fail",
+      detail: detailParts.join("; "),
+    }
+  }
+
+  if (contract.extraInstalled.length > 0) {
+    return {
+      name: "Plugins",
+      status: "warn",
+      detail: detailParts.join("; "),
+    }
   }
 
   return {
     name: "Plugins",
-    status: "fail",
-    detail: `missing required plugin ids: ${missing.join(", ")}`,
+    status: "pass",
+    detail: detailParts.join("; "),
   }
 }
 
@@ -243,6 +265,13 @@ async function buildVaultSettingsCheck(vaultPath: string): Promise<VerifyCheck> 
       status = combineStatuses(status, "warn")
       issues.push("stacked tabs off")
     }
+  }
+
+  const appearance = parseJsonRecord(await readFileText(join(vaultPath, ".obsidian", "appearance.json")))
+  const minimalThemeEnabled = appearance?.cssTheme === "Minimal"
+  if (minimalThemeEnabled && !(await pathExists(join(vaultPath, ".obsidian", "themes", "Minimal")))) {
+    status = combineStatuses(status, "fail")
+    issues.push("Minimal theme assets missing")
   }
 
   const inboxBasePath = join(vaultPath, "00 Inbox", "inbox.base")
@@ -288,7 +317,9 @@ async function buildVaultSettingsCheck(vaultPath: string): Promise<VerifyCheck> 
     return {
       name: "Settings",
       status,
-      detail: "Live Preview on, stacked tabs enabled, Inbox Base configured, templates present",
+      detail: minimalThemeEnabled
+        ? "Live Preview on, stacked tabs enabled, Inbox Base configured, templates present, Minimal theme installed"
+        : "Live Preview on, stacked tabs enabled, Inbox Base configured, templates present",
     }
   }
 
@@ -415,6 +446,23 @@ async function buildOpenClawChecks(vaultPath: string, workspacePath: string): Pr
       detail: `vault path missing from extraPaths in ${toTildePath(openclawConfigPath)}`,
     },
   ]
+}
+
+export const __testing = {
+  buildOpenClawChecks,
+  buildPluginCheck,
+  buildQmdChecks,
+  buildVaultSettingsCheck,
+  combineStatuses,
+  findTabsNode,
+  formatCheck,
+  formatSection,
+  formatVaultFolderLabel,
+  hasLegacyTopLevelMemorySearch,
+  normalizePath,
+  parseJsonRecord,
+  pathListIncludes,
+  summarizeQmdIssue,
 }
 
 export async function runVerify(options: VerifyOptions): Promise<void> {
