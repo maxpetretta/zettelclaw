@@ -432,6 +432,7 @@ Add `.base` files as needed — reading queues, watch lists, content by type. Th
 ### AGENTS.md
 
 The vault root contains `AGENTS.md` — the orientation document for any terminal-based agent (Claude Code, Codex, OpenCode, etc.) working in the vault directory.
+For Claude compatibility, `CLAUDE.md` is an alias of `AGENTS.md` in the template vault.
 
 `AGENTS.md` teaches the agent:
 - The vault's folder structure and what each folder contains
