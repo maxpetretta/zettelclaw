@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs"
-import { copyFile, mkdir } from "node:fs/promises"
+import { copyFile, mkdir, readFile } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 
 import { FOLDERS, getVaultFolders } from "./folders"
+import { substituteTemplate } from "./template"
 import { pathExists, walkFiles, writeFileIfMissing } from "./vault-fs"
 
 export interface CopyResult {
@@ -31,6 +32,7 @@ const TEMPLATE_ROOT = (() => {
 
 const STARTER_NOTE_FILENAME = "Zettelclaw Vault Principles.md"
 const STARTER_INBOX_FILENAME = "Build A Capture Habit.md"
+const STARTER_JOURNAL_TEMPLATE_PATH = join(TEMPLATE_ROOT, "03 Templates", "journal.md")
 
 function formatLocalDate(date: Date): string {
   const year = String(date.getFullYear())
@@ -91,32 +93,15 @@ function buildStarterInboxNote(dateStamp: string): string {
   ].join("\n")
 }
 
-function buildStarterJournalEntry(dateStamp: string): string {
-  return [
-    "---",
-    "type: journal",
-    "tags: []",
-    `created: ${dateStamp}`,
-    "---",
-    "",
-    "> [!agent] Daily briefing",
-    "> - Vault installed and configured",
-    "> - Inbox view available at `00 Inbox/inbox.base`",
-    "> - Templates ready in `03 Templates/`",
-    "",
-    "## Done",
-    "- Installed and configured Zettelclaw.",
-    "",
-    "## Decisions",
-    "- This vault will be the shared long-term context between human and agent.",
-    "",
-    "## Learned",
-    "- The inbox is a queue; durable notes belong in `01 Notes/`.",
-    "",
-    "## Open",
-    "- Import clipper templates and test the first capture.",
-    "",
-  ].join("\n")
+async function buildStarterJournalEntry(vaultPath: string, dateStamp: string): Promise<string> {
+  const folders = getVaultFolders()
+  const vaultTemplatePath = join(vaultPath, folders.templates, "journal.md")
+  const templatePath = (await pathExists(vaultTemplatePath)) ? vaultTemplatePath : STARTER_JOURNAL_TEMPLATE_PATH
+  const template = await readFile(templatePath, "utf8")
+
+  return substituteTemplate(template, {
+    "date:YYYY-MM-DD": dateStamp,
+  })
 }
 
 function pathIsInsideFolder(relativePath: string, folder: string): boolean {
@@ -197,8 +182,9 @@ export async function seedVaultStarterContent(vaultPath: string): Promise<void> 
   const starterNotePath = join(vaultPath, folders.notes, STARTER_NOTE_FILENAME)
   const starterInboxPath = join(vaultPath, folders.inbox, STARTER_INBOX_FILENAME)
   const starterJournalPath = join(vaultPath, folders.journal, `${dateStamp}.md`)
+  const starterJournalEntry = await buildStarterJournalEntry(vaultPath, dateStamp)
 
   await writeFileIfMissing(starterNotePath, buildStarterNote(dateStamp))
   await writeFileIfMissing(starterInboxPath, buildStarterInboxNote(dateStamp))
-  await writeFileIfMissing(starterJournalPath, buildStarterJournalEntry(dateStamp))
+  await writeFileIfMissing(starterJournalPath, starterJournalEntry)
 }

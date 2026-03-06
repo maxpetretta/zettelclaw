@@ -5,6 +5,7 @@ import { join } from "node:path"
 import { configureVaultFolders } from "../vault-folders"
 import { isDirectory, pathExists, readJsonFileOrDefault, walkFiles, writeFileIfMissing } from "../vault-fs"
 import { copyVaultSeed, seedVaultStarterContent } from "../vault-seed"
+import { substituteTemplate } from "../template"
 import { readTextFile, withTempDir, writeTextFile } from "./test-helpers"
 
 describe("vault filesystem, folder migration, and seed content", () => {
@@ -82,6 +83,7 @@ describe("vault filesystem, folder migration, and seed content", () => {
   test("seedVaultStarterContent creates starter notes once", async () => {
     await withTempDir("zettelclaw-vault-starters-", async (dir) => {
       await configureVaultFolders(dir)
+      await copyVaultSeed(dir, { overwrite: false })
       await seedVaultStarterContent(dir)
 
       const firstPass = await walkFiles(dir)
@@ -94,6 +96,13 @@ describe("vault filesystem, folder migration, and seed content", () => {
       if (!journalPath) {
         return
       }
+
+      const journalTemplate = await readTextFile(join(dir, "03 Templates", "journal.md"))
+      expect(await readTextFile(join(dir, journalPath))).toBe(
+        substituteTemplate(journalTemplate, {
+          "date:YYYY-MM-DD": journalPath.replace("02 Journal/", "").replace(".md", ""),
+        }),
+      )
 
       await writeTextFile(join(dir, journalPath), "preserve")
       await seedVaultStarterContent(dir)
