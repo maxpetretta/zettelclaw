@@ -8,6 +8,8 @@
     "cli:init": "bun run --cwd packages/cli init",
     "cli:verify": "bun run --cwd packages/cli verify",
     "cli:test": "bun run --cwd packages/cli test",
+    "test": "bun run cli:test",
+    "test:coverage": "bun run --cwd packages/cli test --coverage",
     "init": "bun run cli:init",
     "verify": "bun run cli:verify",
     "web": "bun run --cwd packages/website dev",
