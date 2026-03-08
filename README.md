@@ -1,6 +1,6 @@
 # Zettelclaw 🦞
 
-Opinionated Obsidian vault template + CLI for human/agent knowledge work with OpenClaw.
+An Obsidian vault your agent can actually read.
 
 Zettelclaw gives you:
 

@@ -1,7 +1,7 @@
 {
   "name": "zettelclaw",
   "version": "2026.2.23",
-  "description": "CLI and vault template for Zettelclaw - your agent's second brain, built together",
+  "description": "An Obsidian vault your agent can actually read.",
   "repository": {
     "type": "git",
     "url": "https://github.com/maxpetretta/zettelclaw"

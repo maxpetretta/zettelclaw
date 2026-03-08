@@ -710,7 +710,7 @@ During `zettelclaw init`, the CLI registers the vault path in OpenClaw's configu
   "agents": {
     "defaults": {
       "memorySearch": {
-        "extraPaths": ["/Users/max/zettelclaw"]
+        "extraPaths": ["~/zettelclaw"]
       }
     }
   }

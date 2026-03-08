@@ -1,7 +1,7 @@
 import { homedir } from "node:os"
 import { isCancel } from "@clack/prompts"
 
-export const CLI_TAGLINE = "Your agent's second brain, built together"
+export const CLI_TAGLINE = "An Obsidian vault your agent can actually read."
 export const DEFAULT_OPENCLAW_WORKSPACE_PATH = "~/.openclaw/workspace"
 export const DEFAULT_VAULT_PATH = "~/zettelclaw"
 export type ThemePreset = "minimal" | "obsidian"
