@@ -79,7 +79,6 @@ describe("configureApp", () => {
     expect(app.livePreview).toBe(false)
     expect(workspace.main?.children?.[0]?.stacked).toBe(false)
   })
-
 })
 
 describe("other vault obsidian config helpers", () => {

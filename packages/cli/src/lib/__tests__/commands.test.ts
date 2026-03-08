@@ -9,7 +9,15 @@ import { expectedQmdCollections } from "../qmd"
 import { configureVaultFolders } from "../vault-folders"
 import { configureApp, configureCommunityPlugins, configureCoreSync, configureMinimalTheme } from "../vault-obsidian"
 import { copyVaultSeed, seedVaultStarterContent } from "../vault-seed"
-import { readJsonFile, readTextFile, withEnv, withTempDir, writeExecutable, writeJsonFile, writeTextFile } from "./test-helpers"
+import {
+  readJsonFile,
+  readTextFile,
+  withEnv,
+  withTempDir,
+  writeExecutable,
+  writeJsonFile,
+  writeTextFile,
+} from "./test-helpers"
 
 function qmdListScript(vaultPath: string): string {
   const lines = expectedQmdCollections(vaultPath).map(
@@ -103,7 +111,9 @@ describe("command flows", () => {
           },
         },
       })
-      expect(await readTextFile(join(dirname(workspacePath), "skills", "zettelclaw", "SKILL.md"))).toContain("# Zettelclaw")
+      expect(await readTextFile(join(dirname(workspacePath), "skills", "zettelclaw", "SKILL.md"))).toContain(
+        "# Zettelclaw",
+      )
     })
   })
 

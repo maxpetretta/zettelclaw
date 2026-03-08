@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { mkdir } from "node:fs/promises"
 import { join } from "node:path"
 
+import { substituteTemplate } from "../template"
 import { configureVaultFolders } from "../vault-folders"
 import { isDirectory, pathExists, readJsonFileOrDefault, walkFiles, writeFileIfMissing } from "../vault-fs"
 import { copyVaultSeed, seedVaultStarterContent } from "../vault-seed"
-import { substituteTemplate } from "../template"
 import { readTextFile, withTempDir, writeTextFile } from "./test-helpers"
 
 describe("vault filesystem and seed content", () => {

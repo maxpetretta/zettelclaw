@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { copyFile, mkdir, readFile } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 
-import { FOLDERS, getVaultFolders } from "./folders"
+import { getVaultFolders } from "./folders"
 import { substituteTemplate } from "./template"
 import { pathExists, walkFiles, writeFileIfMissing } from "./vault-fs"
 
