@@ -13,24 +13,6 @@ npx zettelclaw verify
 
 `init` creates the vault scaffold, seeds starter notes and templates, configures Obsidian defaults, downloads bundled plugins, initializes Git when selected, creates QMD collections when `qmd` is installed, and patches OpenClaw when a workspace is detected.
 
-## How It Works
-
-```
-Capture on the web  →  Web Clipper writes typed notes into 00 Inbox/
-                            ↓
-                   Human processes captures into durable markdown notes
-                            ↓
-                   Vault keeps a flat, predictable folder contract
-                            ↓
-                   QMD indexes inbox, notes, journal, and attachments
-                            ↓
-OpenClaw workspace  →  memorySearch.extraPaths includes the vault path
-                            ↓
-                   Bundled zettelclaw skill teaches the agent the rules
-```
-
-The core rule is simple: humans write durable knowledge in markdown; agents read, search, and assist. Zettelclaw keeps the vault legible to both.
-
 ## Vault Layout
 
 | Path | Purpose |
