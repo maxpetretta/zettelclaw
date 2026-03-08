@@ -1,6 +1,6 @@
 {
   "name": "@zettelclaw/skill",
-  "version": "2026.2.23",
+  "version": "2026.3.7",
   "description": "Zettelclaw skill package for OpenClaw and ClawHub",
   "private": false,
   "type": "module",

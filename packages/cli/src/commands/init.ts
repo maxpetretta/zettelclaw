@@ -156,7 +156,7 @@ export const __testing = {
 }
 
 export async function runInit(options: InitOptions): Promise<void> {
-  intro(formatCommandIntro("Install vault"))
+  intro(formatCommandIntro())
 
   const defaultVaultPath = resolveUserPath(DEFAULT_VAULT_PATH)
   const rawVaultPath = options.vaultPath ?? (options.yes ? defaultVaultPath : await promptVaultPath(defaultVaultPath))

@@ -19,6 +19,6 @@ export function toTildePath(path: string): string {
   return home && path.startsWith(home) ? `~${path.slice(home.length)}` : path
 }
 
-export function formatCommandIntro(action: string): string {
-  return `🦞 ${CLI_TAGLINE}\nZettelclaw · ${action}`
+export function formatCommandIntro(): string {
+  return `🦞 Zettelclaw - ${CLI_TAGLINE}`
 }

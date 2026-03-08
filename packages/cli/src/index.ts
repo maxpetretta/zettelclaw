@@ -40,7 +40,7 @@ const OPTION_SPEC_BY_LONG_NAME = new Map(OPTION_SPECS.map((spec) => [spec.longNa
 
 function usage(): string {
   return [
-    `🦞 ${CLI_TAGLINE}`,
+    `🦞 Zettelclaw - ${CLI_TAGLINE}`,
     "Zettelclaw CLI",
     "",
     "Usage:",

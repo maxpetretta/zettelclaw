@@ -454,7 +454,7 @@ export const __testing = {
 }
 
 export async function runVerify(options: VerifyOptions): Promise<void> {
-  intro(formatCommandIntro("Verify install"))
+  intro(formatCommandIntro())
 
   const vaultChecks: VerifyCheck[] = []
   const openClawChecks: VerifyCheck[] = []
