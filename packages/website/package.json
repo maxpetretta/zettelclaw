@@ -12,18 +12,22 @@
     "lint:astro": "astro check",
     "lint:biome": "biome check .",
     "lint:typecheck": "tsgo --noEmit",
-    "fix": "biome check --write --unsafe ."
+    "fix": "biome check --write --unsafe .",
+    "og": "bun run scripts/screenshot-og.ts"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.6.0",
     "@astrojs/vercel": "8.0.4",
-    "@fontsource/sora": "5.2.8",
+    "@fontsource/fraunces": "^5.2.9",
     "@fontsource/jetbrains-mono": "5.2.8",
+    "@fontsource/sora": "5.2.8",
+    "@vercel/og": "0.8.6",
     "astro": "5.1.1"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.6",
     "@tailwindcss/vite": "4.1.18",
+    "playwright": "^1.58.2",
     "tailwindcss": "4.1.18"
   }
 }

@@ -1,0 +1,281 @@
+---
+import "@fontsource/jetbrains-mono/400.css"
+import "@fontsource/jetbrains-mono/600.css"
+import { heroEyebrow, heroTitle, siteDomain } from "@/lib/site"
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1200" />
+    <meta name="robots" content="noindex" />
+    <title>OG Image</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <div class="graph-bg" aria-hidden="true">
+      <svg id="graph" viewBox="100 50 900 500" preserveAspectRatio="xMidYMid slice" fill="none">
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="og-frame">
+      <div class="og-content">
+        <p class="eyebrow">{heroEyebrow}</p>
+        <h1>An Obsidian vault your<br />agent can actually read.</h1>
+        <div class="og-install">
+          <span class="og-install-prompt">$</span>
+          <code>npx zettelclaw</code>
+        </div>
+      </div>
+
+      <div class="og-domain">{siteDomain}</div>
+    </div>
+
+    <script>
+      const NS = "http://www.w3.org/2000/svg"
+      const svg = document.getElementById("graph")!
+
+      const fills = [
+        "rgba(139, 92, 246, 0.30)",
+        "rgba(139, 92, 246, 0.50)",
+        "rgba(167, 139, 250, 0.38)",
+        "rgba(109, 40, 217, 0.40)",
+        "rgba(196, 181, 253, 0.30)",
+        "rgba(249, 115, 22, 0.45)",
+        "rgba(251, 146, 60, 0.40)",
+        "rgba(253, 186, 116, 0.32)",
+        "rgba(6, 182, 212, 0.32)",
+        "rgba(34, 211, 238, 0.28)",
+        "rgba(236, 72, 153, 0.30)",
+        "rgba(244, 114, 182, 0.26)",
+      ]
+
+      function readFill(index: number): string {
+        return fills[index] ?? fills[0] ?? "rgba(139, 92, 246, 0.30)"
+      }
+
+      function pickFill(i: number): string {
+        const overrides: Record<number, number> = {
+          5: 5, 14: 1, 8: 6, 30: 8, 29: 9, 4: 10, 27: 11, 9: 7, 22: 3, 31: 10, 17: 8,
+        }
+        const override = overrides[i]
+        if (typeof override === "number") return readFill(override)
+        const r = Math.random()
+        if (r < 0.55) return readFill(Math.floor(Math.random() * 5))
+        if (r < 0.72) return readFill(5 + Math.floor(Math.random() * 3))
+        if (r < 0.88) return readFill(8 + Math.floor(Math.random() * 2))
+        return readFill(10 + Math.floor(Math.random() * 2))
+      }
+
+      const seed: [number, number, number][] = [
+        [120,140,3.5],[175,95,2.5],[80,195,2],[200,165,3.5],[155,215,2.5],
+        [340,310,5],[295,275,3],[385,275,2.5],[310,355,2.5],[390,345,2],
+        [595,115,3],[645,85,2.5],[560,150,2],[680,135,3],
+        [720,370,7],[660,330,3.5],[785,330,3],[685,425,3],[765,420,3.5],[645,395,2.5],[805,385,2.5],
+        [1020,195,3.5],[1070,165,2.5],[1000,240,2.5],[1080,225,2],
+        [1100,475,3],[1060,515,2.5],[1140,500,2],
+        [450,180,2],[500,480,2],[850,195,2],[250,470,2],[900,515,2.5],[1250,300,2],[160,400,2],
+      ]
+
+      const edgePairs: [number, number][] = [
+        [0,1],[0,2],[0,3],[3,4],[1,3],
+        [5,6],[5,7],[5,8],[6,7],
+        [10,11],[10,12],[11,13],[10,13],
+        [14,15],[14,16],[14,17],[14,18],[14,19],[14,20],[15,19],[16,20],[17,18],
+        [21,22],[21,23],[22,24],
+        [25,26],[25,27],
+        [3,6],[5,15],[13,14],[20,21],[18,25],[28,10],[30,21],[29,17],
+      ]
+
+      const edgeG = document.createElementNS(NS, "g")
+      edgeG.setAttribute("stroke-width", "1")
+      svg.appendChild(edgeG)
+
+      const nodeG = document.createElementNS(NS, "g")
+      svg.appendChild(nodeG)
+
+      const nodes = seed.map(([x, y, r], i) => {
+        const el = document.createElementNS(NS, "circle")
+        const fill = pickFill(i)
+        el.setAttribute("cx", String(x))
+        el.setAttribute("cy", String(y))
+        el.setAttribute("r", String(r))
+        el.setAttribute("fill", fill)
+        if (r >= 5) el.setAttribute("filter", "url(#glow)")
+        nodeG.appendChild(el)
+        return { x, y, baseR: r, vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4, fill, phase: Math.random() * Math.PI * 2, pulseSpeed: 0.4 + Math.random() * 0.6, el }
+      })
+
+      const edges = edgePairs.map(([a, b]) => {
+        const el = document.createElementNS(NS, "line")
+        el.setAttribute("stroke", "rgba(167, 139, 250, 0.25)")
+        edgeG.appendChild(el)
+        return { a, b, el }
+      })
+
+      // Render initial frame
+      for (const e of edges) {
+        const na = nodes[e.a]
+        const nb = nodes[e.b]
+        if (!(na && nb)) continue
+        e.el.setAttribute("x1", String(na.x))
+        e.el.setAttribute("y1", String(na.y))
+        e.el.setAttribute("x2", String(nb.x))
+        e.el.setAttribute("y2", String(nb.y))
+        const dx = na.x - nb.x
+        const dy = na.y - nb.y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        e.el.setAttribute("stroke-opacity", String(Math.max(0.06, 0.28 - dist / 2200)))
+      }
+
+      // Signal ready for screenshot
+      document.documentElement.dataset.graphReady = "true"
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg-deep: #13111c;
+    --bg-surface: #1c1828;
+    --bg-card: #221e30;
+    --purple-600: #7c3aed;
+    --purple-500: #8b5cf6;
+    --purple-400: #a78bfa;
+    --purple-300: #c4b5fd;
+    --orange-500: #f97316;
+    --orange-400: #fb923c;
+    --text-primary: #ede8f5;
+    --text-secondary: #a99bc4;
+    --text-muted: #6b5f82;
+    --border: rgba(139, 92, 246, 0.1);
+    --font-serif: "Fraunces", "Georgia", serif;
+    --font-mono: "JetBrains Mono", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-serif);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Subtle grain */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+  }
+
+  .graph-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .graph-bg svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .og-frame {
+    position: relative;
+    z-index: 1;
+    width: 1200px;
+    height: 630px;
+    display: flex;
+    align-items: center;
+  }
+
+  .og-content {
+    padding: 0 60px 0 100px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--purple-400);
+    margin-bottom: 32px;
+  }
+
+  h1 {
+    font-size: 106px;
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text-primary) 60%, var(--purple-300));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding-bottom: 8px;
+    margin-bottom: 36px;
+  }
+
+  .og-install {
+    display: inline-flex;
+    align-items: center;
+    gap: 17px;
+    margin-top: 40px;
+    padding: 18px 34px;
+    border-radius: 16px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.06);
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 32px;
+    color: rgba(237, 232, 245, 0.7);
+  }
+
+  .og-install-prompt {
+    color: rgba(167, 139, 250, 0.5);
+  }
+
+  .og-install code {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  .og-domain {
+    position: absolute;
+    bottom: 36px;
+    right: 48px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+
+  astro-dev-toolbar { display: none !important; }
+</style>

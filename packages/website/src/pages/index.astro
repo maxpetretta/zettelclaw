@@ -1,9 +1,20 @@
 ---
 import "@fontsource/jetbrains-mono/400.css"
 import "@fontsource/jetbrains-mono/600.css"
+import {
+  heroEyebrow,
+  heroSubtitle,
+  heroTitle,
+  ogImageAlt,
+  pageDescription,
+  pageTitle,
+  siteUrl,
+} from "@/lib/site"
 
-const title = "Zettelclaw — An Obsidian vault your agent can actually read."
-const description = "An Obsidian vault your agent can actually read."
+const title = pageTitle
+const description = pageDescription
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? siteUrl).toString()
+const ogImageUrl = new URL("/og.png", Astro.site ?? siteUrl).toString()
 
 const features = [
   {
@@ -47,7 +58,18 @@ const features = [
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="theme-color" content="#13111c" />
-    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site ?? "https://zettelclaw.com")} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -78,11 +100,10 @@ const features = [
       </nav>
 
       <section class="hero">
-        <p class="eyebrow">Obsidian vault template <span class="plus">+</span> agent skill</p>
-        <h1>An Obsidian vault your agent can actually&nbsp;read.</h1>
+        <p class="eyebrow">{heroEyebrow}</p>
+        <h1>{heroTitle}</h1>
         <p class="lede">
-          Your notes become searchable context for your AI agent — not dead files in a folder. Every conversation picks up
-          where the last one left off. One command from empty folder to working system.
+          {heroSubtitle}
         </p>
         <div class="hero-cta">
           <button class="copy-block" data-copy="npx zettelclaw" data-label="Copy">
