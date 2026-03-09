@@ -1,19 +1,11 @@
 import { readFile, writeFile } from "node:fs/promises"
 
-import { asRecord } from "./json"
+import { asRecord, asStringArray } from "./json"
 import { pathExists } from "./vault-fs"
 
 export interface EnsureMemoryPathResult {
   changed: boolean
   message?: string
-}
-
-function ensureStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return value.filter((entry): entry is string => typeof entry === "string")
 }
 
 function addUniquePath(paths: string[], candidatePath: string): boolean {
@@ -58,10 +50,10 @@ export async function ensureOpenClawMemoryPath(vaultPath: string, configPath: st
     const defaultsMemorySearch = asRecord(defaults.memorySearch)
     defaults.memorySearch = defaultsMemorySearch
 
-    const defaultExtraPaths = ensureStringArray(defaultsMemorySearch.extraPaths)
+    const defaultExtraPaths = asStringArray(defaultsMemorySearch.extraPaths)
     defaultsMemorySearch.extraPaths = defaultExtraPaths
 
-    const legacyExtraPaths = ensureStringArray(legacyMemorySearch.extraPaths)
+    const legacyExtraPaths = asStringArray(legacyMemorySearch.extraPaths)
     for (const legacyPath of legacyExtraPaths) {
       if (addUniquePath(defaultExtraPaths, legacyPath)) {
         changed = true
