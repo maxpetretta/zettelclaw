@@ -214,15 +214,22 @@ async function downloadAsset(repo: string, releaseTag: string, source: AssetSour
   }
 }
 
-async function downloadPlugin(pluginDir: string, plugin: PluginSource, download: AssetDownloader): Promise<boolean> {
-  const targetDir = join(pluginDir, plugin.id)
-  const stageDir = join(pluginDir, `.tmp-${plugin.id}-${Date.now()}`)
+async function downloadRelease(
+  parentDir: string,
+  id: string,
+  repo: string,
+  releaseTag: string,
+  assets: AssetSource[],
+  download: AssetDownloader,
+): Promise<boolean> {
+  const targetDir = join(parentDir, id)
+  const stageDir = join(parentDir, `.tmp-${id}-${Date.now()}`)
   await mkdir(stageDir, { recursive: true })
 
   let success = true
 
-  for (const source of plugin.assets) {
-    const data = await download(plugin.repo, plugin.releaseTag, source)
+  for (const source of assets) {
+    const data = await download(repo, releaseTag, source)
 
     if (data !== null) {
       await writeFile(join(stageDir, source.name), data)
@@ -239,35 +246,7 @@ async function downloadPlugin(pluginDir: string, plugin: PluginSource, download:
   await rm(targetDir, { recursive: true, force: true })
   await rename(stageDir, targetDir)
 
-  return success
-}
-
-async function downloadTheme(themesDir: string, theme: ThemeSource, download: AssetDownloader): Promise<boolean> {
-  const targetDir = join(themesDir, theme.name)
-  const stageDir = join(themesDir, `.tmp-${theme.name}-${Date.now()}`)
-  await mkdir(stageDir, { recursive: true })
-
-  let success = true
-
-  for (const source of theme.assets) {
-    const data = await download(theme.repo, theme.releaseTag, source)
-
-    if (data !== null) {
-      await writeFile(join(stageDir, source.name), data)
-    } else if (source.required) {
-      success = false
-    }
-  }
-
-  if (!success) {
-    await rm(stageDir, { recursive: true, force: true })
-    return false
-  }
-
-  await rm(targetDir, { recursive: true, force: true })
-  await rename(stageDir, targetDir)
-
-  return success
+  return true
 }
 
 export interface DownloadResult {
@@ -301,7 +280,7 @@ export async function downloadPlugins(
   const pluginOutcomes = await Promise.all(
     plugins.map(async (plugin) => ({
       plugin,
-      ok: await downloadPlugin(pluginDir, plugin, download),
+      ok: await downloadRelease(pluginDir, plugin.id, plugin.repo, plugin.releaseTag, plugin.assets, download),
     })),
   )
 
@@ -315,7 +294,14 @@ export async function downloadPlugins(
 
   if (options.includeMinimal) {
     const themesDir = join(vaultPath, ".obsidian", "themes")
-    const ok = await downloadTheme(themesDir, MINIMAL_THEME, download)
+    const ok = await downloadRelease(
+      themesDir,
+      MINIMAL_THEME.name,
+      MINIMAL_THEME.repo,
+      MINIMAL_THEME.releaseTag,
+      MINIMAL_THEME.assets,
+      download,
+    )
 
     if (ok) {
       result.downloaded.push("Minimal theme")
