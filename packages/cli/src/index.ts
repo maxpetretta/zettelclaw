@@ -46,6 +46,16 @@ function validateThemePreset(value: string | undefined): ThemePreset | undefined
   throw new Error(`Invalid value for --theme: ${value}. Expected minimal or obsidian.`)
 }
 
+function requireNonEmptyOption(value: string | undefined, flag: string): string | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  if (value.length === 0) {
+    throw new Error(`Missing value for ${flag}`)
+  }
+  return value
+}
+
 async function main() {
   const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
@@ -62,21 +72,31 @@ async function main() {
   })
 
   const command = positionals[0]
+  const extraPositionals = positionals.slice(1)
 
   if (values.help || command === "help" || !command) {
     console.log(usage())
     return
   }
 
-  const syncMethod = validateSyncMethod(values.sync)
-  const theme = validateThemePreset(values.theme)
+  if (extraPositionals.length > 0) {
+    throw new Error(`Unknown argument: ${extraPositionals[0]}`)
+  }
+
+  const vaultPath = requireNonEmptyOption(values.vault, "--vault")
+  const workspacePath = requireNonEmptyOption(values.workspace, "--workspace")
+  const syncValue = requireNonEmptyOption(values.sync, "--sync")
+  const themeValue = requireNonEmptyOption(values.theme, "--theme")
+
+  const syncMethod = validateSyncMethod(syncValue)
+  const theme = validateThemePreset(themeValue)
 
   if (command === "init") {
     await runInit({
       yes: values.yes ?? false,
-      vaultPath: values.vault,
+      vaultPath,
       theme,
-      workspacePath: values.workspace,
+      workspacePath,
       syncMethod,
     })
     return
@@ -91,8 +111,8 @@ async function main() {
     }
     await runVerify({
       yes: values.yes ?? false,
-      vaultPath: values.vault,
-      workspacePath: values.workspace,
+      vaultPath,
+      workspacePath,
     })
     return
   }

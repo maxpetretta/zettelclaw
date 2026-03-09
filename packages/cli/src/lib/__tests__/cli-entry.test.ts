@@ -40,4 +40,21 @@ describe("CLI entrypoint", () => {
     expect(result.status).toBe(1)
     expect(`${result.stdout}${result.stderr}`).toContain("Unknown command: plugins")
   })
+
+  test("rejects extra positional arguments", () => {
+    const result = runCli(["init", "extra"])
+
+    expect(result.status).toBe(1)
+    expect(`${result.stdout}${result.stderr}`).toContain("Unknown argument: extra")
+  })
+
+  test("rejects empty string option values", () => {
+    const vaultResult = runCli(["init", "--vault="])
+    expect(vaultResult.status).toBe(1)
+    expect(`${vaultResult.stdout}${vaultResult.stderr}`).toContain("Missing value for --vault")
+
+    const workspaceResult = runCli(["verify", "--workspace="])
+    expect(workspaceResult.status).toBe(1)
+    expect(`${workspaceResult.stdout}${workspaceResult.stderr}`).toContain("Missing value for --workspace")
+  })
 })
