@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises"
 import { join } from "node:path"
 
-import { getVaultFolders } from "./folders"
+import { FOLDERS } from "./folders"
 import { pathExists, readJsonFileOrDefault, removePathIfExists, writeJsonFile } from "./vault-fs"
 
 export type SyncMethod = "git" | "obsidian-sync" | "none"
@@ -75,7 +75,7 @@ function enableTabsStackedByDefault(node: unknown): unknown {
 }
 
 export async function configureApp(pathToVault: string): Promise<void> {
-  const folders = getVaultFolders()
+  const folders = FOLDERS
   const journalTemplatePath = `${folders.templates}/journal.md`
 
   const appPath = join(pathToVault, ".obsidian", "app.json")

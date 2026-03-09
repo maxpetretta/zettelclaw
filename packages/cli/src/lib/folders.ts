@@ -13,7 +13,3 @@ export const FOLDERS: VaultFolders = {
   templates: "03 Templates",
   attachments: "04 Attachments",
 }
-
-export function getVaultFolders(): VaultFolders {
-  return FOLDERS
-}

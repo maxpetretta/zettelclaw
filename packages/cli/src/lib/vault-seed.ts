@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { copyFile, mkdir, readFile } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 
-import { getVaultFolders } from "./folders"
+import { FOLDERS } from "./folders"
 import { substituteTemplate } from "./template"
 import { pathExists, walkFiles, writeFileIfMissing } from "./vault-fs"
 
@@ -94,7 +94,7 @@ function buildStarterInboxNote(dateStamp: string): string {
 }
 
 async function buildStarterJournalEntry(vaultPath: string, dateStamp: string): Promise<string> {
-  const folders = getVaultFolders()
+  const folders = FOLDERS
   const vaultTemplatePath = join(vaultPath, folders.templates, "journal.md")
   const templatePath = (await pathExists(vaultTemplatePath)) ? vaultTemplatePath : STARTER_JOURNAL_TEMPLATE_PATH
   const template = await readFile(templatePath, "utf8")
@@ -149,7 +149,7 @@ export async function copyVaultSeed(vaultPath: string, options: CopyVaultOptions
 }
 
 export async function seedVaultStarterContent(vaultPath: string): Promise<void> {
-  const folders = getVaultFolders()
+  const folders = FOLDERS
   const now = new Date()
   const dateStamp = formatLocalDate(now)
 

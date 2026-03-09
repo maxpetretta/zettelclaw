@@ -53,12 +53,3 @@ export function readOpenClawExtraPaths(config: JsonRecord): string[] {
   const scopedPaths = readOpenClawExtraPathsByScope(config)
   return [...scopedPaths.global, ...scopedPaths.defaults]
 }
-
-export function readHookEnabled(value: unknown): boolean | undefined {
-  if (typeof value === "boolean") {
-    return value
-  }
-
-  const record = asRecord(value)
-  return typeof record.enabled === "boolean" ? record.enabled : undefined
-}

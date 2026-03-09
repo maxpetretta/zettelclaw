@@ -4,7 +4,6 @@ import { join } from "node:path"
 import { ensureOpenClawMemoryPath } from "../openclaw"
 import {
   parseOpenClawConfig,
-  readHookEnabled,
   readOpenClawConfigFile,
   readOpenClawExtraPaths,
   readOpenClawExtraPathsByScope,
@@ -31,12 +30,6 @@ describe("openclaw config and vault detection", () => {
       defaults: ["/vault"],
     })
     expect(readOpenClawExtraPaths(config ?? {})).toEqual(["/legacy", "/vault"])
-  })
-
-  test("readHookEnabled handles booleans and nested enabled flags", () => {
-    expect(readHookEnabled(true)).toBe(true)
-    expect(readHookEnabled({ enabled: false })).toBe(false)
-    expect(readHookEnabled({ nope: true })).toBeUndefined()
   })
 
   test("readOpenClawConfigFile reports missing and invalid files", async () => {

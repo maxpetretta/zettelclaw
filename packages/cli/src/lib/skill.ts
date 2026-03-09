@@ -37,7 +37,3 @@ export function resolveSkillPackageDir(): string {
 
   throw new Error(`Could not resolve Zettelclaw skill package. Tried: ${candidates.join(", ")}`)
 }
-
-export function resolveSkillPath(...parts: string[]): string {
-  return join(resolveSkillPackageDir(), ...parts)
-}
