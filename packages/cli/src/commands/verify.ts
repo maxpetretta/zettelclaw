@@ -94,17 +94,15 @@ function parseJsonRecord(raw: string | undefined): Record<string, unknown> | und
   if (!raw) {
     return undefined
   }
-
   try {
     const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return undefined
     }
+    return parsed as Record<string, unknown>
   } catch {
     return undefined
   }
-
-  return undefined
 }
 
 function formatCheck(check: VerifyCheck): string {

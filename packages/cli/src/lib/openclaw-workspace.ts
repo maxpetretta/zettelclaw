@@ -5,17 +5,10 @@ export interface OpenClawWorkspaceEnv {
   configPath: string
 }
 
-export function resolveOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
-  const stateDir = dirname(workspacePath)
-  return {
-    stateDir,
-    configPath: join(stateDir, "openclaw.json"),
-  }
-}
-
 export function configureOpenClawEnvForWorkspace(workspacePath: string): OpenClawWorkspaceEnv {
-  const env = resolveOpenClawEnvForWorkspace(workspacePath)
-  process.env.OPENCLAW_STATE_DIR = env.stateDir
-  process.env.OPENCLAW_CONFIG_PATH = env.configPath
-  return env
+  const stateDir = dirname(workspacePath)
+  const configPath = join(stateDir, "openclaw.json")
+  process.env.OPENCLAW_STATE_DIR = stateDir
+  process.env.OPENCLAW_CONFIG_PATH = configPath
+  return { stateDir, configPath }
 }

@@ -14,7 +14,7 @@ import { ensureOpenClawMemoryPath } from "../lib/openclaw"
 import { installOpenClawSkillForWorkspace } from "../lib/openclaw-skill"
 import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
-import { type DownloadResult, downloadPlugins } from "../lib/plugins"
+import { downloadPlugins } from "../lib/plugins"
 import { ensureQmdCollections, expectedQmdCollections, installQmdGlobal } from "../lib/qmd"
 import { configureVaultFolders } from "../lib/vault-folders"
 import { isDirectory, pathExists } from "../lib/vault-fs"
@@ -107,17 +107,6 @@ async function promptTheme(defaultTheme: ThemePreset): Promise<ThemePreset> {
   throw new Error(`Invalid theme option selected: ${String(selection)}`)
 }
 
-function themeUsesMinimalTools(theme: ThemePreset): boolean {
-  return theme === "minimal"
-}
-
-function downloadVaultPlugins(vaultPath: string, syncMethod: SyncMethod, theme: ThemePreset): Promise<DownloadResult> {
-  return downloadPlugins(vaultPath, {
-    includeGit: syncMethod === "git",
-    includeMinimal: themeUsesMinimalTools(theme),
-  })
-}
-
 async function promptInstallQmd(): Promise<boolean> {
   const selection = unwrapPrompt(
     await select({
@@ -152,7 +141,6 @@ function buildQmdCollectionSummary(vaultPath: string, configuredCollections: rea
 export const __testing = {
   buildQmdCollectionSummary,
   initGitRepository,
-  themeUsesMinimalTools,
 }
 
 export async function runInit(options: InitOptions): Promise<void> {
@@ -168,7 +156,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   const syncMethod = options.syncMethod ?? (options.yes ? "git" : await promptSyncMethod("git"))
   const theme = options.theme ?? (options.yes ? "minimal" : await promptTheme("minimal"))
-  const minimal = themeUsesMinimalTools(theme)
+  const minimal = theme === "minimal"
 
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
   const explicitWorkspaceConfigured = typeof options.workspacePath === "string" && options.workspacePath.length > 0
@@ -189,20 +177,16 @@ export async function runInit(options: InitOptions): Promise<void> {
   await copyVaultSeed(vaultPath, { overwrite: false })
   await seedVaultStarterContent(vaultPath)
   await configureCoreSync(vaultPath, syncMethod)
-  await configureCommunityPlugins(vaultPath, {
-    enabled: true,
-    includeGit: syncMethod === "git",
-    includeMinimalThemeTools: minimal,
-  })
-  await configureMinimalTheme(vaultPath, minimal)
   await configureApp(vaultPath)
   s.stop("Vault configured")
 
   s.start("Downloading plugins")
-  const pluginResult = await downloadVaultPlugins(vaultPath, syncMethod, theme)
+  const pluginResult = await downloadPlugins(vaultPath, {
+    includeGit: syncMethod === "git",
+    includeMinimal: minimal,
+  })
   s.stop("Plugin downloads finished")
 
-  // Plugin downloads replace plugin directories; re-apply plugin config files afterward.
   await configureCommunityPlugins(vaultPath, {
     enabled: true,
     includeGit: syncMethod === "git",

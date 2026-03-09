@@ -8,12 +8,10 @@ import { expectedQmdCollections } from "../qmd"
 import { withEnv, withTempDir, writeExecutable, writeJsonFile, writeTextFile } from "./test-helpers"
 
 describe("command helper internals", () => {
-  test("init helper functions derive theme and qmd summaries", () => {
+  test("init helper functions derive qmd summaries", () => {
     const configured = expectedQmdCollections("/tmp/demo")
     const configuredNames = configured.map((collection) => collection.name)
 
-    expect(initTesting.themeUsesMinimalTools("minimal")).toBe(true)
-    expect(initTesting.themeUsesMinimalTools("obsidian")).toBe(false)
     expect(
       initTesting.buildQmdCollectionSummary("/tmp/demo", [configuredNames[0] ?? "", configuredNames[2] ?? ""]),
     ).toBe("Inbox, Journal")
