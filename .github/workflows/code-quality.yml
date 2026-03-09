@@ -25,4 +25,4 @@ jobs:
         run: bun run lint
 
       - name: Test
-        run: bun run cli:test
+        run: bun run test
