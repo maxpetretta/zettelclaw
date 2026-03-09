@@ -8,15 +8,9 @@ interface AssetSource {
   required: boolean
 }
 
-interface PluginSource {
-  id: string
-  repo: string
-  releaseTag: string
-  assets: AssetSource[]
-}
-
-interface ThemeSource {
-  name: string
+interface ReleaseSource {
+  directoryName: string
+  resultLabel: string
   repo: string
   releaseTag: string
   assets: AssetSource[]
@@ -34,9 +28,10 @@ function sha256Hex(value: Uint8Array): string {
   return hash.digest("hex")
 }
 
-const CORE_PLUGINS: PluginSource[] = [
+const CORE_PLUGINS: ReleaseSource[] = [
   {
-    id: "calendar",
+    directoryName: "calendar",
+    resultLabel: "calendar",
     repo: "liamcain/obsidian-calendar-plugin",
     releaseTag: "1.5.10",
     assets: [
@@ -46,8 +41,9 @@ const CORE_PLUGINS: PluginSource[] = [
   },
 ]
 
-const GIT_PLUGIN: PluginSource = {
-  id: "obsidian-git",
+const GIT_PLUGIN: ReleaseSource = {
+  directoryName: "obsidian-git",
+  resultLabel: "obsidian-git",
   repo: "Vinzent03/obsidian-git",
   releaseTag: "2.37.1",
   assets: [
@@ -57,9 +53,10 @@ const GIT_PLUGIN: PluginSource = {
   ],
 }
 
-const MINIMAL_PLUGINS: PluginSource[] = [
+const MINIMAL_PLUGINS: ReleaseSource[] = [
   {
-    id: "obsidian-minimal-settings",
+    directoryName: "obsidian-minimal-settings",
+    resultLabel: "obsidian-minimal-settings",
     repo: "kepano/obsidian-minimal-settings",
     releaseTag: "8.2.1",
     assets: [
@@ -69,7 +66,8 @@ const MINIMAL_PLUGINS: PluginSource[] = [
     ],
   },
   {
-    id: "obsidian-hider",
+    directoryName: "obsidian-hider",
+    resultLabel: "obsidian-hider",
     repo: "kepano/obsidian-hider",
     releaseTag: "1.6.1",
     assets: [
@@ -80,8 +78,9 @@ const MINIMAL_PLUGINS: PluginSource[] = [
   },
 ]
 
-const MINIMAL_THEME: ThemeSource = {
-  name: "Minimal",
+const MINIMAL_THEME: ReleaseSource = {
+  directoryName: "Minimal",
+  resultLabel: "Minimal theme",
   repo: "kepano/obsidian-minimal",
   releaseTag: "8.1.5",
   assets: [
@@ -91,12 +90,10 @@ const MINIMAL_THEME: ThemeSource = {
 }
 
 const MANAGED_PLUGIN_IDS = [
-  ...CORE_PLUGINS.map((plugin) => plugin.id),
-  GIT_PLUGIN.id,
-  ...MINIMAL_PLUGINS.map((plugin) => plugin.id),
+  ...CORE_PLUGINS.map((plugin) => plugin.directoryName),
+  GIT_PLUGIN.directoryName,
+  ...MINIMAL_PLUGINS.map((plugin) => plugin.directoryName),
 ] as const
-
-export const MANAGED_THEME_NAMES = [MINIMAL_THEME.name] as const
 
 export type ManagedPluginId = (typeof MANAGED_PLUGIN_IDS)[number]
 
@@ -106,20 +103,6 @@ function uniqueSortedStrings(values: readonly string[]): string[] {
 
 function isManagedPluginId(value: string): value is ManagedPluginId {
   return MANAGED_PLUGIN_IDS.includes(value as ManagedPluginId)
-}
-
-export function getManagedPluginIds(options: DownloadOptions): string[] {
-  const ids = [CORE_PLUGINS[0]?.id].filter((id): id is string => typeof id === "string")
-
-  if (options.includeGit) {
-    ids.push(GIT_PLUGIN.id)
-  }
-
-  if (options.includeMinimal) {
-    ids.push(...MINIMAL_PLUGINS.map((plugin) => plugin.id))
-  }
-
-  return uniqueSortedStrings(ids)
 }
 
 export interface ReadEnabledCommunityPluginsResult {
@@ -267,7 +250,7 @@ export async function downloadPlugins(
   const pluginDir = join(vaultPath, ".obsidian", "plugins")
   const result: DownloadResult = { downloaded: [], failed: [] }
 
-  const plugins: PluginSource[] = [...CORE_PLUGINS]
+  const plugins: ReleaseSource[] = [...CORE_PLUGINS]
 
   if (options.includeGit) {
     plugins.push(GIT_PLUGIN)
@@ -280,15 +263,22 @@ export async function downloadPlugins(
   const pluginOutcomes = await Promise.all(
     plugins.map(async (plugin) => ({
       plugin,
-      ok: await downloadRelease(pluginDir, plugin.id, plugin.repo, plugin.releaseTag, plugin.assets, download),
+      ok: await downloadRelease(
+        pluginDir,
+        plugin.directoryName,
+        plugin.repo,
+        plugin.releaseTag,
+        plugin.assets,
+        download,
+      ),
     })),
   )
 
   for (const outcome of pluginOutcomes) {
     if (outcome.ok) {
-      result.downloaded.push(outcome.plugin.id)
+      result.downloaded.push(outcome.plugin.resultLabel)
     } else {
-      result.failed.push(outcome.plugin.id)
+      result.failed.push(outcome.plugin.resultLabel)
     }
   }
 
@@ -296,7 +286,7 @@ export async function downloadPlugins(
     const themesDir = join(vaultPath, ".obsidian", "themes")
     const ok = await downloadRelease(
       themesDir,
-      MINIMAL_THEME.name,
+      MINIMAL_THEME.directoryName,
       MINIMAL_THEME.repo,
       MINIMAL_THEME.releaseTag,
       MINIMAL_THEME.assets,
@@ -304,9 +294,9 @@ export async function downloadPlugins(
     )
 
     if (ok) {
-      result.downloaded.push("Minimal theme")
+      result.downloaded.push(MINIMAL_THEME.resultLabel)
     } else {
-      result.failed.push("Minimal theme")
+      result.failed.push(MINIMAL_THEME.resultLabel)
     }
   }
 

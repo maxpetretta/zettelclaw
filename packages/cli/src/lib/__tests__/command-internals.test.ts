@@ -161,9 +161,10 @@ exit 1
 
     await withTempDir("zettelclaw-verify-helper-openclaw-", async (dir) => {
       const workspacePath = join(dir, "workspace", "state")
+      const configPath = join(dir, "workspace", "openclaw.json")
       await mkdir(workspacePath, { recursive: true })
 
-      await expect(verifyTesting.buildOpenClawChecks("/vault", workspacePath)).resolves.toEqual([
+      await expect(verifyTesting.buildOpenClawChecks("/vault", configPath)).resolves.toEqual([
         {
           name: "Settings",
           status: "warn",

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
 
-import { asRecord, asStringArray, type JsonRecord } from "./json"
+import { asRecord, asStringArray, parseJsonValue, type JsonRecord } from "./json"
 import { pathExists } from "./vault-fs"
 
 export interface ReadConfigResult {
@@ -30,11 +30,12 @@ export async function readOpenClawConfigFile(configPath: string): Promise<ReadCo
 }
 
 export function parseOpenClawConfig(raw: string): JsonRecord | undefined {
-  try {
-    return asRecord(JSON.parse(raw))
-  } catch {
+  const parsed = parseJsonValue(raw)
+  if (parsed === undefined) {
     return undefined
   }
+
+  return asRecord(parsed)
 }
 
 export function readOpenClawExtraPathsByScope(config: JsonRecord): { global: string[]; defaults: string[] } {

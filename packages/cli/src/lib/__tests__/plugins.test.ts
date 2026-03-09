@@ -3,7 +3,6 @@ import { join } from "node:path"
 
 import {
   downloadPlugins,
-  getManagedPluginIds,
   readEnabledCommunityPlugins,
   readInstalledManagedPlugins,
   readManagedPluginContractState,
@@ -12,17 +11,6 @@ import { pathExists } from "../vault-fs"
 import { withTempDir, writeJsonFile, writeTextFile } from "./test-helpers"
 
 describe("plugin helpers and managed plugin contract", () => {
-  test("returns managed plugin ids for each theme/sync combination", () => {
-    expect(getManagedPluginIds({ includeGit: false, includeMinimal: false })).toEqual(["calendar"])
-    expect(getManagedPluginIds({ includeGit: true, includeMinimal: false })).toEqual(["calendar", "obsidian-git"])
-    expect(getManagedPluginIds({ includeGit: true, includeMinimal: true })).toEqual([
-      "calendar",
-      "obsidian-git",
-      "obsidian-hider",
-      "obsidian-minimal-settings",
-    ])
-  })
-
   test("reads enabled community plugins and reports config errors", async () => {
     await withTempDir("zettelclaw-plugins-config-", async (dir) => {
       await expect(readEnabledCommunityPlugins(dir)).resolves.toEqual({
@@ -50,7 +38,7 @@ describe("plugin helpers and managed plugin contract", () => {
       await writeTextFile(join(dir, ".obsidian", "plugins", "some-other-plugin", "main.js"), "")
 
       expect(await readInstalledManagedPlugins(dir)).toEqual(["calendar", "obsidian-git"])
-      expect(await readManagedPluginContractState(dir, ["calendar", "obsidian-hider"])).toEqual({
+      expect(await readManagedPluginContractState(dir, ["calendar", "obsidian-hider", "some-other-plugin"])).toEqual({
         enabled: ["calendar", "obsidian-hider"],
         installed: ["calendar", "obsidian-git"],
         missingInstalled: ["obsidian-hider"],

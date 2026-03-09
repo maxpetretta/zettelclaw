@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises"
-import { basename, dirname, join } from "node:path"
+import { basename, join } from "node:path"
 import { intro, log, text } from "@clack/prompts"
 
 import {
@@ -10,8 +10,9 @@ import {
   unwrapPrompt,
 } from "../lib/cli"
 import { FOLDERS } from "../lib/folders"
+import { parseJsonRecord } from "../lib/json"
 import { readOpenClawConfigFile, readOpenClawExtraPathsByScope } from "../lib/openclaw-config"
-import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
+import { configureOpenClawEnvForWorkspace, resolveOpenClawWorkspaceEnv } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { readEnabledCommunityPlugins, readManagedPluginContractState } from "../lib/plugins"
 import { expectedQmdCollections, listQmdCollections } from "../lib/qmd"
@@ -55,12 +56,11 @@ async function promptVaultPath(): Promise<string> {
   )
 }
 
-async function detectVaultPath(options: VerifyOptions, workspacePath: string): Promise<string | undefined> {
+async function detectVaultPath(options: VerifyOptions, openclawConfigPath: string): Promise<string | undefined> {
   if (options.vaultPath) {
     return resolveUserPath(options.vaultPath)
   }
 
-  const openclawConfigPath = join(dirname(workspacePath), "openclaw.json")
   const detected = await detectVaultFromOpenClawConfig(openclawConfigPath, [FOLDERS.notes], [FOLDERS.journal])
   if (detected) {
     return detected
@@ -89,22 +89,6 @@ function pathListIncludes(paths: readonly string[], targetPath: string): boolean
   const target = normalizePath(targetPath)
   return paths.some((value) => normalizePath(value) === target)
 }
-
-function parseJsonRecord(raw: string | undefined): Record<string, unknown> | undefined {
-  if (!raw) {
-    return undefined
-  }
-  try {
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return undefined
-    }
-    return parsed as Record<string, unknown>
-  } catch {
-    return undefined
-  }
-}
-
 function formatCheck(check: VerifyCheck): string {
   const icon = check.status === "pass" ? "✅" : check.status === "fail" ? "❌" : "⚠️"
   return `${icon} ${check.name}: ${check.detail}`
@@ -378,10 +362,7 @@ function buildQmdChecks(vaultPath: string): VerifyCheck[] {
   ]
 }
 
-async function buildOpenClawChecks(vaultPath: string, workspacePath: string): Promise<VerifyCheck[]> {
-  const openclawDir = dirname(workspacePath)
-  const openclawConfigPath = join(openclawDir, "openclaw.json")
-
+async function buildOpenClawChecks(vaultPath: string, openclawConfigPath: string): Promise<VerifyCheck[]> {
   const configResult = await readOpenClawConfigFile(openclawConfigPath)
   if (!configResult.config) {
     return [
@@ -458,6 +439,7 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
   const openClawChecks: VerifyCheck[] = []
 
   const workspacePath = resolveUserPath(options.workspacePath ?? DEFAULT_OPENCLAW_WORKSPACE_PATH)
+  const workspaceEnv = resolveOpenClawWorkspaceEnv(workspacePath)
   const workspaceDetected = await isDirectory(workspacePath)
 
   if (workspaceDetected) {
@@ -467,7 +449,7 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
     openClawChecks.push({ name: "Workspace", status: "warn", detail: `missing ${toTildePath(workspacePath)}` })
   }
 
-  const vaultPath = await detectVaultPath(options, workspacePath)
+  const vaultPath = await detectVaultPath(options, workspaceEnv.configPath)
   if (!(vaultPath && (await isDirectory(vaultPath)))) {
     throw new Error("Could not find a Zettelclaw vault. Provide --vault or run `zettelclaw init` first.")
   }
@@ -484,7 +466,7 @@ export async function runVerify(options: VerifyOptions): Promise<void> {
   vaultChecks.push(await buildVaultSettingsCheck(vaultPath))
 
   if (workspaceDetected) {
-    openClawChecks.push(...(await buildOpenClawChecks(vaultPath, workspacePath)))
+    openClawChecks.push(...(await buildOpenClawChecks(vaultPath, workspaceEnv.configPath)))
   } else {
     openClawChecks.push(
       { name: "Settings", status: "warn", detail: "skipped until workspace is available" },

@@ -1,6 +1,7 @@
 import { cp, mkdir, rm } from "node:fs/promises"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 
+import { resolveOpenClawWorkspaceEnv } from "./openclaw-workspace"
 import { resolveSkillPackageDir } from "./skill"
 
 export const OPENCLAW_SKILLS_DIRNAME = "skills"
@@ -16,7 +17,7 @@ export function resolveOpenClawSkillInstallPath(stateDir: string): string {
 }
 
 export async function installOpenClawSkillForWorkspace(workspacePath: string): Promise<InstallOpenClawSkillResult> {
-  const stateDir = dirname(workspacePath)
+  const { stateDir } = resolveOpenClawWorkspaceEnv(workspacePath)
   const sourcePath = resolveSkillPackageDir()
   const installedPath = resolveOpenClawSkillInstallPath(stateDir)
 

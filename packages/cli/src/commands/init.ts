@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { basename, dirname, join } from "node:path"
+import { basename, join } from "node:path"
 import { intro, log, select, spinner, text } from "@clack/prompts"
 
 import {
@@ -12,7 +12,7 @@ import {
 } from "../lib/cli"
 import { ensureOpenClawMemoryPath } from "../lib/openclaw"
 import { installOpenClawSkillForWorkspace } from "../lib/openclaw-skill"
-import { configureOpenClawEnvForWorkspace } from "../lib/openclaw-workspace"
+import { configureOpenClawEnvForWorkspace, type OpenClawWorkspaceEnv } from "../lib/openclaw-workspace"
 import { resolveUserPath } from "../lib/paths"
 import { downloadPlugins } from "../lib/plugins"
 import { ensureQmdCollections, expectedQmdCollections, installQmdGlobal } from "../lib/qmd"
@@ -166,8 +166,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     throw new Error(`OpenClaw workspace not found at ${toTildePath(workspacePath)}`)
   }
 
+  let workspaceEnv: OpenClawWorkspaceEnv | undefined
   if (workspaceDetected) {
-    configureOpenClawEnvForWorkspace(workspacePath)
+    workspaceEnv = configureOpenClawEnvForWorkspace(workspacePath)
   }
 
   const s = spinner()
@@ -241,9 +242,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   summaryLines.push(`QMD collections: ${qmdCollectionSummary ?? "none"}`)
   summaryLines.push(`Plugins: ${pluginResult.downloaded.join(", ") || "none"}`)
 
-  if (workspaceDetected) {
-    const openclawConfigPath = join(dirname(workspacePath), "openclaw.json")
-    const openclawPatch = await ensureOpenClawMemoryPath(vaultPath, openclawConfigPath)
+  if (workspaceEnv) {
+    const openclawPatch = await ensureOpenClawMemoryPath(vaultPath, workspaceEnv.configPath)
 
     if (openclawPatch.changed) {
       summaryLines.push("OpenClaw config: memory path added")

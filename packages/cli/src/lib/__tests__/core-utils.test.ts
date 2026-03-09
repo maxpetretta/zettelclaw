@@ -5,6 +5,7 @@ import { toTildePath } from "../cli"
 import { FOLDERS } from "../folders"
 import { asRecord, asStringArray } from "../json"
 import { installOpenClawSkillForWorkspace, resolveOpenClawSkillInstallPath } from "../openclaw-skill"
+import { resolveOpenClawWorkspaceEnv } from "../openclaw-workspace"
 import { expandHome, resolveUserPath } from "../paths"
 import { substituteTemplate } from "../template"
 import { readTextFile, withTempDir, writeTextFile } from "./test-helpers"
@@ -42,6 +43,13 @@ describe("core utility modules", () => {
       journal: "02 Journal",
       templates: "03 Templates",
       attachments: "04 Attachments",
+    })
+  })
+
+  test("openclaw workspace helper derives state/config paths", () => {
+    expect(resolveOpenClawWorkspaceEnv("/tmp/openclaw/workspace")).toEqual({
+      stateDir: "/tmp/openclaw",
+      configPath: "/tmp/openclaw/openclaw.json",
     })
   })
 
