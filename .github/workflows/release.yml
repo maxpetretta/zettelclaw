@@ -53,9 +53,15 @@ jobs:
       - name: Publish To npm
         working-directory: packages/cli
         run: |
-          npm publish --provenance --access public 2>&1 || {
+          version="$(node -p "require('./package.json').version")"
+          npm_tag="latest"
+          if [[ "$version" == *-beta.* ]]; then
+            npm_tag="beta"
+          fi
+
+          npm publish --provenance --access public --tag "$npm_tag" 2>&1 || {
             exit_code=$?
-            if npm view zettelclaw@"$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+            if npm view "zettelclaw@$version" version >/dev/null 2>&1; then
               echo "Version already published — continuing."
             else
               exit $exit_code
