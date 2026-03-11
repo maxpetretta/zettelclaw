@@ -7,6 +7,8 @@ description: "Work inside a Zettelclaw vault using the current typed frontmatter
 
 Follow the canonical Zettelclaw vault model: capture externally, write durable notes manually, and use the agent for navigation/synthesis.
 
+This is an instruction-only skill. It does not install software by itself. `qmd` is optional when it is already available in the environment, and `rg` is the supported fallback for search.
+
 ## Vault structure
 
 ```
@@ -115,3 +117,4 @@ If configuring OpenClaw memory paths, use:
 - `agents.defaults.memorySearch.extraPaths`
 
 Do not write legacy top-level `memorySearch`.
+Only change OpenClaw config when the operator explicitly wants this vault wired into an OpenClaw installation.

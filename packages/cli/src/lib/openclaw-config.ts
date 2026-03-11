@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
 
-import { asRecord, asStringArray, parseJsonValue, type JsonRecord } from "./json"
+import { asRecord, asStringArray, type JsonRecord, parseJsonValue } from "./json"
 import { pathExists } from "./vault-fs"
 
 export interface ReadConfigResult {

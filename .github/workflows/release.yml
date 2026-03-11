@@ -62,8 +62,13 @@ jobs:
             fi
           }
 
-      - name: Install ClawHub CLI
-        run: npm i -g clawhub
+      - name: Install ClawHub CLI From Repository
+        run: |
+          git clone --depth 1 https://github.com/openclaw/clawhub.git /tmp/clawhub
+          cd /tmp/clawhub
+          bun install --frozen-lockfile
+          bun run --cwd packages/clawdhub build
+          npm i -g ./packages/clawdhub
 
       - name: Login To ClawHub
         env:
